@@ -5,15 +5,36 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge';
 import {  getStatusSteps } from '@/backend/transort-data';
 import { Button } from '@/components/ui/button';
-import { MapPin, Clock, CheckCircle, Circle, Package, ArrowRight, ArrowLeft } from 'lucide-react'
+import { MapPin, Clock, ArrowRight, ArrowLeft } from 'lucide-react'
 import { useJobStore } from '@/store/useStore';
 import { useRouter } from 'next/navigation'
 import TimelineStep from '@/components/Timeline';
 
 const Jobs = () => {
+    
     const job = useJobStore((state) => state.selectedJob)
+    
     console.log('Job ที่รับมาจาก store : ', job)
     const router = useRouter();
+
+       if (!job || !job.DO || job.DO.length === 0) {
+        return (
+            <div className="p-4">
+                <Navbars />
+                <div className="text-center mt-10 text-red-500">
+                    🚫 ไม่พบข้อมูลการขนส่ง กรุณากลับไปเลือกงานอีกครั้ง
+                </div>
+                <div className="flex justify-center mt-4">
+                    <Button onClick={() => router.push('/home')}>
+                        <ArrowLeft className="mr-2" size={16} /> กลับหน้าหลัก
+                    </Button>
+                </div>
+            </div>
+        )
+    }
+
+
+
     const formatDate = (date: string) => {
         const d = new Date(date)
         return d.toLocaleDateString('th-TH', {
@@ -23,6 +44,8 @@ const Jobs = () => {
     }
 
     const statusSteps = getStatusSteps();
+    console.log ('job job:', job.DO[0]);
+    // ตรวจสอบว่า job มีข้อมูลหรือไม่ 
     const timestamps = job.DO[0] || {};
 
     // หา step ปัจจุบันที่กำลังดำเนินการ
