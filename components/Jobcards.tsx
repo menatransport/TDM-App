@@ -5,7 +5,7 @@ import { useJobStore } from '@/store/useStore'
 import { mockTransportJobs } from '@/backend/transort-data'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { MapPin, Clock, Package, ArrowRight } from 'lucide-react'
+import { MapPin, Clock, ArrowRight } from 'lucide-react'
 
 
 export const Jobcards = () => {

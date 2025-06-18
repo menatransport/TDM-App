@@ -1,9 +1,9 @@
 'use client'
-import React, { useEffect } from 'react'
+import React from 'react'
 import { Navbars } from '@/components/Navbars';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge';
-import { getJobById, getStatusSteps, TransportJob } from '@/backend/transort-data';
+import {  getStatusSteps } from '@/backend/transort-data';
 import { Button } from '@/components/ui/button';
 import { MapPin, Clock, CheckCircle, Circle, Package, ArrowRight, ArrowLeft } from 'lucide-react'
 import { useJobStore } from '@/store/useStore';

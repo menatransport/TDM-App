@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react';
+import React from 'react';
 import { CheckCircle, Circle, Clock } from 'lucide-react';
 
 interface TimelineStepProps {
