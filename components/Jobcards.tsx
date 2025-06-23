@@ -7,9 +7,34 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { MapPin, Clock, ArrowRight } from 'lucide-react'
 
+interface JobcardsProps {
+  filterStatus: string;
+}
 
-export const Jobcards = () => {
+export const Jobcount = () => {
+    const jobs = mockTransportJobs
+    const totalCount = jobs.length;
+    const inProgressCount = jobs.filter((job) => job.Status !== "ขนส่งสำเร็จ").length;
+    const completedCount = jobs.filter((job) => job.Status === "ขนส่งสำเร็จ").length;
+
+    return {
+      totalCount,
+      inProgressCount,
+      completedCount
+    }
+}
+
+export const Jobcards = ({ filterStatus }: JobcardsProps) => {
   const jobs = mockTransportJobs
+ const filteredJobs = jobs.filter((job) => {
+  if (filterStatus === "ทั้งหมด") {return true;
+  }
+  if (filterStatus === "รอดำเนินงาน") {
+    return job.Status !== "ขนส่งสำเร็จ";
+  }
+  return job.Status === filterStatus;
+});
+
   const router = useRouter()
   const getStatusConfig = (status: string | undefined) => {
     switch (status) {
@@ -72,10 +97,10 @@ export const Jobcards = () => {
 }
 
   return (
-    <div className="w-full max-w-6xl mx-auto p-4">
+    <div className="w-full mx-auto p-4">
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-        {jobs.map((job, index) => {
+        {filteredJobs.map((job, index) => {
           const statusConfig = getStatusConfig("null")
           return (
             <Card 

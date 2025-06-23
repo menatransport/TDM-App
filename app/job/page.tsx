@@ -172,7 +172,7 @@ const Jobs = () => {
     <>
       <Navbars />
 
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex justify-center p-10 relative overflow-hidden">
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex justify-center p-5 relative overflow-hidden">
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-20 -left-20 w-40 h-40 bg-green-200 bg-opacity-30 rounded-full animate-pulse"></div>
           <div className="absolute top-1/4 -right-16 w-32 h-32 bg-emerald-200 bg-opacity-20 rounded-full "></div>
@@ -180,7 +180,7 @@ const Jobs = () => {
           <div className="absolute bottom-20 right-1/4 w-16 h-16 bg-emerald-300 bg-opacity-30 rounded-full "></div>
         </div>
 
-        <div className="flex flex-col z-1 w-full space-y-2 mt-1.5">
+        <div className="flex flex-col z-1 w-full space-y-4">
           {/* Buttton to home */}
           <div className="flex items-center justify-between mb-6">
             <Button
@@ -358,25 +358,21 @@ const Jobs = () => {
                 <div className="grid grid-cols-2 flex justify-center md:grid-cols-2 gap-4">
                   <input
                     type="number"
-                    value={job.Pallet_tran || ""}
                     className="w-full text-xs text-center p-2 border border-gray-300 rounded-lg bg-white shadow-sm"
                     placeholder="แลกเปลี่ยน"
                   />
                   <input
                     type="number"
-                    value={job.Pallet_change || ""}
                     className="w-full text-xs text-center p-2 border border-gray-300 rounded-lg bg-white shadow-sm"
                     placeholder="โอน"
                   />
                   <input
                     type="number"
-                    value={job.Pallet_tran || ""}
                     className="w-full text-xs text-center p-2 border border-gray-300 rounded-lg bg-white shadow-sm"
                     placeholder="นำฝาก"
                   />
                   <input
                     type="number"
-                    value={job.Pallet_change || ""}
                     className="w-full text-xs text-center p-2 border border-gray-300 rounded-lg bg-white shadow-sm "
                     placeholder="รับคืน"
                   />

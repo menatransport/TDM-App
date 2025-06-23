@@ -22,6 +22,23 @@ const TimelineStep: React.FC<TimelineStepProps> = ({
   icon 
 }) => {
 
+const formatDatetime = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const date = new Date(e.target.value);
+
+  // ปรับเวลาให้อยู่ในโซน 'Asia/Bangkok'
+  const bangkokOffset = 7 * 60; // +07:00
+  const localTime = new Date(date.getTime() + bangkokOffset * 60000);
+
+  const dd = String(localTime.getDate()).padStart(2, '0');
+  const mm = String(localTime.getMonth() + 1).padStart(2, '0');
+  const yyyy = localTime.getFullYear();
+  const HH = String(localTime.getHours()).padStart(2, '0');
+  const min = String(localTime.getMinutes()).padStart(2, '0');
+  return `${dd}/${mm}/${yyyy}, ${HH}:${min}`;
+};
+
+
+
   return (
     <div className="relative flex items-start space-x-4 pb-6">
       {/* Connector Line */}
@@ -88,11 +105,13 @@ const TimelineStep: React.FC<TimelineStepProps> = ({
           ) : (
             isActive && (
               <div className="w-full mt-2 flex justify-start">
-                <input  min={new Date().toISOString().slice(0, 16)}
+                <input 
+                  aria-label="Date and time"
                   type="datetime-local"
+                  onChange={(e) => formatDatetime(e)}
                   id={key}
                   name={key}
-                  className="w-1/2 max-w-xs px-2 py-2 border border-blue-200 rounded-lg text-xs 
+                  className="text-center w-100 p-3 border border-blue-200 rounded-md text-xs 
                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
                            bg-white shadow-sm transition-all duration-200"
                   placeholder="เลือกวันที่และเวลา"

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Truck, Eye, EyeOff, User, Lock, ArrowRight, Check } from 'lucide-react'
+import { transortUser } from '@/backend/transort-user'
 
 const login = () => {
   const [username, setUsername] = useState('')
@@ -50,7 +51,10 @@ const login = () => {
   setError('')
 
   try {
-
+    console.log("username", username, "password", password);
+    const chck = transortUser(username, password);
+    console.log("chck", chck);
+    if (chck) {
     if (username == "admin" && password == "1234") {
       localStorage.setItem('isLoggedIn', 'true')
       local_remember()
@@ -58,11 +62,16 @@ const login = () => {
     } else {
       setError('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง')
     }
+  } else {
+      setError('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง')
+    }
   } catch (err) {
+    console.error('Login error:', err)
     setError('เกิดข้อผิดพลาดในการเข้าสู่ระบบ')
   } finally {
     setIsLoading(false)
   }
+  
 }
 
 return (

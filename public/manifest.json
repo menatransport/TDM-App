@@ -1,0 +1,22 @@
+
+{
+  "name": "Smart-TDM Application",
+  "short_name": "Smart-TDM",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#10b981",
+  "description": "A smart tool for tracking and managing transportation and delivery metrics.",
+  "icons": [
+    {
+      "src": "/Rimberio.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/Rimberio.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
