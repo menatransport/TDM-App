@@ -4,6 +4,7 @@ import React from 'react';
 import { CheckCircle, Circle, Clock } from 'lucide-react';
 
 interface TimelineStepProps {
+  key: string;
   title: string;
   timestamp?: string;
   isCompleted: boolean;
@@ -13,6 +14,7 @@ interface TimelineStepProps {
 }
 
 const TimelineStep: React.FC<TimelineStepProps> = ({ 
+  key,
   title, 
   timestamp, 
   isCompleted, 
@@ -23,7 +25,7 @@ const TimelineStep: React.FC<TimelineStepProps> = ({
   return (
     <div className="relative flex items-start space-x-4 pb-6">
       {/* Connector Line */}
-      {!isActive && (
+      {(title !== "เสร็จงาน") && !isActive &&  (
         <div className={`absolute left-5 top-10 w-0.5 h-full transition-colors duration-300 ${
           isCompleted ? 'bg-gradient-to-b from-green-500 to-green-300' : 'bg-gray-200'
         }`} />
@@ -51,7 +53,7 @@ const TimelineStep: React.FC<TimelineStepProps> = ({
       </div>
 
       {/* Content */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 ">
         <div className={`
           bg-white rounded-xl p-4 shadow-sm border transition-all duration-300
           ${isCompleted
@@ -60,7 +62,7 @@ const TimelineStep: React.FC<TimelineStepProps> = ({
             ? 'border-blue-200 bg-gradient-to-r from-blue-50 to-blue-25 shadow-md'
             : 'border-gray-100 hover:shadow-sm'}
         `}>
-          <div className="flex items-center space-x-3 mb-2">
+          <div className="flex items-center space-x-3">
             <span className="text-2xl" role="img" aria-label={title}>{icon}</span>
             <h3 className={`font-semibold text-lg transition-colors duration-300 ${
               isCompleted 
@@ -85,10 +87,12 @@ const TimelineStep: React.FC<TimelineStepProps> = ({
             </div>
           ) : (
             isActive && (
-              <div className="w-full mt-2 flex justify-center">
+              <div className="w-full mt-2 flex justify-start">
                 <input  min={new Date().toISOString().slice(0, 16)}
                   type="datetime-local"
-                  className="w-full max-w-xs px-2 py-2 border border-blue-200 rounded-lg text-xs 
+                  id={key}
+                  name={key}
+                  className="w-1/2 max-w-xs px-2 py-2 border border-blue-200 rounded-lg text-xs 
                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
                            bg-white shadow-sm transition-all duration-200"
                   placeholder="เลือกวันที่และเวลา"

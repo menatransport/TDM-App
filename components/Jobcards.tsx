@@ -44,7 +44,8 @@ export const Jobcards = () => {
         return {
           color: 'bg-gradient-to-r from-orange-500 to-orange-600 text-white',
           bgColor: 'bg-orange-50 border-orange-200',
-          iconColor: 'text-orange-600'
+          iconColor: 'text-orange-600',
+          btn: 'bg-orange-200'
         }
       default:
         return {
@@ -87,7 +88,7 @@ export const Jobcards = () => {
                   <div className="absolute inset-0 bg-white/10 transform -skew-y-1 translate-y-8"></div>
                   <div className="relative flex justify-between items-start">
                     <div>
-                      <h3 className="text-base font-bold text-dark mb-1">#{job.Id_load}</h3>
+                      <h3 className="text-base font-bold text-dark mb-1">📦{job.Id_load}</h3>
                       <p className="text-dark/90 text-xs font-medium">
                         {job.H_plate} • {job.T_plate}
                       </p>
