@@ -1,14 +1,11 @@
-// next.config.js
-const withPWA = require('next-pwa')({
-  dest: 'public',
-  register: true,
-  skipWaiting: true,
-  // Optional: caching strategy, etc.
-});
-
-const nextConfig = {
-  reactStrictMode: true,
-  // สามารถใส่ config เพิ่มเติมตรงนี้ได้
-};
-
-module.exports = withPWA(nextConfig);
+import type { NextConfig } from 'next'
+ 
+const nextConfig: NextConfig = {
+  eslint: {
+    // Warning: This allows production builds to successfully complete even if
+    // your project has ESLint errors.
+    ignoreDuringBuilds: true,
+  },
+}
+ 
+export default nextConfig

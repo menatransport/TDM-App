@@ -3,11 +3,11 @@ import React, { useState } from "react";
 import { Navbars } from "@/components/Navbars";
 import { Jobcards, Jobcount } from "@/components/Jobcards";
 import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
-import { RefreshCcw, Funnel, Inbox } from "lucide-react";
+// import { useRouter } from "next/navigation";
+import { Funnel, Inbox } from "lucide-react";
 
 const Home = () => {
-  const router = useRouter();
+  // const router = useRouter();
   const [filterStatus, setFilterStatus] = useState("ทั้งหมด");
   const count = Jobcount();
   console.log("count", count);
