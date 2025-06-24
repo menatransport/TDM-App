@@ -16,12 +16,36 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import Swal from "sweetalert2";
 
 const Home = () => {
   // const router = useRouter();
   const [filterStatus, setFilterStatus] = useState("ทั้งหมด");
-  const handledropdown = (val: string) => {
-    console.log('val : ',val)
+  const handleSaved = () => {
+     Swal.fire({
+        title: "คุณต้องการยืนยันบันทึกข้อมูลหรือไม่?",
+        text: "กรุณาตรวจสอบความถูกต้องของข้อมูลก่อนกดปุ่ม 'ตกลง'",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "ตกลง",
+        cancelButtonText: "ยกเลิก",
+        allowOutsideClick: false
+      }).then((result) => {
+        if (result.isConfirmed) {
+          Swal.fire({
+            title: "บันทึกข้อมูลสำเร็จ",
+            text: "ข้อมูลของคุณถูกบันทึกเรียบร้อยแล้ว",
+            icon: "success",
+            confirmButtonText: "ตกลง",
+            allowOutsideClick: false
+          }).then(() => {
+            //router.push("/home");
+            //Close Dialog
+          });
+        }
+      });
   };
   const count = Jobcount();
   console.log("count", count);
@@ -61,31 +85,92 @@ const Home = () => {
                     <span>ระบบพาเลท</span>
                   </Button>
                 </DialogTrigger>
-                <DialogContent  
+                <DialogContent
                   onInteractOutside={(e) => e.preventDefault()}
-                  className="bg-white border border-gray-500">
+                  className="bg-white border border-gray-500"
+                >
                   <DialogHeader>
                     <DialogTitle>ระบบพาเลท</DialogTitle>
                     <DialogDescription className="text-[11px] text-gray-700">
-                      กรอกข้อมูลเกี่ยวกับพาเลทที่มีการเบิกเข้า-เบิกออก พื้นที่ ออฟฟิศ TDM
+                      กรอกข้อมูลเกี่ยวกับพาเลทที่มีการเบิกเข้า-เบิกออก พื้นที่
+                      ออฟฟิศ TDM
                     </DialogDescription>
                   </DialogHeader>
+                <div className="grid grid-cols-1 gap-4 p-4 ">
                   <div className="flex flex-row items-center gap-2">
-                  <Badge className="text-center bg-green-200 p-1.5">เลือกรายการ</Badge>
-                  <select className="w-50 border text-[13px] p-1 text-center border-gray-300 rounded-md"
-                  onChange={(value)=>handledropdown}
-                  ><option value=""></option>
-                  <option value="เบิกเข้า">เบิกเข้า</option>
-                  <option value="เบิกออก">เบิกออก</option>
-                  </select>
+                    <Badge className="text-center bg-green-200 p-1.5">
+                      วันที่ลงพาเลท
+                    </Badge>
+                    <input
+                      type="date"
+                      defaultValue={new Date().toISOString().split("T")[0]}
+                      onChange={(e) => console.log(e.target.value)}
+                      className="w-50 border text-[13px] p-1 text-center border-gray-300 rounded-md bg-white"
+                    />
                   </div>
-                  <div className="grid grid-cols-3 gap-10 ml-4">
-                  <p>Hello</p>
-                  <p>Hello</p>
-                  <p>Hello</p>
+
+                  <div className="flex flex-row items-center gap-2">
+                    <Badge className="text-center bg-green-200 p-1.5">
+                      สถานที่พาเลท
+                    </Badge>
+                    <select
+                      className="w-50 border text-[13px] p-1 text-center border-gray-300 rounded-md"
+                      defaultValue={"ออฟฟิศ TDM"}
+                    >
+                      <option value=""></option>
+                      <option value="ออฟฟิศ TDM">ออฟฟิศ TDM</option>
+                    </select>
                   </div>
+
+                  <div className="flex flex-row items-center gap-2">
+                    <Badge className="text-center bg-green-200 p-1.5">
+                      เลือกรายการ
+                    </Badge>
+                    <select
+                      className="w-50 border text-[13px] p-1 text-center border-gray-300 rounded-md"
+                    required>
+                      <option value=""></option>
+                      <option value="เบิกเข้า">เบิกเข้า</option>
+                      <option value="เบิกออก">เบิกออก</option>
+                    </select>
+                  </div>
+
+                  <div className="flex flex-row items-center gap-2">
+                    <Badge className="text-center bg-green-200 p-1.5">
+                      จำนวนพาเลท
+                    </Badge>
+                    <input
+                      type="number"
+                      className="w-50 border text-[13px] p-1 text-center border-gray-300 rounded-md bg-white w-20"
+                    required/>
+                  </div>
+                </div>
+
+                  {/* <DialogClose asChild>
+                    <Button className="bg-red-500 text-white hover:bg-red-600">
+                      ยกเลิก
+                    </Button>
+                  {/* <div className="grid grid-cols-3 gap-10 ml-4 p-5 rounded-lg">
+                    <div className="flex flex-col text-center">
+                      <input
+                        type="number"
+                        className="border text-[13px] p-1 text-center border-gray-300 rounded-md bg-white"
+                      />
+                      <label className="text-[13px] m-2">จำนวนพาเลท</label>
+                    </div>
+                    <p>----------</p>
+                    <p>ออฟฟิศ TDM</p>
+                  </div> */}
+
                   <DialogFooter className="sm:justify-start">
-                   {/* Button Submit and close ยกเลิก */}
+                    {/* Button Submit and close ยกเลิก */}
+                    <Button
+                    onClick={handleSaved}
+                      type="submit"
+                      className="bg-green-500 text-white hover:bg-green-600"
+                    >
+                      บันทึกข้อมูล
+                    </Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>

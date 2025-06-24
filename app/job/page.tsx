@@ -50,7 +50,7 @@ const Jobs = () => {
 
   const handleSaved = () => {
   Swal.fire({
-    title: "คุณต้องการยืนยันการบันทึกข้อมูลหรือไม่?",
+    title: "คุณต้องการยืนยันบันทึกข้อมูลหรือไม่?",
     text: "กรุณาตรวจสอบความถูกต้องของข้อมูลก่อนกดปุ่ม 'ตกลง'",
     icon: "warning",
     showCancelButton: true,
