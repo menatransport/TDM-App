@@ -3,12 +3,26 @@ import React, { useState } from "react";
 import { Navbars } from "@/components/Navbars";
 import { Jobcards, Jobcount } from "@/components/Jobcards";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 // import { useRouter } from "next/navigation";
 import { Funnel, Inbox } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
 
 const Home = () => {
   // const router = useRouter();
   const [filterStatus, setFilterStatus] = useState("ทั้งหมด");
+  const handledropdown = (val: string) => {
+    console.log('val : ',val)
+  };
   const count = Jobcount();
   console.log("count", count);
   return (
@@ -40,13 +54,41 @@ const Home = () => {
                 <RefreshCcw className="h-4 w-4" />
                 <span>รีเฟรช</span>
               </Button> */}
-              <Button
-                variant="outline"
-                className="flex items-center bg-white space-x-2 hover:shadow-lg hover:-translate-y-1"
-              >
-                <Inbox className="h-4 w-4" />
-                <span>ระบบพาเลท</span>
-              </Button>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button className="flex items-center bg-white border border-gray-500 space-x-2 hover:shadow-lg hover:-translate-y-1">
+                    <Inbox className="h-4 w-4" />
+                    <span>ระบบพาเลท</span>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent  
+                  onInteractOutside={(e) => e.preventDefault()}
+                  className="bg-white border border-gray-500">
+                  <DialogHeader>
+                    <DialogTitle>ระบบพาเลท</DialogTitle>
+                    <DialogDescription className="text-[11px] text-gray-700">
+                      กรอกข้อมูลเกี่ยวกับพาเลทที่มีการเบิกเข้า-เบิกออก พื้นที่ ออฟฟิศ TDM
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="flex flex-row items-center gap-2">
+                  <Badge className="text-center bg-green-200 p-1.5">เลือกรายการ</Badge>
+                  <select className="w-50 border text-[13px] p-1 text-center border-gray-300 rounded-md"
+                  onChange={(value)=>handledropdown}
+                  ><option value=""></option>
+                  <option value="เบิกเข้า">เบิกเข้า</option>
+                  <option value="เบิกออก">เบิกออก</option>
+                  </select>
+                  </div>
+                  <div className="grid grid-cols-3 gap-10 ml-4">
+                  <p>Hello</p>
+                  <p>Hello</p>
+                  <p>Hello</p>
+                  </div>
+                  <DialogFooter className="sm:justify-start">
+                   {/* Button Submit and close ยกเลิก */}
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
 

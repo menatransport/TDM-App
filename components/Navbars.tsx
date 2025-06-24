@@ -15,7 +15,7 @@ export const Navbars = () => {
 
   return (
     <nav className="bg-gray-50 border-b border-gray-200 shadow-sm border-b border-gray-100">
-      <div className="max-w-7xl mx-auto px-4">
+      <div className="mx-4 px-4 md:mx-auto sm:mx-auto">
         <div className="flex justify-between items-center h-18">
 
           <div className="flex items-center space-x-3">
