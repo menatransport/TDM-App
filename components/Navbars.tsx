@@ -4,6 +4,7 @@ import { Truck, Menu, X, Bell, User } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 
+
 export const Navbars = () => {
 
   const [isMenuOpen, setIsMenuOpen] = useState(false)
