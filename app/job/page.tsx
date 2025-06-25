@@ -369,13 +369,13 @@ const Jobs = () => {
                   <input
                     type="number"
                     className="w-full text-xs text-center p-2 border border-gray-300 rounded-lg bg-white shadow-sm"
-                    placeholder="นำฝาก"
+                    placeholder="ยืม"
                   />
-                  <input
+                  {/* <input
                     type="number"
                     className="w-full text-xs text-center p-2 border border-gray-300 rounded-lg bg-white shadow-sm "
                     placeholder="รับคืน"
-                  />
+                  /> */}
                 </div>
               </div>
             </CardContent>

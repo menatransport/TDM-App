@@ -433,11 +433,11 @@ export const getJobById = (id: string): TransportJob | undefined => {
 export const getStatusSteps = () => [
   { key: 'Timestamp_start', label: 'เริ่มงาน', icon: '🚀' },
   { key: 'Timestamp_ori', label: 'ถึงต้นทาง', icon: '📍' },
-  { key: 'Timestamp_strecv', label: 'เริ่มรับสินค้า', icon: '📦' },
-  { key: 'Timestamp_enrecv', label: 'รับสินค้าเสร็จ', icon: '✅' },
+  { key: 'Timestamp_strecv', label: 'เริ่มขึ้นสินค้า', icon: '📤' },
+  { key: 'Timestamp_enrecv', label: 'ขึ้นสินค้าเสร็จ', icon: '✅' },
   { key: 'Timestamp_intran', label: 'เริ่มขนส่ง', icon: '🚛' },
   { key: 'Timestamp_des', label: 'ถึงปลายทาง', icon: '🎯' },
-  { key: 'Timestamp_stload', label: 'เริ่มลงสินค้า', icon: '📤' },
+  { key: 'Timestamp_stload', label: 'เริ่มลงสินค้า', icon: '📥' },
   { key: 'Timestamp_enload', label: 'ลงสินค้าเสร็จ', icon: '✅' },
   { key: 'Timestamp_ended', label: 'เสร็จงาน', icon: '🏁' }
 ];

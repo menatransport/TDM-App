@@ -154,6 +154,7 @@ const Home = () => {
                       <option value=""></option>
                       <option value="เบิกเข้า">เบิกเข้า</option>
                       <option value="เบิกออก">เบิกออก</option>
+                      <option value="ส่งคืนลูกค้า">ส่งคืนลูกค้า</option>
                     </select>
                   </div>
 
