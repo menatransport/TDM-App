@@ -382,7 +382,7 @@ const Jobs = () => {
           </Card>
 
           {/* เอกสาร แนบรูป*/}
-          <Card className="mb-4 bg-gray-50 shadow-md hover:shadow-lg transition-all duration-300 border-0 ring-1 ring-gray-200/50 hover:ring-gray-300/50">
+          <Card className="mb-25 bg-gray-50 shadow-md hover:shadow-lg transition-all duration-300 border-0 ring-1 ring-gray-200/50 hover:ring-gray-300/50">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <ImagePlus className="h-5 w-5" />
@@ -425,13 +425,15 @@ const Jobs = () => {
           </Card>
 
             {/* Button saved */}
-            <div className="fixed bottom-0 right-0 m-2.5 ">
+            <div className="fixed bottom-0 right-0 m-2.5 z-50">
                 <Button
-                    onClick={handleSaved}
-                    className="bg-blue-500 text-white hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2 px-4 py-2 rounded-lg shadow-md">
-                    <Save  size={16} />
-                    บันทึกข้อมูล
-                </Button>
+  onClick={handleSaved}
+  className="fixed bottom-4 right-4 z-50 h-12 bg-blue-500 text-white hover:bg-blue-700 transition-all duration-200 flex items-center space-x-2 px-4 py-2 rounded-full shadow-lg sm:rounded-lg sm:bottom-6 sm:right-6"
+>
+  <Save size={18} />
+  <span className="hidden sm:inline">บันทึกข้อมูล</span>
+</Button>
+
             </div>
         </div>
       </div>

@@ -1,11 +1,11 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useRef  } from 'react'
 import { Navbars } from "@/components/Navbars";
 import { Jobcards, Jobcount } from "@/components/Jobcards";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 // import { useRouter } from "next/navigation";
-import { Funnel, Inbox } from "lucide-react";
+import { Funnel, Inbox, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -21,31 +21,53 @@ import Swal from "sweetalert2";
 const Home = () => {
   // const router = useRouter();
   const [filterStatus, setFilterStatus] = useState("ทั้งหมด");
+  const [DialogResult, setDialogResult] = useState(false);
+
+  const [images, setImages] = useState<File[]>([])
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const files = e.target.files;
+  if (!files) return;
+
+  const selectedFiles = Array.from(files);
+  const totalImages = images.length + selectedFiles.length;
+
+  if (totalImages > 2) {
+    alert("คุณสามารถอัปโหลดได้สูงสุด 2 รูปภาพเท่านั้น");
+
+    // เคลียร์ input file เพื่อไม่ให้เกิด state ค้าง
+    if (inputRef.current) {
+      inputRef.current.value = "";
+    }
+    return;
+  }
+
+  setImages((prev) => [...prev, ...selectedFiles]);
+};
+
+
+   const removeImage = (indexToRemove: number) => {
+    setImages((prev) => {
+      const updated = prev.filter((_, index) => index !== indexToRemove)
+      // ถ้าไม่มีรูปแล้ว เคลียร์ input file ด้วย
+      if (updated.length === 0 && inputRef.current) {
+        inputRef.current.value = ''
+      }
+      return updated
+    })
+  }
+  
+
+
   const handleSaved = () => {
-     Swal.fire({
-        title: "คุณต้องการยืนยันบันทึกข้อมูลหรือไม่?",
-        text: "กรุณาตรวจสอบความถูกต้องของข้อมูลก่อนกดปุ่ม 'ตกลง'",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonColor: "#3085d6",
-        cancelButtonColor: "#d33",
-        confirmButtonText: "ตกลง",
-        cancelButtonText: "ยกเลิก",
-        allowOutsideClick: false
-      }).then((result) => {
-        if (result.isConfirmed) {
-          Swal.fire({
-            title: "บันทึกข้อมูลสำเร็จ",
-            text: "ข้อมูลของคุณถูกบันทึกเรียบร้อยแล้ว",
-            icon: "success",
-            confirmButtonText: "ตกลง",
-            allowOutsideClick: false
-          }).then(() => {
-            //router.push("/home");
-            //Close Dialog
-          });
-        }
-      });
+
+    setDialogResult(false);
+    Swal.fire({
+  title: "บันทึกข้อมูลสำเร็จ!",
+  icon: "success",
+  draggable: true
+});
   };
   const count = Jobcount();
   console.log("count", count);
@@ -78,7 +100,7 @@ const Home = () => {
                 <RefreshCcw className="h-4 w-4" />
                 <span>รีเฟรช</span>
               </Button> */}
-              <Dialog>
+              <Dialog open={DialogResult} onOpenChange={setDialogResult}>
                 <DialogTrigger asChild>
                   <Button className="flex items-center bg-white border border-gray-500 space-x-2 hover:shadow-lg hover:-translate-y-1">
                     <Inbox className="h-4 w-4" />
@@ -104,7 +126,7 @@ const Home = () => {
                     <input
                       type="date"
                       defaultValue={new Date().toISOString().split("T")[0]}
-                      onChange={(e) => console.log(e.target.value)}
+                      required
                       className="w-50 border text-[13px] p-1 text-center border-gray-300 rounded-md bg-white"
                     />
                   </div>
@@ -124,7 +146,7 @@ const Home = () => {
 
                   <div className="flex flex-row items-center gap-2">
                     <Badge className="text-center bg-green-200 p-1.5">
-                      เลือกรายการ
+                      ประเภทการเบิก
                     </Badge>
                     <select
                       className="w-50 border text-[13px] p-1 text-center border-gray-300 rounded-md"
@@ -144,6 +166,41 @@ const Home = () => {
                       className="w-50 border text-[13px] p-1 text-center border-gray-300 rounded-md bg-white w-20"
                     required/>
                   </div>
+                  <div className="flex flex-row items-center gap-2">
+                    <Badge className="text-center bg-green-200 p-1.5">
+                      แนบหลักฐาน
+                    </Badge>
+                     <input
+        ref={inputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          placeholder='เลือกรูปภาพ'
+          onChange={handleFileChange}
+          className="block w-full text-sm text-gray-500 file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+        />
+         </div>
+
+        {images.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4">
+            {images.map((file, index) => (
+              <div key={index} className="relative group">
+                <img
+                  src={URL.createObjectURL(file)}
+                  alt={`preview-${index}`}
+                  className="w-full object-cover rounded-lg border border-gray-300 shadow"
+                />
+                <button
+                  onClick={() => removeImage(index)}
+                  className="absolute top-1 right-1 bg-white bg-opacity-70  text-red-500 rounded-full p-1 shadow opacity-100 transition"
+                  title="ลบรูปนี้"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
                 </div>
 
                   {/* <DialogClose asChild>
@@ -162,7 +219,7 @@ const Home = () => {
                     <p>ออฟฟิศ TDM</p>
                   </div> */}
 
-                  <DialogFooter className="sm:justify-start">
+                  <DialogFooter className="w-full flex justify-between ">
                     {/* Button Submit and close ยกเลิก */}
                     <Button
                     onClick={handleSaved}

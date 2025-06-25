@@ -55,7 +55,7 @@ const login = () => {
     const chck = transortUser(username, password);
     console.log("chck", chck);
     if (chck) {
-    if (username == "admin" && password == "1234") {
+    if (username == "user" && password == "1234") {
       localStorage.setItem('isLoggedIn', 'true')
       local_remember()
       router.push('/home')
@@ -219,7 +219,7 @@ return (
           <div className="text-xs space-y-1">
             <p className="text-green-700 flex items-center">
               <span className="w-16">ชื่อผู้ใช้:</span>
-              <code className="bg-green-100 px-2 py-1 rounded text-green-800">admin</code>
+              <code className="bg-green-100 px-2 py-1 rounded text-green-800">user</code>
             </p>
             <p className="text-green-700 flex items-center">
               <span className="w-16">รหัสผ่าน:</span>

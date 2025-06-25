@@ -51,7 +51,7 @@ export const Navbars = () => {
 
             <button className="flex items-center space-x-2 px-3 py-2 text-gray-500 hover:text-green-600 hover:bg-gray-50 rounded-lg transition-colors duration-150">
               <User className="w-5 h-5" />
-              <span className="sm:block text-sm font-medium text-gray-700">Admin</span>
+              <span className="sm:block text-sm font-medium text-gray-700">User_1234</span>
             </button>
 
             <button 
