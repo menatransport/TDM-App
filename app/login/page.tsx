@@ -13,8 +13,7 @@ const login = () => {
   const [error, setError] = useState('')
   const [isVisible, setIsVisible] = useState(false)
   const [isChecked, setIsChecked] = useState(false)
-  const router = useRouter() // ✅ ใช้ router จาก next/router แทน
-  const JWT = "jwt_admin_001";
+  const router = useRouter() 
   const local_remember = () => {
     if (typeof window !== 'undefined') {
       if (isChecked) {
@@ -51,9 +50,9 @@ const login = () => {
   setError('')
 
   try {
-    console.log("username", username, "password", password);
-    const chck = transortUser(username, password);
-    console.log("chck", chck);
+
+    let chck = transortUser(username, password);
+
     if (chck) {
     if (username == "user" && password == "1234") {
       localStorage.setItem('isLoggedIn', 'true')
@@ -91,20 +90,20 @@ return (
 
       {/* Logo section */}
       <div className="text-center mb-2">
-        <div className={`inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-500 rounded-2xl mb-4 shadow-lg transform transition-all duration-700 ease-out ${
+        <div className={`inline-flex items-center justify-center w-50 h-25 bg-gradient-to-br from-white-400 to-white-500 rounded-2xl mb-4  transform transition-all duration-700 ease-out ${
           isVisible ? 'scale-100 rotate-0' : 'scale-0 rotate-45'
         }`}>
-          <Truck className="w-8 h-8 text-white" />
+         <img src="/mena.png" alt="Logo" className="w-40 h-25" />
         </div>
         <h1 className={`text-2xl font-bold text-gray-800 mb-1 transform transition-all duration-700 ease-out delay-200 ${
           isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
         }`}>
-          Menatransport
+          Smart - TDM Tracking Status
         </h1>
         <p className={`text-gray-500 text-sm transform transition-all duration-700 ease-out delay-300 ${
           isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
         }`}>
-          Logistics & Delivery
+          Deverloped by Process Improvment Team 2025
         </p>
       </div>
 
@@ -233,7 +232,7 @@ return (
       <div className={`text-center mt-6 text-gray-500 text-sm transform transition-all duration-700 ease-out delay-600 ${
         isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
       }`}>
-        <p>© 2025 Menatransport Logistics</p>
+        <p>© 2025 MENA TRANSPORT PUBLIC.CO.,LTD</p>
       </div>
     </div>
   </div>

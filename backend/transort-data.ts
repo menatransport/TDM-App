@@ -15,6 +15,7 @@ export interface TransportJob {
   Pallet_act: string;
   Cost_pd: number;
   Rmk_job: string;
+  Estimate_time: string; 
   DO: Array<{
     Timestamp_start?: string;
     Timestamp_ori?: string;
@@ -46,11 +47,12 @@ export const mockTransportJobs: TransportJob[] = [
     Recv_date: "2025-06-17",
     Recv_time: "06:00",
     unload_date: "2025-06-17",
-    unload_time: "18:00",
+    unload_time: "19:00",
     Pallet_pl: 30,
     Pallet_act: "โอน",
     Cost_pd: 1800,
     Rmk_job: "ทอยขวด 2",
+    Estimate_time:"",
     DO: [
       {
         Timestamp_start: "",
@@ -87,6 +89,7 @@ export const mockTransportJobs: TransportJob[] = [
     Pallet_act: "โอน",
     Cost_pd: 1800,
     Rmk_job: "ทอยขวด 2",
+    Estimate_time: "07:00",
     DO: [
       {
         Timestamp_start: "16/6/2025, 10:00",
@@ -123,6 +126,7 @@ export const mockTransportJobs: TransportJob[] = [
     Pallet_act: "แลกเปลี่ยน",
     Cost_pd: 1200,
     Rmk_job: "เตรียมพาเลทเปล่า 26 ตัวติดรถไปด้วย",
+    Estimate_time: "",
     DO: [
       {
         Timestamp_start: "16/6/2025, 10:00",
@@ -162,6 +166,7 @@ export const mockTransportJobs: TransportJob[] = [
     Pallet_act: "แลกเปลี่ยน",
     Cost_pd: 1200,
     Rmk_job: "เตรียมพาเลทเปล่า 26 ตัวติดรถไปด้วย",
+    Estimate_time: "16:00",
     DO: [
       {
         Timestamp_start: "16/6/2025, 10:00",
@@ -201,6 +206,7 @@ export const mockTransportJobs: TransportJob[] = [
     Pallet_act: "แลกเปลี่ยน",
     Cost_pd: 1200,
     Rmk_job: "เตรียมพาเลทเปล่า 26 ตัวติดรถไปด้วย",
+    Estimate_time: "16:30",
     DO: [
       {
         Timestamp_start: "16/6/2025, 10:00",
@@ -240,6 +246,7 @@ export const mockTransportJobs: TransportJob[] = [
     Pallet_act: "แลกเปลี่ยน",
     Cost_pd: 1200,
     Rmk_job: "เตรียมพาเลทเปล่า 26 ตัวติดรถไปด้วย",
+    Estimate_time: "",
     DO: [
       {
         Timestamp_start: "16/6/2025, 10:00",
@@ -279,6 +286,7 @@ export const mockTransportJobs: TransportJob[] = [
     Pallet_act: "แลกเปลี่ยน",
     Cost_pd: 1200,
     Rmk_job: "เตรียมพาเลทเปล่า 26 ตัวติดรถไปด้วย",
+    Estimate_time: "",
     DO: [
       {
         Timestamp_start: "16/6/2025, 10:00",
@@ -318,6 +326,7 @@ export const mockTransportJobs: TransportJob[] = [
     Pallet_act: "แลกเปลี่ยน",
     Cost_pd: 1200,
     Rmk_job: "เตรียมพาเลทเปล่า 26 ตัวติดรถไปด้วย",
+    Estimate_time: "",
     DO: [
       {
         Timestamp_start: "16/6/2025, 10:00",
@@ -357,6 +366,7 @@ export const mockTransportJobs: TransportJob[] = [
     Pallet_act: "แลกเปลี่ยน",
     Cost_pd: 1200,
     Rmk_job: "เตรียมพาเลทเปล่า 26 ตัวติดรถไปด้วย",
+    Estimate_time: "",
     DO: [
       {
         Timestamp_start: "16/6/2025, 10:00",
@@ -396,6 +406,7 @@ export const mockTransportJobs: TransportJob[] = [
     Pallet_act: "โอน",
     Cost_pd: 1500,
     Rmk_job: "ลงงานเสร็จแล้ว ขึ้นงานคืนโรงเบียร์ต่อ",
+    Estimate_time: "",
     DO: [
       {
         Timestamp_start: "16/6/2025, 10:00",

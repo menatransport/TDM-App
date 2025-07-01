@@ -4,7 +4,6 @@ import { Truck, Menu, X, Bell, User } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 
-
 export const Navbars = () => {
 
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -20,9 +19,10 @@ export const Navbars = () => {
         <div className="flex justify-between items-center h-18">
 
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
-              <Truck className="w-5 h-5 text-white" />
-            </div>
+            
+              {/* <Truck className="w-5 h-5 text-white" /> */}
+              <img src="/mena.png" alt="Logo" className="w-15 h-10" />
+   
             <div>
               <h1 className="text-lg font-semibold text-gray-900">Smart - TDM</h1>
               <p className="text-xs text-gray-500 -mt-0.5">Menatransport</p>

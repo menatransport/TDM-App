@@ -108,7 +108,6 @@ const Home = () => {
                   </Button>
                 </DialogTrigger>
                 <DialogContent
-                  onInteractOutside={(e) => e.preventDefault()}
                   className="bg-white border border-gray-500"
                 >
                   <DialogHeader>

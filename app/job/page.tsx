@@ -1,11 +1,12 @@
 "use client";
-import React, { useState, useRef  } from 'react'
+import React, { useState, useRef } from "react";
 import { Navbars } from "@/components/Navbars";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getStatusSteps } from "@/backend/transort-data";
 import { Button } from "@/components/ui/button";
 import Swal from "sweetalert2";
+import { ImagesFn } from "@/components/ImagesFn";
 import {
   MapPin,
   Clock,
@@ -14,7 +15,9 @@ import {
   ImagePlus,
   CircleEllipsis,
   X,
-  Save 
+  Save,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { useJobStore } from "@/store/useStore";
 import { useRouter } from "next/navigation";
@@ -22,57 +25,60 @@ import TimelineStep from "@/components/Timeline";
 
 const Jobs = () => {
   const job = useJobStore((state) => state.selectedJob);
-
+  const [isOpen1, setIsOpen1] = useState(false);
+  const [isOpen2, setIsOpen2] = useState(false);
+  const [isOpen3, setIsOpen3] = useState(false);
+  const [isOpen4, setIsOpen4] = useState(false);
   console.log("Job ที่รับมาจาก store : ", job);
   const router = useRouter();
 
-  const [images, setImages] = useState<File[]>([])
-  const inputRef = useRef<HTMLInputElement>(null)
+  const [images, setImages] = useState<File[]>([]);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
+    const files = e.target.files;
     if (files) {
       // แปลง FileList เป็น Array แล้วต่อกับ state เดิม
-      setImages((prev) => [...prev, ...Array.from(files)])
+      setImages((prev) => [...prev, ...Array.from(files)]);
     }
-  }
+  };
 
-   const removeImage = (indexToRemove: number) => {
+  const removeImage = (indexToRemove: number) => {
     setImages((prev) => {
-      const updated = prev.filter((_, index) => index !== indexToRemove)
+      const updated = prev.filter((_, index) => index !== indexToRemove);
       // ถ้าไม่มีรูปแล้ว เคลียร์ input file ด้วย
       if (updated.length === 0 && inputRef.current) {
-        inputRef.current.value = ''
+        inputRef.current.value = "";
       }
-      return updated
-    })
-  }
+      return updated;
+    });
+  };
 
   const handleSaved = () => {
-  Swal.fire({
-    title: "คุณต้องการยืนยันบันทึกข้อมูลหรือไม่?",
-    text: "กรุณาตรวจสอบความถูกต้องของข้อมูลก่อนกดปุ่ม 'ตกลง'",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonColor: "#3085d6",
-    cancelButtonColor: "#d33",
-    confirmButtonText: "ตกลง",
-    cancelButtonText: "ยกเลิก",
-    allowOutsideClick: false
-  }).then((result) => {
-    if (result.isConfirmed) {
-      Swal.fire({
-        title: "บันทึกข้อมูลสำเร็จ",
-        text: "ข้อมูลของคุณถูกบันทึกเรียบร้อยแล้ว",
-        icon: "success",
-        confirmButtonText: "ตกลง",
-        allowOutsideClick: false
-      }).then(() => {
-        router.push("/home");
-      });
-    }
-  });
-}
+    Swal.fire({
+      title: "คุณต้องการยืนยันบันทึกข้อมูลหรือไม่?",
+      text: "กรุณาตรวจสอบความถูกต้องของข้อมูลก่อนกดปุ่ม 'ตกลง'",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "ตกลง",
+      cancelButtonText: "ยกเลิก",
+      allowOutsideClick: false,
+    }).then((result) => {
+      if (result.isConfirmed) {
+        Swal.fire({
+          title: "บันทึกข้อมูลสำเร็จ",
+          text: "ข้อมูลของคุณถูกบันทึกเรียบร้อยแล้ว",
+          icon: "success",
+          confirmButtonText: "ตกลง",
+          allowOutsideClick: false,
+        }).then(() => {
+          router.push("/home");
+        });
+      }
+    });
+  };
 
   if (!job || !job.DO || job.DO.length === 0) {
     return (
@@ -326,7 +332,7 @@ const Jobs = () => {
                     timestamps[step.key as keyof typeof timestamps];
                   const isCompleted = timestamp && timestamp.trim() !== "";
                   const isActive = index === currentStepIndex + 1;
-                    //console.log("step.key:", step.key);
+                  //console.log("step.key:", step.key);
                   return (
                     <TimelineStep
                       key={step.key}
@@ -343,7 +349,7 @@ const Jobs = () => {
           </Card>
 
           {/* รายละเอียดเพิ่มเติม*/}
-          <Card className="mb-4 bg-gray-50 shadow-md hover:shadow-lg transition-all duration-300 border-0 ring-1 ring-gray-200/50 hover:ring-gray-300/50">
+          <Card className="mb-25 bg-gray-50 shadow-md hover:shadow-lg transition-all duration-300 border-0 ring-1 ring-gray-200/50 hover:ring-gray-300/50">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <CircleEllipsis className="h-5 w-5" />
@@ -352,36 +358,118 @@ const Jobs = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4 mb-4">
-                <CardTitle className="flex text-sm font-normal space-x-2">
+                <CardTitle
+                  className="flex items-center justify-between text-sm font-normal p-2 bg-orange-100 rounded-lg cursor-pointer"
+                  onClick={() => setIsOpen1(!isOpen1)}
+                >
                   <span>1. จำนวนพาเลท</span>
+                  {isOpen1 ? (
+                    <ChevronUp size={18} />
+                  ) : (
+                    <ChevronDown size={18} />
+                  )}
                 </CardTitle>
-                <div className="grid grid-cols-2 flex justify-center md:grid-cols-2 gap-4">
-                  <input
-                    type="number"
-                    className="w-full text-xs text-center p-2 border border-gray-300 rounded-lg bg-white shadow-sm"
-                    placeholder="แลกเปลี่ยน"
-                  />
-                  <input
-                    type="number"
-                    className="w-full text-xs text-center p-2 border border-gray-300 rounded-lg bg-white shadow-sm"
-                    placeholder="โอน"
-                  />
-                  <input
-                    type="number"
-                    className="w-full text-xs text-center p-2 border border-gray-300 rounded-lg bg-white shadow-sm"
-                    placeholder="ยืม"
-                  />
-                  {/* <input
-                    type="number"
-                    className="w-full text-xs text-center p-2 border border-gray-300 rounded-lg bg-white shadow-sm "
-                    placeholder="รับคืน"
-                  /> */}
-                </div>
+                {isOpen1 && (
+                  <div className="grid grid-cols-2 md:grid-cols-2 gap-4 mt-2">
+                     <div className="w-full max-w-sm min-w-[200px]">
+                    <div className="relative">
+                      <input className="peer w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-slate-400 hover:border-slate-300 shadow-sm focus:shadow" />
+                      <label className="absolute cursor-text bg-white px-1 left-2.5 top-2.5 text-slate-400 text-sm transition-all transform origin-left peer-focus:-top-2 peer-focus:left-2.5 peer-focus:text-xs peer-focus:text-slate-400 peer-focus:scale-90">
+                        แลกเปลี่ยนพาเลท
+                      </label>
+                    </div>
+                  </div>
+                    <div className="w-full max-w-sm min-w-[200px]">
+                    <div className="relative">
+                      <input className="peer w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-slate-400 hover:border-slate-300 shadow-sm focus:shadow" />
+                      <label className="absolute cursor-text bg-white px-1 left-2.5 top-2.5 text-slate-400 text-sm transition-all transform origin-left peer-focus:-top-2 peer-focus:left-2.5 peer-focus:text-xs peer-focus:text-slate-400 peer-focus:scale-90">
+                        โอนพาเลท
+                      </label>
+                    </div>
+                  </div>
+                     <div className="w-full max-w-sm min-w-[200px]">
+                    <div className="relative">
+                      <input className="peer w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-slate-400 hover:border-slate-300 shadow-sm focus:shadow" />
+                      <label className="absolute cursor-text bg-white px-1 left-2.5 top-2.5 text-slate-400 text-sm transition-all transform origin-left peer-focus:-top-2 peer-focus:left-2.5 peer-focus:text-xs peer-focus:text-slate-400 peer-focus:scale-90">
+                        นำฝากพาเลท
+                      </label>
+                    </div>
+                  </div>
+                     <div className="w-full max-w-sm min-w-[200px]">
+                    <div className="relative">
+                      <input className="peer w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-slate-400 hover:border-slate-300 shadow-sm focus:shadow" />
+                      <label className="absolute cursor-text bg-white px-1 left-2.5 top-2.5 text-slate-400 text-sm transition-all transform origin-left peer-focus:-top-2 peer-focus:left-2.5 peer-focus:text-xs peer-focus:text-slate-400 peer-focus:scale-90">
+                        รับคืนพาเลท
+                      </label>
+                    </div>
+                  </div>
+                  </div>
+                )}
+                <CardTitle
+                  className="flex items-center justify-between text-sm font-normal p-2 bg-orange-100 rounded-lg cursor-pointer"
+                  onClick={() => setIsOpen2(!isOpen2)}
+                >
+                  <span>2. รายละเอียดสินค้าชำรุด</span>
+                  {isOpen2 ? (
+                    <ChevronUp size={18} />
+                  ) : (
+                    <ChevronDown size={18} />
+                  )}
+                </CardTitle>
+                {isOpen2 && (
+                  <div className="w-full max-w-sm min-w-[200px]">
+                    <div className="relative">
+                      <input className="peer w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-slate-400 hover:border-slate-300 shadow-sm focus:shadow" />
+                      <label className="absolute cursor-text bg-white px-1 left-2.5 top-2.5 text-slate-400 text-sm transition-all transform origin-left peer-focus:-top-2 peer-focus:left-2.5 peer-focus:text-xs peer-focus:text-slate-400 peer-focus:scale-90">
+                        ระบุรายละเอียดสินค้าชำรุด
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                {/* หัวข้อ 3 */}
+                <CardTitle
+                  className="flex items-center justify-between text-sm font-normal p-2 bg-orange-100 rounded-lg cursor-pointer"
+                  onClick={() => setIsOpen3(!isOpen3)}
+                >
+                  <span>3. เลข LDT</span>
+                  {isOpen3 ? (
+                    <ChevronUp size={18} />
+                  ) : (
+                    <ChevronDown size={18} />
+                  )}
+                </CardTitle>
+                {isOpen3 && (
+                  <div className="w-full max-w-sm min-w-[200px]">
+                    <div className="relative">
+                      <input className="peer w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-slate-400 hover:border-slate-300 shadow-sm focus:shadow" />
+                      <label className="absolute cursor-text bg-white px-1 left-2.5 top-2.5 text-slate-400 text-sm transition-all transform origin-left peer-focus:-top-2 peer-focus:left-2.5 peer-focus:text-xs peer-focus:text-slate-400 peer-focus:scale-90">
+                        ระบุเลข LDT
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                {/* หัวข้อ 4 */}
+                <CardTitle
+                  className="flex items-center justify-between text-sm font-normal p-2 bg-orange-100 rounded-lg cursor-pointer"
+                  onClick={() => setIsOpen4(!isOpen4)}
+                >
+                  <span>4. บิลทางด่วน</span>
+                  {isOpen4 ? (
+                    <ChevronUp size={18} />
+                  ) : (
+                    <ChevronDown size={18} />
+                  )}
+                </CardTitle>
+                {isOpen4 && <ImagesFn />}
+
+                {/* NOT */}
               </div>
             </CardContent>
           </Card>
 
-          {/* เอกสาร แนบรูป*/}
+          {/* เอกสาร แนบรูป
           <Card className="mb-20 bg-gray-50 shadow-md hover:shadow-lg transition-all duration-300 border-0 ring-1 ring-gray-200/50 hover:ring-gray-300/50">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -390,51 +478,49 @@ const Jobs = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-               <input
-        ref={inputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          placeholder='เลือกรูปภาพ'
-          onChange={handleFileChange}
-          className="block w-full text-sm text-gray-500 file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-        />
-        
+              <input
+                ref={inputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                placeholder="เลือกรูปภาพ"
+                onChange={handleFileChange}
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              />
 
-        {images.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4">
-            {images.map((file, index) => (
-              <div key={index} className="relative group">
-                <img
-                  src={URL.createObjectURL(file)}
-                  alt={`preview-${index}`}
-                  className="w-full object-cover rounded-lg border border-gray-300 shadow"
-                />
-                <button
-                  onClick={() => removeImage(index)}
-                  className="absolute top-1 right-1 bg-white bg-opacity-70  text-red-500 rounded-full p-1 shadow opacity-100 transition"
-                  title="ลบรูปนี้"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+              {images.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4">
+                  {images.map((file, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={`preview-${index}`}
+                        className="w-full object-cover rounded-lg border border-gray-300 shadow"
+                      />
+                      <button
+                        onClick={() => removeImage(index)}
+                        className="absolute top-1 right-1 bg-white bg-opacity-70  text-red-500 rounded-full p-1 shadow opacity-100 transition"
+                        title="ลบรูปนี้"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
-          </Card>
+          </Card> */}
 
-            {/* Button saved */}
-            <div className="fixed bottom-0 right-0 m-2.5 z-50">
-                <Button
-  onClick={handleSaved}
-  className="fixed bottom-4 right-4 z-50 h-12 bg-blue-500 text-white hover:bg-blue-700 transition-all duration-200 flex items-center space-x-2 px-4 py-2 shadow-lg"
->
-  <Save size={18} />
-  <span className="">บันทึกข้อมูล</span>
-</Button>
-
-            </div>
+          {/* Button saved */}
+          <div className="fixed bottom-0 right-0 m-2.5 z-50">
+            <Button
+              onClick={handleSaved}
+              className="fixed bottom-4 right-4 z-50 h-12 bg-blue-500 text-white hover:bg-blue-700 transition-all duration-200 flex items-center space-x-2 px-4 py-2 shadow-lg"
+            >
+              <Save size={18} />
+              <span className="">บันทึกข้อมูล</span>
+            </Button>
+          </div>
         </div>
       </div>
     </>
