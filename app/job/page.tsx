@@ -1,12 +1,12 @@
 "use client";
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { Navbars } from "@/components/Navbars";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { getStatusSteps } from "@/backend/transort-data";
 import { Button } from "@/components/ui/button";
 import Swal from "sweetalert2";
 import { ImagesFn } from "@/components/ImagesFn";
+import { useSearchParams } from "next/navigation";
 import {
   MapPin,
   Clock,
@@ -19,42 +19,64 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-import { useJobStore } from "@/store/useStore";
 import { useRouter } from "next/navigation";
 import TimelineStep from "@/components/Timeline";
 
 const Jobs = () => {
-  const job = useJobStore((state) => state.selectedJob);
+  const router = useRouter();
+
   const [isOpen1, setIsOpen1] = useState(false);
   const [isOpen2, setIsOpen2] = useState(false);
   const [isOpen3, setIsOpen3] = useState(false);
   const [isOpen4, setIsOpen4] = useState(false);
-  console.log("Job ที่รับมาจาก store : ", job);
-  const router = useRouter();
+  const [job, setDatajobs] = useState<any>({});
+  const [tickets, setTickets] = useState<any>({});
+  const [pallet, setPallet] = useState<any>({});
+  const [imageTollway, setImagesTollway] = useState<File[]>([]);
+  const searchParams = useSearchParams();
 
-  const [images, setImages] = useState<File[]>([]);
-  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const jobId = searchParams.get("id");
+    const access_token = localStorage.getItem("access_token");
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files) {
-      // แปลง FileList เป็น Array แล้วต่อกับ state เดิม
-      setImages((prev) => [...prev, ...Array.from(files)]);
-    }
-  };
+    if (!access_token || !jobId) return;
 
-  const removeImage = (indexToRemove: number) => {
-    setImages((prev) => {
-      const updated = prev.filter((_, index) => index !== indexToRemove);
-      // ถ้าไม่มีรูปแล้ว เคลียร์ input file ด้วย
-      if (updated.length === 0 && inputRef.current) {
-        inputRef.current.value = "";
+    const fetchData = async () => {
+      try {
+        const res_data = await fetch("/api/orders_job", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${access_token}`,
+            id: jobId,
+          },
+        });
+
+        const data = await res_data.json();
+        console.log("ticketData:", data.ticket);
+        console.log("palletData:", data.palletdata);
+        setDatajobs(data);
+        setTickets(data.ticket);
+        setPallet(data.palletdata);
+      } catch (error) {
+        console.error("Error fetching data:", error);
       }
-      return updated;
-    });
+    };
+
+    fetchData();
+  }, [searchParams]);
+
+  const handleImagesChange = (files: File[]) => {
+    setImagesTollway(files);
+    console.log(
+      "✅ รูปภาพใหม่:",
+      files.map((f) => f.name)
+    );
   };
 
   const handleSaved = () => {
+    console.log("จำนวนภาพใน images4:", imageTollway.length);
+
     Swal.fire({
       title: "คุณต้องการยืนยันบันทึกข้อมูลหรือไม่?",
       text: "กรุณาตรวจสอบความถูกต้องของข้อมูลก่อนกดปุ่ม 'ตกลง'",
@@ -66,6 +88,7 @@ const Jobs = () => {
       cancelButtonText: "ยกเลิก",
       allowOutsideClick: false,
     }).then((result) => {
+
       if (result.isConfirmed) {
         Swal.fire({
           title: "บันทึกข้อมูลสำเร็จ",
@@ -74,18 +97,18 @@ const Jobs = () => {
           confirmButtonText: "ตกลง",
           allowOutsideClick: false,
         }).then(() => {
-          router.push("/home");
+          // router.push("/home");
         });
       }
     });
   };
 
-  if (!job || !job.DO || job.DO.length === 0) {
+  if (!job || job.length === 0) {
     return (
       <div className="p-4">
         <Navbars />
         <div className="text-center mt-10 text-red-500">
-          🚫 ไม่พบข้อมูลการขนส่ง กรุณากลับไปเลือกงานอีกครั้ง
+          🚫 ไม่พบข้อมูลการขนส่ง โปรดแจ้งเจ้าหน้าที่
         </div>
         <div className="flex justify-center mt-4">
           <Button onClick={() => router.push("/home")}>
@@ -96,40 +119,67 @@ const Jobs = () => {
     );
   }
 
-  const formatDate = (date: string) => {
-    const d = new Date(date);
+  const formatDate = (dateStr: string | undefined) => {
+    if (!dateStr || typeof dateStr !== "string") return "-";
+
+    const [datePart] = dateStr.split(",");
+    if (!datePart) return "-";
+
+    const [day, month, year] = datePart.split("/").map(Number);
+    const d = new Date(year, month - 1, day);
+
     return d.toLocaleDateString("th-TH", {
       day: "2-digit",
       month: "short",
     });
   };
 
-  const statusSteps = getStatusSteps();
-  console.log("job job:", job.DO[0]);
-  // ตรวจสอบว่า job มีข้อมูลหรือไม่
-  const timestamps = job.DO[0] || {};
+  const formatTime = (dateStr: string | undefined) => {
+    if (!dateStr || typeof dateStr !== "string") return "-";
 
-  // หา step ปัจจุบันที่กำลังดำเนินการ
-  const getCurrentStep = () => {
-    const stepKeys = statusSteps.map((step) => step.key);
-    let currentStepIndex = -1;
+    const [datePart, timePart] = dateStr.split(",");
+    if (!datePart || !timePart) return "-";
 
-    for (let i = 0; i < stepKeys.length; i++) {
-      if (timestamps[stepKeys[i] as keyof typeof timestamps]) {
-        currentStepIndex = i;
-      } else {
-        break;
-      }
-    }
+    const [day, month, year] = datePart.split("/").map(Number);
+    const [hour, minute] = timePart.trim().split(":").map(Number);
+    const d = new Date(year, month - 1, day, hour, minute);
 
-    return currentStepIndex;
+    return d.toLocaleTimeString("th-TH", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
-  const currentStepIndex = getCurrentStep();
-  const palletInfo = job.DO[1] || {};
-  const attachmentInfo = job.DO[2] || {};
+  interface Pallet {
+    change_pallet?: string;
+    transfer_pallet?: string;
+    drop_pallet?: string;
+    return_pallet?: string;
+    borrow_customer_pallet?: string;
+    return_customer_pallet?: string;
+    [key: string]: string | undefined;
+  }
 
-  const getStatusConfig = (status: string | undefined) => {
+  const handleInputChange = (field: keyof Pallet, value: string) => {
+    setPallet((prev: Pallet) => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const getStatusSteps = () => [
+    { key: "Timestamp_start", label: "เริ่มงาน", icon: "🚀" },
+    { key: "Timestamp_ori", label: "ถึงต้นทาง", icon: "📍" },
+    { key: "Timestamp_strecv", label: "เริ่มขึ้นสินค้า", icon: "📤" },
+    { key: "Timestamp_enrecv", label: "ขึ้นสินค้าเสร็จ", icon: "✅" },
+    { key: "Timestamp_intran", label: "เริ่มขนส่ง", icon: "🚛" },
+    { key: "Timestamp_des", label: "ถึงปลายทาง", icon: "🎯" },
+    { key: "Timestamp_stload", label: "เริ่มลงสินค้า", icon: "📥" },
+    { key: "Timestamp_enload", label: "ลงสินค้าเสร็จ", icon: "✅" },
+    { key: "Timestamp_ended", label: "เสร็จงาน", icon: "🏁" },
+  ];
+
+  const getStatusConfig = (status: string) => {
     switch (status) {
       case "พร้อมรับงาน":
       case "ขนส่งสำเร็จ":
@@ -203,14 +253,14 @@ const Jobs = () => {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg font-bold">
-                  📦{job.Id_load}
+                  📦{job.load_id}
                 </CardTitle>
                 <Badge
                   className={`${
-                    getStatusConfig(job.Status).color
+                    getStatusConfig(job.status).color
                   } border-white/30 text-xs px-2 py-0.5 rounded-full backdrop-blur-sm`}
                 >
-                  {job.Status}
+                  {job.status}
                 </Badge>
               </div>
             </CardHeader>
@@ -219,30 +269,30 @@ const Jobs = () => {
                 <div className="flex items-center justify-between text-xs">
                   <div
                     className={`flex items-center space-x-1 flex-1 min-w-0 ${
-                      getStatusConfig(job.Status).btn
+                      getStatusConfig(job.status).btn
                     } rounded-lg p-2 shadow-sm`}
                   >
                     <MapPin
                       className={`h-3 w-3 ${
-                        getStatusConfig(job.Status).iconColor
+                        getStatusConfig(job.status).iconColor
                       } flex-shrink-0`}
                     />
                     <span className="font-medium text-white-900 truncate">
-                      {job.Ori_locat}
+                      {job.locat_recive}
                     </span>
                   </div>
                   <ArrowRight
                     className={`h-3 w-3 ${
-                      getStatusConfig(job.Status).iconColor
+                      getStatusConfig(job.status).iconColor
                     } mx-2 flex-shrink-0`}
                   />
                   <div
                     className={`flex items-center space-x-1 flex-1 min-w-0 ${
-                      getStatusConfig(job.Status).btn
+                      getStatusConfig(job.status).btn
                     } rounded-lg p-2 shadow-sm`}
                   >
                     <span className="font-medium text-gray-900 truncate">
-                      {job.Des_locat}
+                      {job.locat_deliver}
                     </span>
                   </div>
                 </div>
@@ -258,9 +308,11 @@ const Jobs = () => {
                     </div>
                     <div className="flex flex-row gap-2">
                       <p className="text-xs font-bold text-gray-900">
-                        {formatDate(job.Recv_date)}
+                        {formatDate(job.date_recive)}
                       </p>
-                      <p className="text-xs text-gray-600">{job.Recv_time}</p>
+                      <p className="text-xs text-gray-600">
+                        {formatTime(job.date_recive)}
+                      </p>
                     </div>
                   </div>
 
@@ -273,9 +325,11 @@ const Jobs = () => {
                     </div>
                     <div className="flex flex-row gap-2">
                       <p className="text-xs font-bold text-gray-900">
-                        {formatDate(job.unload_date)}
+                        {formatDate(job.date_deliver)}
                       </p>
-                      <p className="text-xs text-gray-600">{job.unload_time}</p>
+                      <p className="text-xs text-gray-600">
+                        {formatTime(job.date_deliver)}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -287,7 +341,7 @@ const Jobs = () => {
                       </p>
                     </div>
                     <p className="text-xs font-bold text-center text-gray-900">
-                      {job.Cost_pd}
+                      {job.unload_cost} 
                     </p>
                   </div>
                   <div className="bg-white rounded-lg p-2 shadow-sm">
@@ -297,7 +351,7 @@ const Jobs = () => {
                       </p>
                     </div>
                     <p className="text-xs font-bold text-center text-gray-900">
-                      {job.Pallet_pl} {job.Pallet_act}
+                      {job.pallet_plan} {job.pallet_type}
                     </p>
                   </div>
                 </div>
@@ -309,7 +363,7 @@ const Jobs = () => {
                       </p>
                     </div>
                     <p className="text-xs font-bold text-center text-gray-900">
-                      {job.Rmk_job}
+                      {job.remark}
                     </p>
                   </div>
                 </div>
@@ -327,12 +381,12 @@ const Jobs = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {statusSteps.map((step, index) => {
+                {/* {statusSteps.map((step, index) => {
                   const timestamp =
                     timestamps[step.key as keyof typeof timestamps];
                   const isCompleted = timestamp && timestamp.trim() !== "";
                   const isActive = index === currentStepIndex + 1;
-                  //console.log("step.key:", step.key);
+       
                   return (
                     <TimelineStep
                       key={step.key}
@@ -343,7 +397,7 @@ const Jobs = () => {
                       icon={step.icon}
                     />
                   );
-                })}
+                })} */}
               </div>
             </CardContent>
           </Card>
@@ -358,158 +412,173 @@ const Jobs = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4 mb-4">
-                <CardTitle
-                  className="flex items-center justify-between text-sm font-normal p-2 bg-orange-100 rounded-lg cursor-pointer"
-                  onClick={() => setIsOpen1(!isOpen1)}
-                >
-                  <span>1. จำนวนพาเลท</span>
-                  {isOpen1 ? (
-                    <ChevronUp size={18} />
-                  ) : (
-                    <ChevronDown size={18} />
-                  )}
-                </CardTitle>
+               <div
+          className="flex items-center justify-between text-sm font-medium p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg cursor-pointer hover:from-blue-100 hover:to-blue-150 transition-all duration-200 shadow-sm"
+          onClick={() => setIsOpen1(!isOpen1)}
+        >
+          <span className="text-blue-800">1. จัดการพาเลท</span>
+          {isOpen1 ? (
+            <ChevronUp size={20} className="text-blue-600" />
+          ) : (
+            <ChevronDown size={20} className="text-blue-600" />
+          )}
+        </div>
                 {isOpen1 && (
-                  <div className="grid grid-cols-2 md:grid-cols-2 gap-4 mt-2">
-                     <div className="w-full max-w-sm min-w-[200px]">
-                    <div className="relative">
-                      <input className="peer w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-slate-400 hover:border-slate-300 shadow-sm focus:shadow" />
-                      <label className="absolute cursor-text bg-white px-1 left-2.5 top-2.5 text-slate-400 text-sm transition-all transform origin-left peer-focus:-top-2 peer-focus:left-2.5 peer-focus:text-xs peer-focus:text-slate-400 peer-focus:scale-90">
-                        แลกเปลี่ยนพาเลท
-                      </label>
-                    </div>
-                  </div>
-                    <div className="w-full max-w-sm min-w-[200px]">
-                    <div className="relative">
-                      <input className="peer w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-slate-400 hover:border-slate-300 shadow-sm focus:shadow" />
-                      <label className="absolute cursor-text bg-white px-1 left-2.5 top-2.5 text-slate-400 text-sm transition-all transform origin-left peer-focus:-top-2 peer-focus:left-2.5 peer-focus:text-xs peer-focus:text-slate-400 peer-focus:scale-90">
-                        โอนพาเลท
-                      </label>
-                    </div>
-                  </div>
-                     <div className="w-full max-w-sm min-w-[200px]">
-                    <div className="relative">
-                      <input className="peer w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-slate-400 hover:border-slate-300 shadow-sm focus:shadow" />
-                      <label className="absolute cursor-text bg-white px-1 left-2.5 top-2.5 text-slate-400 text-sm transition-all transform origin-left peer-focus:-top-2 peer-focus:left-2.5 peer-focus:text-xs peer-focus:text-slate-400 peer-focus:scale-90">
-                        นำฝากพาเลท
-                      </label>
-                    </div>
-                  </div>
-                     <div className="w-full max-w-sm min-w-[200px]">
-                    <div className="relative">
-                      <input className="peer w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-slate-400 hover:border-slate-300 shadow-sm focus:shadow" />
-                      <label className="absolute cursor-text bg-white px-1 left-2.5 top-2.5 text-slate-400 text-sm transition-all transform origin-left peer-focus:-top-2 peer-focus:left-2.5 peer-focus:text-xs peer-focus:text-slate-400 peer-focus:scale-90">
-                        รับคืนพาเลท
-                      </label>
-                    </div>
-                  </div>
-                  </div>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4 p-4 bg-gray-50 rounded-lg">
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                แลกเปลี่ยนพาเลท
+              </label>
+              <input
+                type="text"
+                value={pallet.change_pallet || 0}
+                onChange={(e) => handleInputChange('change_pallet', e.target.value)}
+                placeholder="กรอกจำนวนพาเลทที่แลกเปลี่ยน"
+                className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm"
+              />
+            </div>
+            
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                โอนพาเลท
+              </label>
+              <input
+                type="text"
+                value={pallet.transfer_pallet || 0}
+                onChange={(e) => handleInputChange('transfer_pallet', e.target.value)}
+                placeholder="กรอกจำนวนพาเลทที่โอน"
+                className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm"
+              />
+            </div>
+            
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                นำฝากพาเลท
+              </label>
+              <input
+                type="text"
+                value={pallet.drop_pallet || 0}
+                onChange={(e) => handleInputChange('drop_pallet', e.target.value)}
+                placeholder="กรอกจำนวนพาเลทที่นำฝาก"
+                className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm"
+              />
+            </div>
+            
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                รับคืนพาเลท
+              </label>
+              <input
+                type="text"
+                value={pallet.return_pallet || 0}
+                onChange={(e) => handleInputChange('return_pallet', e.target.value)}
+                placeholder="กรอกจำนวนพาเลทที่รับคืน"
+                className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm"
+              />
+            </div>
+            
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                ยืมพาเลทลูกค้า
+              </label>
+              <input
+                type="text"
+                value={pallet.borrow_customer_pallet || 0}
+                onChange={(e) => handleInputChange('borrow_customer_pallet', e.target.value)}
+                placeholder="กรอกจำนวนพาเลทที่ยืม (แจ้งเจ้าหน้าที่)"
+                className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm"
+              />
+            </div>
+            
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                คืนพาเลทลูกค้า
+              </label>
+              <input
+                type="text"
+                value={pallet.return_customer_pallet || 0}
+                onChange={(e) => handleInputChange('return_customer_pallet', e.target.value)}
+                placeholder="กรอกจำนวนพาเลทที่คืน"
+                className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm"
+              />
+            </div>
+              <p className="text-[14px] text-amber-600 mt-1">
+                ⚠️ การยืม-ฝากพาเลทโปรดแจ้งเจ้าหน้าที่ให้รับทราบ
+              </p>
+          </div>
                 )}
-                <CardTitle
-                  className="flex items-center justify-between text-sm font-normal p-2 bg-orange-100 rounded-lg cursor-pointer"
-                  onClick={() => setIsOpen2(!isOpen2)}
-                >
-                  <span>2. รายละเอียดสินค้าชำรุด</span>
-                  {isOpen2 ? (
-                    <ChevronUp size={18} />
-                  ) : (
-                    <ChevronDown size={18} />
-                  )}
-                </CardTitle>
-                {isOpen2 && (
-                  <div className="w-full max-w-sm min-w-[200px]">
-                    <div className="relative">
-                      <input className="peer w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-slate-400 hover:border-slate-300 shadow-sm focus:shadow" />
-                      <label className="absolute cursor-text bg-white px-1 left-2.5 top-2.5 text-slate-400 text-sm transition-all transform origin-left peer-focus:-top-2 peer-focus:left-2.5 peer-focus:text-xs peer-focus:text-slate-400 peer-focus:scale-90">
-                        ระบุรายละเอียดสินค้าชำรุด
-                      </label>
-                    </div>
-                  </div>
-                )}
+                <div
+          className="flex items-center justify-between text-sm font-medium p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg cursor-pointer hover:from-blue-100 hover:to-blue-150 transition-all duration-200 shadow-sm"
+          onClick={() => setIsOpen2(!isOpen2)}
+        >
+          <span className="text-blue-800">2. รายละเอียดสินค้าชำรุด</span>
+          {isOpen2 ? (
+            <ChevronUp size={20} className="text-blue-600" />
+          ) : (
+            <ChevronDown size={20} className="text-blue-600" />
+          )}
+        </div>
+{isOpen2 && (
+          <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                รายละเอียดสินค้าชำรุด
+              </label>
+              <textarea
+                rows={4}
+                placeholder="กรุณาระบุรายละเอียดของสินค้าที่ชำรุด เช่น ประเภทความเสียหาย สาเหตุ จำนวน เป็นต้น"
+                className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm resize-none"
+              />
+            </div>
+              <p className="text-xs text-gray-500 mt-1">
+                💡 กรุณาระบุรายละเอียดให้ชัดเจนพร้อมแนบรูปภาพ
+              </p>
+          </div>
+        )}
+          
 
                 {/* หัวข้อ 3 */}
-                <CardTitle
-                  className="flex items-center justify-between text-sm font-normal p-2 bg-orange-100 rounded-lg cursor-pointer"
-                  onClick={() => setIsOpen3(!isOpen3)}
-                >
-                  <span>3. เลข LDT</span>
-                  {isOpen3 ? (
-                    <ChevronUp size={18} />
-                  ) : (
-                    <ChevronDown size={18} />
-                  )}
-                </CardTitle>
+                <div
+          className="flex items-center justify-between text-sm font-medium p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg cursor-pointer hover:from-blue-100 hover:to-blue-150 transition-all duration-200 shadow-sm"
+          onClick={() => setIsOpen3(!isOpen3)}
+        >
+          <span className="text-blue-800">3. เลข LDT</span>
+          {isOpen3 ? (
+            <ChevronUp size={20} className="text-blue-600" />
+          ) : (
+            <ChevronDown size={20} className="text-blue-600" />
+          )}
+        </div>
                 {isOpen3 && (
-                  <div className="w-full max-w-sm min-w-[200px]">
-                    <div className="relative">
-                      <input className="peer w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-slate-400 hover:border-slate-300 shadow-sm focus:shadow" />
-                      <label className="absolute cursor-text bg-white px-1 left-2.5 top-2.5 text-slate-400 text-sm transition-all transform origin-left peer-focus:-top-2 peer-focus:left-2.5 peer-focus:text-xs peer-focus:text-slate-400 peer-focus:scale-90">
-                        ระบุเลข LDT
-                      </label>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4 p-4 bg-gray-50 rounded-lg">
+            <div className="space-y-1">
+
+              <input
+                type="text"
+                placeholder="กรอกเลข LDT"
+                className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm"
+              />
+            </div>
                     </div>
-                  </div>
+
                 )}
 
-                {/* หัวข้อ 4 */}
-                <CardTitle
-                  className="flex items-center justify-between text-sm font-normal p-2 bg-orange-100 rounded-lg cursor-pointer"
-                  onClick={() => setIsOpen4(!isOpen4)}
-                >
-                  <span>4. บิลทางด่วน</span>
-                  {isOpen4 ? (
-                    <ChevronUp size={18} />
-                  ) : (
-                    <ChevronDown size={18} />
-                  )}
-                </CardTitle>
-                {isOpen4 && <ImagesFn />}
-
-                {/* NOT */}
+                              <div
+          className="flex items-center justify-between text-sm font-medium p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg cursor-pointer hover:from-blue-100 hover:to-blue-150 transition-all duration-200 shadow-sm"
+          onClick={() => setIsOpen4(!isOpen4)}
+        >
+          <span className="text-blue-800">4. บิลทางด่วน</span>
+          {isOpen4 ? (
+            <ChevronUp size={20} className="text-blue-600" />
+          ) : (
+            <ChevronDown size={20} className="text-blue-600" />
+          )}
+        </div>
+               
+                {isOpen4 && <ImagesFn onImagesChange={handleImagesChange} />}
               </div>
             </CardContent>
           </Card>
-
-          {/* เอกสาร แนบรูป
-          <Card className="mb-20 bg-gray-50 shadow-md hover:shadow-lg transition-all duration-300 border-0 ring-1 ring-gray-200/50 hover:ring-gray-300/50">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <ImagePlus className="h-5 w-5" />
-                <span>เอกสารรูปภาพ</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <input
-                ref={inputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                placeholder="เลือกรูปภาพ"
-                onChange={handleFileChange}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-              />
-
-              {images.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4">
-                  {images.map((file, index) => (
-                    <div key={index} className="relative group">
-                      <img
-                        src={URL.createObjectURL(file)}
-                        alt={`preview-${index}`}
-                        className="w-full object-cover rounded-lg border border-gray-300 shadow"
-                      />
-                      <button
-                        onClick={() => removeImage(index)}
-                        className="absolute top-1 right-1 bg-white bg-opacity-70  text-red-500 rounded-full p-1 shadow opacity-100 transition"
-                        title="ลบรูปนี้"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card> */}
 
           {/* Button saved */}
           <div className="fixed bottom-0 right-0 m-2.5 z-50">

@@ -3,27 +3,31 @@ import React, { useRef, useState } from 'react'
 import { ImagePlus, X } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export const ImagesFn = () => {
+type ImagesFnProps = {
+  onImagesChange: (files: File[]) => void;
+};
+export const ImagesFn: React.FC<ImagesFnProps> = ({ onImagesChange }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [images, setImages] = useState<File[]>([]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files) {
-      // Convert FileList to Array and append to existing state
-      setImages((prev) => [...prev, ...Array.from(files)]);
-    }
-  };
+  const files = e.target.files;
+  if (files) {
+    const newImages = [...images, ...Array.from(files)];
+    console.log("📸 รูปใหม่:", newImages.map(f => f.name)); // ✅ ตรวจตรงนี้
+    setImages(newImages);
+    onImagesChange(newImages);
+  }
+};
+
 
   const removeImage = (indexToRemove: number) => {
-    setImages((prev) => {
-      const updated = prev.filter((_, index) => index !== indexToRemove);
-      // Clear input file if no images left
-      if (updated.length === 0 && inputRef.current) {
-        inputRef.current.value = "";
-      }
-      return updated;
-    });
+    const updated = images.filter((_, index) => index !== indexToRemove);
+    setImages(updated);
+    onImagesChange(updated); 
+    if (updated.length === 0 && inputRef.current) {
+      inputRef.current.value = "";
+    }
   };
 
   return (

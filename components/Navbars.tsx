@@ -7,7 +7,8 @@ import { useRouter } from 'next/navigation'
 export const Navbars = () => {
 
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-   const router = useRouter()
+  const router = useRouter()
+  const username = localStorage.getItem('user');
   const handleLogout = () => {
         localStorage.setItem('isLoggedIn', 'false') 
         router.push('/login')
@@ -24,8 +25,8 @@ export const Navbars = () => {
               <img src="/mena.png" alt="Logo" className="w-15 h-10" />
    
             <div>
-              <h1 className="text-lg font-semibold text-gray-900">Smart - TDM</h1>
-              <p className="text-xs text-gray-500 -mt-0.5">Menatransport</p>
+              <h1 className="hidden text-lg font-semibold text-gray-900">Smart - TDM</h1>
+              <p className="hidden text-xs text-gray-500 -mt-0.5">Menatransport</p>
             </div>
           </div>
 
@@ -51,7 +52,7 @@ export const Navbars = () => {
 
             <button className="flex items-center space-x-2 px-3 py-2 text-gray-500 hover:text-green-600 hover:bg-gray-50 rounded-lg transition-colors duration-150">
               <User className="w-5 h-5" />
-              <span className="sm:block text-sm font-medium text-gray-700">User_1234</span>
+              <span className="sm:block text-sm font-bold text-gray-700">{username}</span>
             </button>
 
             <button 

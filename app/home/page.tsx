@@ -1,10 +1,10 @@
 "use client";
-import React, { useState, useRef  } from 'react'
+import React, { useState, useRef, useEffect, use } from "react";
 import { Navbars } from "@/components/Navbars";
-import { Jobcards, Jobcount } from "@/components/Jobcards";
+import { Jobcards } from "@/components/Jobcards";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-// import { useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Funnel, Inbox, X } from "lucide-react";
 import {
   Dialog,
@@ -19,57 +19,84 @@ import {
 import Swal from "sweetalert2";
 
 const Home = () => {
-  // const router = useRouter();
   const [filterStatus, setFilterStatus] = useState("ทั้งหมด");
   const [DialogResult, setDialogResult] = useState(false);
+  const [datajobs, setDatajobs] = useState<any[]>([]);
+  const [images, setImages] = useState<File[]>([]);
 
-  const [images, setImages] = useState<File[]>([])
-  const inputRef = useRef<HTMLInputElement>(null)
+  const router = useRouter();
+
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const access_token = localStorage.getItem("access_token");
+        const res_data = await fetch("/api/orders_home", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${access_token}`,
+          },
+        });
+        const data = await res_data.json();
+        setDatajobs(data.jobs);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const files = e.target.files;
-  if (!files) return;
+    const files = e.target.files;
+    if (!files) return;
 
-  const selectedFiles = Array.from(files);
-  const totalImages = images.length + selectedFiles.length;
+    const selectedFiles = Array.from(files);
+    const totalImages = images.length + selectedFiles.length;
 
-  if (totalImages > 2) {
-    alert("คุณสามารถอัปโหลดได้สูงสุด 2 รูปภาพเท่านั้น");
+    if (totalImages > 2) {
+      alert("คุณสามารถอัปโหลดได้สูงสุด 2 รูปภาพเท่านั้น");
 
-    // เคลียร์ input file เพื่อไม่ให้เกิด state ค้าง
-    if (inputRef.current) {
-      inputRef.current.value = "";
+      // เคลียร์ input file เพื่อไม่ให้เกิด state ค้าง
+      if (inputRef.current) {
+        inputRef.current.value = "";
+      }
+      return;
     }
-    return;
-  }
 
-  setImages((prev) => [...prev, ...selectedFiles]);
-};
+    setImages((prev) => [...prev, ...selectedFiles]);
+  };
 
-
-   const removeImage = (indexToRemove: number) => {
+  const removeImage = (indexToRemove: number) => {
     setImages((prev) => {
-      const updated = prev.filter((_, index) => index !== indexToRemove)
+      const updated = prev.filter((_, index) => index !== indexToRemove);
       // ถ้าไม่มีรูปแล้ว เคลียร์ input file ด้วย
       if (updated.length === 0 && inputRef.current) {
-        inputRef.current.value = ''
+        inputRef.current.value = "";
       }
-      return updated
-    })
-  }
-  
-
+      return updated;
+    });
+  };
 
   const handleSaved = () => {
-
     setDialogResult(false);
     Swal.fire({
-  title: "บันทึกข้อมูลสำเร็จ!",
-  icon: "success",
-  draggable: true
-});
+      title: "บันทึกข้อมูลสำเร็จ!",
+      icon: "success",
+      draggable: true,
+    });
   };
-  const count = Jobcount();
+  const count = {
+    totalCount: datajobs.length,
+    inProgressCount: datajobs.filter((job) => job.status !== "ขนส่งสำเร็จ")
+      .length,
+    completedCount: datajobs.filter((job) => job.status === "ขนส่งสำเร็จ")
+      .length,
+  };
+
   console.log("count", count);
   return (
     <>
@@ -87,19 +114,11 @@ const Home = () => {
         <div className="flex flex-col z-10 w-full space-y-4">
           {/* Heading + Top Buttons */}
           <div className="flex justify-between items-center gap-2">
-            <p className="text-xl sm:text-xl text-center font-semibold text-gray-800">
+            <p className="hidden text-xl sm:text-xl text-center font-semibold text-gray-800">
               งานขนส่งของฉัน
             </p>
 
-            <div className="flex gap-2 flex-reverse sm:flex-row flex-col">
-              {/* <Button
-                variant="outline"
-                onClick={() => router.push("/home")}
-                className="flex items-center bg-white space-x-2 hover:shadow-lg hover:-translate-y-1"
-              >
-                <RefreshCcw className="h-4 w-4" />
-                <span>รีเฟรช</span>
-              </Button> */}
+            <div className="hidden gap-2 flex-reverse sm:flex-row flex-col">
               <Dialog open={DialogResult} onOpenChange={setDialogResult}>
                 <DialogTrigger asChild>
                   <Button className="flex items-center bg-white border border-gray-500 space-x-2 hover:shadow-lg hover:-translate-y-1">
@@ -107,9 +126,7 @@ const Home = () => {
                     <span>ระบบพาเลท</span>
                   </Button>
                 </DialogTrigger>
-                <DialogContent
-                  className="bg-white border border-gray-500"
-                >
+                <DialogContent className="bg-white border border-gray-500">
                   <DialogHeader>
                     <DialogTitle>ระบบพาเลท</DialogTitle>
                     <DialogDescription className="text-[11px] text-gray-700">
@@ -117,112 +134,98 @@ const Home = () => {
                       ออฟฟิศ TDM
                     </DialogDescription>
                   </DialogHeader>
-                <div className="grid grid-cols-1 gap-4 p-4 ">
-                  <div className="flex flex-row items-center gap-2">
-                    <Badge className="text-center bg-green-200 p-1.5">
-                      วันที่ลงพาเลท
-                    </Badge>
-                    <input
-                      type="date"
-                      defaultValue={new Date().toISOString().split("T")[0]}
-                      required
-                      className="w-50 border text-[13px] p-1 text-center border-gray-300 rounded-md bg-white"
-                    />
-                  </div>
+                  <div className="grid grid-cols-1 gap-4 p-4 ">
+                    <div className="flex flex-row items-center gap-2">
+                      <Badge className="text-center bg-green-200 p-1.5">
+                        วันที่ลงพาเลท
+                      </Badge>
+                      <input
+                        type="date"
+                        defaultValue={new Date().toISOString().split("T")[0]}
+                        required
+                        className="w-50 border text-[13px] p-1 text-center border-gray-300 rounded-md bg-white"
+                      />
+                    </div>
 
-                  <div className="flex flex-row items-center gap-2">
-                    <Badge className="text-center bg-green-200 p-1.5">
-                      สถานที่พาเลท
-                    </Badge>
-                    <select
-                      className="w-50 border text-[13px] p-1 text-center border-gray-300 rounded-md"
-                      defaultValue={"ออฟฟิศ TDM"}
-                    >
-                      <option value=""></option>
-                      <option value="ออฟฟิศ TDM">ออฟฟิศ TDM</option>
-                    </select>
-                  </div>
+                    <div className="flex flex-row items-center gap-2">
+                      <Badge className="text-center bg-green-200 p-1.5">
+                        สถานที่พาเลท
+                      </Badge>
+                      <select
+                        className="w-50 border text-[13px] p-1 text-center border-gray-300 rounded-md"
+                        defaultValue={"ออฟฟิศ TDM"}
+                      >
+                        <option value=""></option>
+                        <option value="ออฟฟิศ TDM">ออฟฟิศ TDM</option>
+                      </select>
+                    </div>
 
-                  <div className="flex flex-row items-center gap-2">
-                    <Badge className="text-center bg-green-200 p-1.5">
-                      ประเภทการเบิก
-                    </Badge>
-                    <select
-                      className="w-50 border text-[13px] p-1 text-center border-gray-300 rounded-md"
-                    required>
-                      <option value=""></option>
-                      <option value="เบิกเข้า">เบิกเข้า</option>
-                      <option value="เบิกออก">เบิกออก</option>
-                      <option value="ส่งคืนลูกค้า">ส่งคืนลูกค้า</option>
-                    </select>
-                  </div>
+                    <div className="flex flex-row items-center gap-2">
+                      <Badge className="text-center bg-green-200 p-1.5">
+                        ประเภทการเบิก
+                      </Badge>
+                      <select
+                        className="w-50 border text-[13px] p-1 text-center border-gray-300 rounded-md"
+                        required
+                      >
+                        <option value=""></option>
+                        <option value="เบิกเข้า">เบิกเข้า</option>
+                        <option value="เบิกออก">เบิกออก</option>
+                        <option value="ส่งคืนลูกค้า">ส่งคืนลูกค้า</option>
+                      </select>
+                    </div>
 
-                  <div className="flex flex-row items-center gap-2">
-                    <Badge className="text-center bg-green-200 p-1.5">
-                      จำนวนพาเลท
-                    </Badge>
-                    <input
-                      type="number"
-                      className="w-50 border text-[13px] p-1 text-center border-gray-300 rounded-md bg-white w-20"
-                    required/>
-                  </div>
-                  <div className="flex flex-row items-center gap-2">
-                    <Badge className="text-center bg-green-200 p-1.5">
-                      แนบหลักฐาน
-                    </Badge>
-                     <input
-        ref={inputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          placeholder='เลือกรูปภาพ'
-          onChange={handleFileChange}
-          className="block w-full text-sm text-gray-500 file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-        />
-         </div>
-
-        {images.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4">
-            {images.map((file, index) => (
-              <div key={index} className="relative group">
-                <img
-                  src={URL.createObjectURL(file)}
-                  alt={`preview-${index}`}
-                  className="w-full object-cover rounded-lg border border-gray-300 shadow"
-                />
-                <button
-                  onClick={() => removeImage(index)}
-                  className="absolute top-1 right-1 bg-white bg-opacity-70  text-red-500 rounded-full p-1 shadow opacity-100 transition"
-                  title="ลบรูปนี้"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-                </div>
-
-                  {/* <DialogClose asChild>
-                    <Button className="bg-red-500 text-white hover:bg-red-600">
-                      ยกเลิก
-                    </Button>
-                  {/* <div className="grid grid-cols-3 gap-10 ml-4 p-5 rounded-lg">
-                    <div className="flex flex-col text-center">
+                    <div className="flex flex-row items-center gap-2">
+                      <Badge className="text-center bg-green-200 p-1.5">
+                        จำนวนพาเลท
+                      </Badge>
                       <input
                         type="number"
-                        className="border text-[13px] p-1 text-center border-gray-300 rounded-md bg-white"
+                        className="w-50 border text-[13px] p-1 text-center border-gray-300 rounded-md bg-white w-20"
+                        required
                       />
-                      <label className="text-[13px] m-2">จำนวนพาเลท</label>
                     </div>
-                    <p>----------</p>
-                    <p>ออฟฟิศ TDM</p>
-                  </div> */}
+                    <div className="flex flex-row items-center gap-2">
+                      <Badge className="text-center bg-green-200 p-1.5">
+                        แนบหลักฐาน
+                      </Badge>
+                      <input
+                        ref={inputRef}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        placeholder="เลือกรูปภาพ"
+                        onChange={handleFileChange}
+                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                      />
+                    </div>
+
+                    {images.length > 0 && (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4">
+                        {images.map((file, index) => (
+                          <div key={index} className="relative group">
+                            <img
+                              src={URL.createObjectURL(file)}
+                              alt={`preview-${index}`}
+                              className="w-full object-cover rounded-lg border border-gray-300 shadow"
+                            />
+                            <button
+                              onClick={() => removeImage(index)}
+                              className="absolute top-1 right-1 bg-white bg-opacity-70  text-red-500 rounded-full p-1 shadow opacity-100 transition"
+                              title="ลบรูปนี้"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
                   <DialogFooter className="w-full flex justify-between ">
                     {/* Button Submit and close ยกเลิก */}
                     <Button
-                    onClick={handleSaved}
+                      onClick={handleSaved}
                       type="submit"
                       className="bg-green-500 text-white hover:bg-green-600"
                     >
@@ -281,7 +284,7 @@ const Home = () => {
           </div>
 
           {/* Job Cards */}
-          <Jobcards filterStatus={filterStatus} />
+          <Jobcards filterStatus={filterStatus} datajobs={datajobs} />
         </div>
       </div>
     </>

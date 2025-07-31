@@ -1,0 +1,22 @@
+// app/api/test-db/route.ts
+import { NextResponse } from 'next/server';
+
+export async function GET(req: Request) {
+try {
+  const Access_token  = req.headers.get('Authorization')?.replace('Bearer ', '');
+  console.log('ORDERS [API] Access Token:', Access_token);
+    const externalRes = await fetch('https://backend-tdm.onrender.com/jobs', {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${Access_token}`,
+    }
+  });
+  const data = await externalRes.json();
+  console.log('ORDERS [API] ดึงข้อมูลจาก external API:', data);
+  return NextResponse.json(data);
+  } catch (err: any) {
+    console.error('❌ DB Error:', err.message);
+    return NextResponse.json({ error: 'Failed to fetch table list' }, { status: 500 });
+  }
+}

@@ -9,42 +9,27 @@ import { MapPin, Clock, ArrowRight } from "lucide-react";
 
 interface JobcardsProps {
   filterStatus: string;
+  datajobs: any;
 }
 
-export const Jobcount = () => {
-  const jobs = mockTransportJobs;
-  console.log("Jobs: ", jobs);
-  const totalCount = jobs.length;
-  const inProgressCount = jobs.filter(
-    (job) => job.Status !== "ขนส่งสำเร็จ"
-  ).length;
-  const completedCount = jobs.filter(
-    (job) => job.Status === "ขนส่งสำเร็จ"
-  ).length;
 
-  return {
-    totalCount,
-    inProgressCount,
-    completedCount,
-  };
-};
-
-export const Jobcards = ({ filterStatus }: JobcardsProps) => {
-  const jobs = mockTransportJobs;
-  const filteredJobs = jobs.filter((job) => {
+export const Jobcards = ({ filterStatus, datajobs }: JobcardsProps) => {
+  const jobs = datajobs;
+  console.log("Jobs from props: ", jobs);
+  const filteredJobs = jobs.filter((job:any) => {
     if (filterStatus === "ทั้งหมด") {
       return true;
     }
     if (filterStatus === "รอดำเนินงาน") {
-      return job.Status !== "ขนส่งสำเร็จ";
+      return job.status !== "ขนส่งสำเร็จ";
     }
-    return job.Status === filterStatus;
+    return job.status === filterStatus;
   });
 
   const router = useRouter();
 
-  const getStatusConfig = (status: string | undefined) => {
-    switch (status) {
+  const getStatusConfig = (job: any) => {
+    switch (job.status) {
       case "พร้อมรับงาน":
       case "ขนส่งสำเร็จ":
         return {
@@ -96,28 +81,52 @@ export const Jobcards = ({ filterStatus }: JobcardsProps) => {
 
 
 
-  const formatDate = (date: string) => {
-    const d = new Date(date);
-    return d.toLocaleDateString("th-TH", {
-      day: "2-digit",
-      month: "short",
+ const formatDate = (dateStr: string | undefined) => {
+  if (!dateStr || typeof dateStr !== "string") return "-";
+
+  const [datePart] = dateStr.split(",");
+  if (!datePart) return "-";
+
+  const [day, month, year] = datePart.split("/").map(Number);
+  const d = new Date(year, month - 1, day);
+
+  return d.toLocaleDateString("th-TH", {
+    day: "2-digit",
+    month: "short",
+  });
+};
+
+
+  const formatTime = (dateStr: string | undefined) => {
+    if (!dateStr || typeof dateStr !== "string") return "-";
+
+    const [datePart, timePart] = dateStr.split(",");
+    if (!datePart || !timePart) return "-";
+
+    const [day, month, year] = datePart.split("/").map(Number);
+    const [hour, minute] = timePart.trim().split(":").map(Number);
+    const d = new Date(year, month - 1, day, hour, minute);
+
+    return d.toLocaleTimeString("th-TH", {
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
-  const handleJob = (job: (typeof jobs)[0]) => {
-    console.log("OBJ : ", job);
-    useJobStore.getState().setJob(job); // ✅ เก็บไว้ใน global state
-    router.push("/job");
-  };
+
+const handleJob = (idjob: (typeof jobs)[0]) => {
+  console.log("OBJ : ", idjob);
+  router.push(`/job?id=${idjob}`);
+};
 
   return (
     <div className="w-full mx-auto p-4">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-        {filteredJobs.map((job, index) => {
+        {filteredJobs.map((job:any) => {
           const statusConfig = getStatusConfig("null");
           return (
             <Card
-              key={job.Id_load}
+              key={job.load_id}
               className={`transition-all duration-300 hover:shadow-lg hover:-translate-y-1  rounded-xl border-2 ${statusConfig.bgColor} group overflow-hidden`}
             >
               <CardContent className="p-0">
@@ -127,26 +136,26 @@ export const Jobcards = ({ filterStatus }: JobcardsProps) => {
                   <div className="relative flex justify-between items-start">
                     <div>
                       <h3 className="text-base font-bold text-dark mb-1">
-                        📦{job.Id_load}
+                        📦{job.load_id}
                       </h3>
                       <p className="text-dark/90 text-xs font-medium">
-                        {job.H_plate} • {job.T_plate}
+                        {job.h_plate} • {job.t_plate}
                       </p>
                     </div>
                     <div className="flex flex-col items-end  space-x-2">
                       <Badge
                         className={`${
-                          getStatusConfig(job.Status).color
+                          getStatusConfig(job.status).color
                         } border-white/30 text-xs px-2 py-0.5 rounded-full backdrop-blur-sm`}
                       >
-                        {job.Status}
+                        {job.status}
                       </Badge>
-                      <div className={`${getEstimateTime(job.Estimate_time)} flex-col items-end space-x-1`}>
+                      <div className={`${getEstimateTime(job.estimate_time)} hidden flex-col items-end space-x-1`}>
                         <p className="text-xs  text-red-700">
                           ⏰ คุณอาจจะไปสาย
                         </p>
                         <p className="text-xs text-gray-500">
-                          เวลาที่คาดว่าจะถึง {job.Estimate_time} น.
+                          เวลาที่คาดว่าจะถึง {job.estimate_time} น.
                         </p>
                       </div>
                     </div>
@@ -161,7 +170,7 @@ export const Jobcards = ({ filterStatus }: JobcardsProps) => {
                         className={`h-3 w-3 ${statusConfig.iconColor} flex-shrink-0`}
                       />
                       <span className="font-medium text-gray-900 truncate">
-                        {job.Ori_locat}
+                        {job.locat_recive}
                       </span>
                     </div>
                     <ArrowRight
@@ -169,7 +178,7 @@ export const Jobcards = ({ filterStatus }: JobcardsProps) => {
                     />
                     <div className="flex items-center space-x-1 flex-1 min-w-0">
                       <span className="font-medium text-gray-900 truncate">
-                        {job.Des_locat}
+                        {job.locat_deliver}
                       </span>
                     </div>
                   </div>
@@ -184,9 +193,9 @@ export const Jobcards = ({ filterStatus }: JobcardsProps) => {
                         </p>
                       </div>
                       <p className="text-xs font-bold text-gray-900">
-                        {formatDate(job.Recv_date)}
+                        {formatDate(job.date_recive)}
                       </p>
-                      <p className="text-xs text-gray-600">{job.Recv_time}</p>
+                      <p className="text-xs text-gray-600">{formatTime(job.date_recive)}</p>
                     </div>
 
                     <div className="bg-white rounded-lg p-2 border border-gray-100 shadow-sm">
@@ -197,17 +206,17 @@ export const Jobcards = ({ filterStatus }: JobcardsProps) => {
                         </p>
                       </div>
                       <p className="text-xs font-bold text-gray-900">
-                        {formatDate(job.unload_date)}
+                        {formatDate(job.date_deliver)}
                       </p>
-                      <p className="text-xs text-gray-600">{job.unload_time}</p>
+                      <p className="text-xs text-gray-600">{formatTime(job.date_deliver)}</p>
                     </div>
                   </div>
 
                   {/* Compact action button */}
                   <button
-                    onClick={() => handleJob(job)}
-                    className={`w-full py-2 px-3 rounded-lg font-semibold text-xs transition-all duration-200 hover:shadow-md active:scale-98 ${
-                      getStatusConfig(job.Status).btn
+                    onClick={() => handleJob(job.load_id)}
+                    className={`w-full py-2 px-3 rounded-lg font-semibold text-xs transition-all duration-200 hover:shadow-md active:scale-98 
+                     bg-blue-200
                     } group-hover:shadow-lg`}
                   >
                     <span className="flex items-center justify-center space-x-1">
