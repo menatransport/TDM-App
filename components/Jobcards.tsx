@@ -1,8 +1,6 @@
 "use client";
 import React from "react";
 import { useRouter } from "next/navigation";
-import { useJobStore } from "@/store/useStore";
-import { mockTransportJobs } from "@/backend/transort-data";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Clock, ArrowRight } from "lucide-react";
@@ -116,7 +114,7 @@ export const Jobcards = ({ filterStatus, datajobs }: JobcardsProps) => {
 
 const handleJob = (idjob: (typeof jobs)[0]) => {
   console.log("OBJ : ", idjob);
-  router.push(`/job?id=${idjob}`);
+  router.push(`/ticket?id=${idjob}`);
 };
 
   return (

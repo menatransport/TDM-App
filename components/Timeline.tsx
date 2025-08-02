@@ -1,5 +1,4 @@
-'use client'
-
+"use client";
 import React, { useRef, useState } from 'react'
 import { CheckCircle, Circle, Clock, ImagePlus, X } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'

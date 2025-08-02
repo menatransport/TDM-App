@@ -1,10 +1,9 @@
 "use client";
-import React, { useState, useRef, useEffect, use } from "react";
-import { Navbars } from "@/components/Navbars";
+
+import { useState, useEffect, useRef } from "react";
 import { Jobcards } from "@/components/Jobcards";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useRouter } from "next/navigation";
 import { Funnel, Inbox, X } from "lucide-react";
 import {
   Dialog,
@@ -18,13 +17,12 @@ import {
 } from "@/components/ui/dialog";
 import Swal from "sweetalert2";
 
-const Home = () => {
+
+export const Jobcomponent = () => {
   const [filterStatus, setFilterStatus] = useState("ทั้งหมด");
   const [DialogResult, setDialogResult] = useState(false);
   const [datajobs, setDatajobs] = useState<any[]>([]);
   const [images, setImages] = useState<File[]>([]);
-
-  const router = useRouter();
 
 
   useEffect(() => {
@@ -73,7 +71,6 @@ const Home = () => {
   const removeImage = (indexToRemove: number) => {
     setImages((prev) => {
       const updated = prev.filter((_, index) => index !== indexToRemove);
-      // ถ้าไม่มีรูปแล้ว เคลียร์ input file ด้วย
       if (updated.length === 0 && inputRef.current) {
         inputRef.current.value = "";
       }
@@ -98,10 +95,9 @@ const Home = () => {
   };
 
   console.log("count", count);
-  return (
-    <>
-      <Navbars />
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex justify-center px-4 py-3 relative overflow-hidden">
+
+return (
+  <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex justify-center px-4 py-3 relative overflow-hidden">
         {/* Background Bubbles */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-20 -left-20 w-40 h-40 bg-green-200 bg-opacity-30 rounded-full animate-pulse"></div>
@@ -287,8 +283,5 @@ const Home = () => {
           <Jobcards filterStatus={filterStatus} datajobs={datajobs} />
         </div>
       </div>
-    </>
-  );
-};
-
-export default Home;
+)
+}

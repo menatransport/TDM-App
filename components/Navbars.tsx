@@ -1,19 +1,23 @@
-'use client' 
-import { useState } from 'react'
-import { Truck, Menu, X, Bell, User } from 'lucide-react'
+
+"use client";
+import { useEffect, useState } from 'react'
+import { Menu, X, Bell, User } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
-
 export const Navbars = () => {
-
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [username, setUsername] = useState<string | null>(null)
   const router = useRouter()
-  const username = localStorage.getItem('user');
-  const handleLogout = () => {
-        localStorage.setItem('isLoggedIn', 'false') 
-        router.push('/login')
-  }
 
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user')
+    setUsername(storedUser)
+  }, [])
+
+  const handleLogout = () => {
+    localStorage.setItem('isLoggedIn', 'false')
+    router.push('/login')
+  }
   return (
     <nav className="bg-gray-50 border-b border-gray-200 shadow-sm border-b border-gray-100">
       <div className="mx-4 px-4 md:mx-auto sm:mx-auto">
