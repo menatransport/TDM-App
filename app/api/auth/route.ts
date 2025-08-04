@@ -3,7 +3,7 @@ import { generateToken } from '@/lib/auth';
 
 export async function POST(req: Request) {
   const { username, password } = await req.json();
-  console.log('[API] รับค่าจาก client:', [username, password ]);
+  // console.log('[API] รับค่าจาก client:', [username, password ]);
   const params = new URLSearchParams();
   params.append('username', username);
   params.append('password', password);
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   });
 
   const db = await externalRes.json();
-  console.log('[API] ดึงข้อมูลจาก external API:', db);
+  // console.log('[API] ดึงข้อมูลจาก external API:', db);
 
   const token = generateToken({ username: username , role: db.role });
   console.log('[API] สร้าง Token:', token);

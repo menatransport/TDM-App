@@ -5,8 +5,9 @@ const Ticketpage = () => {
   
   return (
     <>
-<Ticket />
 <Navbars /> 
+<Ticket />
+
 
     </>
   );

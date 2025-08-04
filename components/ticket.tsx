@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Swal from "sweetalert2";
 import { ImagesFn } from "@/components/ImagesFn";
+import { TimelineStep } from "@/components/Timeline";
+import Image from 'next/image'
 
 import {
   MapPin,
@@ -23,7 +25,7 @@ import { useRouter } from "next/navigation";
 export const Ticket = () => {
  
  const router = useRouter();
- 
+
    const [isOpen1, setIsOpen1] = useState(false);
    const [isOpen2, setIsOpen2] = useState(false);
    const [isOpen3, setIsOpen3] = useState(false);
@@ -31,9 +33,10 @@ export const Ticket = () => {
    const [job, setDatajobs] = useState<any>({});
    const [tickets, setTickets] = useState<any>({});
    const [pallet, setPallet] = useState<any>({});
-   const [imageTollway, setImagesTollway] = useState<File[]>([]);
-  
-  
+   const [existingImages_tollway, setExistingImages_tollway] = useState<{ key: string; url: string }[]>([]);
+   const [existingImages_timeline, setExistingImages_timeline] = useState<{ key: string; url: string }[]>([]);
+   const [images_Tollway, setImages_Tollway] = useState<File[]>([]);
+
 useEffect(() => {
 
     const params = new URLSearchParams(window.location.search);
@@ -52,13 +55,30 @@ useEffect(() => {
            id: jobId ?? "",
          },
        });
- 
+
+       const res_images = await fetch("/api/upload", {
+         method: "GET",
+         headers: {
+          id: jobId ?? "",
+         },
+       });
        const data = await res_data.json();
-       console.log("ticketData:", data.ticket);
-       console.log("palletData:", data.palletdata);
+       const getimages = await res_images.json();
+       console.log('getimages : ',getimages)
+       const tollwayImages = getimages.images.filter((img: { key: string }) =>
+      img.key.includes("tollway")
+      );
+       const timelineImages = getimages.images.filter((img: { key: string }) =>
+      img.key.includes("end")
+      );
+
+       setExistingImages_timeline(timelineImages);
+       setExistingImages_tollway(tollwayImages);
        setDatajobs(data);
        setTickets(data.ticket);
        setPallet(data.palletdata);
+
+      
      } catch (error) {
        console.error("Error fetching data:", error);
      }
@@ -68,42 +88,63 @@ useEffect(() => {
  }, []);
  
  
-   const handleImagesChange = (files: File[]) => {
-     setImagesTollway(files);
+   const handleImages_Tollway = (files: File[]) => {
+    console.log('files Tollway :  ',files)
+     setImages_Tollway(files);
      console.log(
        "✅ รูปภาพใหม่:",
        files.map((f) => f.name)
      );
    };
  
-   const handleSaved = () => {
-     console.log("จำนวนภาพใน images4:", imageTollway.length);
- 
-     Swal.fire({
-       title: "คุณต้องการยืนยันบันทึกข้อมูลหรือไม่?",
-       text: "กรุณาตรวจสอบความถูกต้องของข้อมูลก่อนกดปุ่ม 'ตกลง'",
-       icon: "warning",
-       showCancelButton: true,
-       confirmButtonColor: "#3085d6",
-       cancelButtonColor: "#d33",
-       confirmButtonText: "ตกลง",
-       cancelButtonText: "ยกเลิก",
-       allowOutsideClick: false,
-     }).then((result) => {
- 
-       if (result.isConfirmed) {
-         Swal.fire({
-           title: "บันทึกข้อมูลสำเร็จ",
-           text: "ข้อมูลของคุณถูกบันทึกเรียบร้อยแล้ว",
-           icon: "success",
-           confirmButtonText: "ตกลง",
-           allowOutsideClick: false,
-         }).then(() => {
-           // router.push("/home");
-         });
-       }
-     });
-   };
+   const handleSaved = async () => {
+  console.log("จำนวนภาพใน images4:", images_Tollway.length);
+
+  const result = await Swal.fire({
+    title: "คุณต้องการยืนยันบันทึกข้อมูลหรือไม่?",
+    text: "กรุณาตรวจสอบความถูกต้องของข้อมูลก่อนกดปุ่ม 'ตกลง'",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonColor: "#3085d6",
+    cancelButtonColor: "#d33",
+    confirmButtonText: "ตกลง",
+    cancelButtonText: "ยกเลิก",
+    allowOutsideClick: false,
+  });
+
+  if (!result.isConfirmed) return;
+
+  const formData = new FormData();
+  if(images_Tollway.length > 0){
+  images_Tollway.forEach((file, index) => {
+    // console.log('file Fromdata : ',file)
+    formData.append("file", file);
+  });
+}
+  console.log([...formData.entries()]);
+  try {
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (res.ok) {
+      Swal.fire({
+        title: "บันทึกข้อมูลสำเร็จ",
+        text: "ข้อมูลของคุณถูกบันทึกเรียบร้อยแล้ว",
+        icon: "success",
+        confirmButtonText: "ตกลง",
+        allowOutsideClick: false,
+      });
+      router.push("/job");
+    } else {
+      Swal.fire("เกิดข้อผิดพลาด", "ไม่สามารถอัปโหลดภาพได้", "error");
+    }
+  } catch (err) {
+    console.error("Upload error", err);
+    Swal.fire("เกิดข้อผิดพลาด", "ไม่สามารถเชื่อมต่อ API ได้", "error");
+  }
+};
  
 
    const formatDate = (dateStr: string | undefined) => {
@@ -153,19 +194,8 @@ useEffect(() => {
        [field]: value
      }));
    };
- 
-   const getStatusSteps = () => [
-     { key: "Timestamp_start", label: "เริ่มงาน", icon: "🚀" },
-     { key: "Timestamp_ori", label: "ถึงต้นทาง", icon: "📍" },
-     { key: "Timestamp_strecv", label: "เริ่มขึ้นสินค้า", icon: "📤" },
-     { key: "Timestamp_enrecv", label: "ขึ้นสินค้าเสร็จ", icon: "✅" },
-     { key: "Timestamp_intran", label: "เริ่มขนส่ง", icon: "🚛" },
-     { key: "Timestamp_des", label: "ถึงปลายทาง", icon: "🎯" },
-     { key: "Timestamp_stload", label: "เริ่มลงสินค้า", icon: "📥" },
-     { key: "Timestamp_enload", label: "ลงสินค้าเสร็จ", icon: "✅" },
-     { key: "Timestamp_ended", label: "เสร็จงาน", icon: "🏁" },
-   ];
- 
+
+  
    const getStatusConfig = (status: string) => {
      switch (status) {
        case "พร้อมรับงาน":
@@ -210,6 +240,8 @@ useEffect(() => {
          };
      }
    };
+
+   console.log('TimelineStep : ',existingImages_timeline)
  
  return(
  <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex justify-center p-5 relative overflow-hidden">
@@ -222,16 +254,32 @@ useEffect(() => {
 
         <div className="flex flex-col z-1 w-full space-y-4">
           {/* Buttton to home */}
-          <div className="flex items-center justify-between mb-6">
-            <Button
-              variant="outline"
-              onClick={() => router.push("/Jobpage")}
-              className="flex items-center bg-white space-x-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span>กลับ</span>
-            </Button>
-          </div>
+    <div className="flex items-center justify-between mb-2">
+  {/* ปุ่มกลับฝั่งซ้าย */}
+   <Button
+  onClick={() => router.back()}
+  className="flex items-center gap-2 rounded-md bg-white px-4 py-2 text-gray-700 shadow hover:bg-gray-100 transition-all duration-200"
+>
+  <ArrowLeft className="h-4 w-4 text-emerald-500" />
+  <span className="font-medium">งาน</span>
+</Button>
+
+<div className="flex flex-col justify-center text-center item-center cursor-pointer">
+ <Image
+      src="/cameralord.gif"
+      onClick={() => router.push(`/picture?id=${job.load_id}`)}
+      width={60}
+      height={60}
+      alt="images"
+    />
+ <Badge
+                  className={`border-white/30 text-xs rounded-full backdrop-blur-sm`}
+                >
+                 รูปภาพ
+                </Badge>
+</div>
+</div>
+
           {/* Header Info */}
           <Card className="mb-4 bg-gray-50 shadow-md hover:shadow-lg transition-all duration-300 border-0 ring-1 ring-gray-200/50 hover:ring-gray-300/50">
             <CardHeader>
@@ -356,7 +404,7 @@ useEffect(() => {
           </Card>
 
           {/* Timeline สถานะ */}
-          <Card className="mb-4 bg-gray-50 shadow-md hover:shadow-lg transition-all duration-300 border-0 ring-1 ring-gray-200/50 hover:ring-gray-300/50">
+          <Card className="mb-4 bg-gray-0 shadow-md hover:shadow-lg transition-all duration-300 border-0 ring-1 ring-gray-200/50 hover:ring-gray-300/50">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Clock className="h-5 w-5" />
@@ -365,23 +413,9 @@ useEffect(() => {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {/* {statusSteps.map((step, index) => {
-                  const timestamp =
-                    timestamps[step.key as keyof typeof timestamps];
-                  const isCompleted = timestamp && timestamp.trim() !== "";
-                  const isActive = index === currentStepIndex + 1;
-       
-                  return (
-                    <TimelineStep
-                      key={step.key}
-                      title={step.label}
-                      timestamp={timestamp}
-                      isCompleted={isCompleted}
-                      isActive={isActive}
-                      icon={step.icon}
-                    />
-                  );
-                })} */}
+                
+                    <TimelineStep db={tickets} existingImages={existingImages_timeline} />
+                     
               </div>
             </CardContent>
           </Card>
@@ -547,7 +581,7 @@ useEffect(() => {
 
                 )}
 
-                              <div
+                              {/* <div
           className="flex items-center justify-between text-sm font-medium p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg cursor-pointer hover:from-blue-100 hover:to-blue-150 transition-all duration-200 shadow-sm"
           onClick={() => setIsOpen4(!isOpen4)}
         >
@@ -559,7 +593,12 @@ useEffect(() => {
           )}
         </div>
                
-                {isOpen4 && <ImagesFn onImagesChange={handleImagesChange} />}
+                {isOpen4 && <ImagesFn 
+                onImagesChange={handleImages_Tollway}
+                jobId={tickets.load_id}
+                imagesOf="tollway"
+                existingImages={existingImages_tollway}
+                />} */}
               </div>
             </CardContent>
           </Card>

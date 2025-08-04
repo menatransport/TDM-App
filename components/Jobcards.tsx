@@ -218,7 +218,7 @@ const handleJob = (idjob: (typeof jobs)[0]) => {
                     } group-hover:shadow-lg`}
                   >
                     <span className="flex items-center justify-center space-x-1">
-                      <span>ดูรายละเอียด</span>
+                      <span>ติดตามสถานะ</span>
                       <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
                     </span>
                   </button>

@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useEffect, useRef } from "react";
 import { Jobcards } from "@/components/Jobcards";
 import { Button } from "@/components/ui/button";

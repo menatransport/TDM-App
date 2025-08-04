@@ -1,200 +1,354 @@
 "use client";
 import React, { useRef, useState } from 'react'
-import { CheckCircle, Circle, Clock, ImagePlus, X } from 'lucide-react'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { MapPin, Truck, Package, Home, Check, Clock, ArrowRight, X } from 'lucide-react';
+import { ImagesFn } from "@/components/ImagesFn";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-interface TimelineStepProps {
-  key: string
-  title: string
-  timestamp?: string
-  isCompleted: boolean
-  isActive: boolean
-  icon: string
+interface Typedata {
+  load_id: string,
+  start_recive_datetime: string,
+  intransit_datetime: string,
+  start_unload_datetime: string,
+  complete_datetime: string,
+  end_recive_datetime: string,
+  start_datetime: string,
+  origin_datetime: string,
+  desination_datetime: string,
+  end_unload_datetime: string
 }
 
-const TimelineStep: React.FC<TimelineStepProps> = ({
-  key,
-  title,
-  timestamp,
-  isCompleted,
-  isActive,
-  icon
-}) => {
-  const inputRef = useRef<HTMLInputElement>(null)
-  const [images, setImages] = useState<File[]>([])
+export const TimelineStep = ({db,existingImages}: {db: Typedata; existingImages: { key: string; url: string }[];}) => {
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files
-    if (files) {
-      setImages([...images, ...Array.from(files)])
+
+  console.log('existingImages [Timeline] : ',existingImages)
+
+const [selectedStatus, setSelectedStatus] = useState<StatusItem | null>(null);
+const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+const [imageStatus, setImagesStatus] = useState<File[]>([]);
+  type StatusItem = {
+  key: keyof Typedata;
+  title: string;
+  icon: React.ElementType;
+  description: string;
+  color: string;
+  };
+
+   const statusConfig: StatusItem[] = [
+    {
+      key: 'start_datetime',
+      title: 'รับงาน',
+      icon: MapPin,
+      description: 'กดรับงานขนส่ง',
+      color: 'bg-indigo-500'
+    },
+    {
+      key: 'origin_datetime',
+      title: 'ถึงต้นทาง',
+      icon: Truck,
+      description: 'ถึงสถานที่ขึ้นสินค้า',
+      color: 'bg-orange-600'
+    },
+    {
+      key: 'start_recive_datetime',
+      title: 'เริ่มขึ้นสินค้า',
+      icon: Package,
+      description: 'เริ่มขึ้นสินค้าจากต้นทาง',
+      color: 'bg-blue-500'
+    },
+     {
+      key: 'end_recive_datetime',
+      title: 'ขึ้นสินค้าเสร็จ',
+      icon: Truck,
+      description: 'ขึ้นสินค้าจากต้นทางสำเร็จ',
+      color: 'bg-yellow-500'
+    },
+    {
+      key: 'intransit_datetime', 
+      title: 'เริ่มขนส่ง',
+      icon: Package,
+      description: 'เริ่มขนส่งสินค้า',
+      color: 'bg-purple-500'
+    },
+    {
+      key: 'desination_datetime',
+      title: 'ถึงปลายทาง',
+      icon: Truck,
+      description: 'ถึงสถานที่ลงสินค้า',
+      color: 'bg-red-500'
+    },
+    {
+      key: 'start_unload_datetime',
+      title: 'เริ่มลงสินค้า',
+      icon: Package,
+      description: 'เริ่มลงสินค้าจากปลายทาง',
+      color: 'bg-orange-500'
+    },
+      {
+      key: 'end_unload_datetime',
+      title: 'ลงสินค้าเสร็จ',
+      icon: Home,
+      description: 'ลงสินค้าจากปลายทางสำเร็จ',
+      color: 'bg-green-500'
+    },
+    {
+      key: 'complete_datetime',
+      title: 'จัดส่งแล้ว (POD)',
+      icon: Truck,
+      description: 'จัดการขนส่งสำเร็จ (POD)',
+      color: 'bg-blue-600'
     }
+  
+  ];
+
+  const handleImagesChange = (files: File[]) => {
+     setImagesStatus(files);
+     console.log(
+       "✅ รูปภาพใหม่:",
+       files.map((f) => f.name)
+     );
+   };
+
+   const openModal = (status: any) => {
+    console.log('status :timeline: ',status)
+    setSelectedStatus(status);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedStatus(null);
+  };
+
+const formatDateTime = (dateTimeString: any) => {
+  if (!dateTimeString) return 'ยังไม่มีข้อมูล';
+
+  console.log('formatDateTime : ', dateTimeString);
+
+  try {
+    // รองรับ "22/7/2025, 8:00:00" หรือ "22/7/2025 8:00:00"
+    const match = dateTimeString.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})[ ,]+(\d{1,2}):(\d{2}):(\d{2})$/);
+
+    if (!match) return 'รูปแบบข้อมูลไม่ถูกต้อง';
+
+    const [, day, month, year, hour, minute, second] = match;
+    const date = new Date(
+      Number(year),
+      Number(month) - 1, // JavaScript month เริ่มที่ 0
+      Number(day),
+      Number(hour),
+      Number(minute),
+      Number(second)
+    );
+
+    if (isNaN(date.getTime())) return 'ข้อมูลไม่ถูกต้อง';
+
+    return date.toLocaleString('th-TH', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch (error) {
+    console.log('Error : ', error);
+    return 'รูปแบบข้อมูลไม่ถูกต้อง';
   }
+};
 
-  const removeImage = (index: number) => {
-    const updated = [...images]
-    updated.splice(index, 1)
-    setImages(updated)
-  }
 
-  const formatDatetime = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const date = new Date(e.target.value)
-    const bangkokOffset = 7 * 60
-    const localTime = new Date(date.getTime() + bangkokOffset * 60000)
-    const dd = String(localTime.getDate()).padStart(2, '0')
-    const mm = String(localTime.getMonth() + 1).padStart(2, '0')
-    const yyyy = localTime.getFullYear()
-    const HH = String(localTime.getHours()).padStart(2, '0')
-    const min = String(localTime.getMinutes()).padStart(2, '0')
-    return `${dd}/${mm}/${yyyy}, ${HH}:${min}`
-  }
+   const isStatusCompleted = (statusKey: keyof Typedata): boolean => {
+  return db[statusKey] !== null && db[statusKey] !== '';
+};
 
-  const shouldShowImageUpload =
-    (title === 'ขึ้นสินค้าเสร็จ' || title === 'ลงสินค้าเสร็จ') &&
-    (isActive || isCompleted)
+  const getNextStatus = () => {
+    for (let i = 0; i < statusConfig.length; i++) {
+      if (!isStatusCompleted(statusConfig[i].key)) {
+        return i;
+      }
+    }
+    return -1; // ทุกสถานะเสร็จหมดแล้ว
+  };
 
-  return (
-    <div className="relative flex items-start space-x-4 pb-6">
-      {/* Connector Line */}
-      {title !== 'เสร็จงาน' && !isActive && (
-        <div
-          className={`absolute left-5 top-10 w-0.5 h-full transition-colors duration-300 ${
-            isCompleted
-              ? 'bg-gradient-to-b from-green-500 to-green-300'
-              : 'bg-gray-200'
-          }`}
-        />
-      )}
+  const getCurrentStatus = () => {
+    for (let i = statusConfig.length - 1; i >= 0; i--) {
+      if (isStatusCompleted(statusConfig[i].key)) {
+        return i;
+      }
+    }
+    return -1;
+  };
 
-      {/* Icon */}
-      <div className="relative z-10">
-        <div
-          className={`
-          flex items-center justify-center w-10 h-10 rounded-full border-2 text-sm
-          transition-all duration-300 shadow-lg
-          ${isCompleted
-            ? 'bg-gradient-to-br from-green-500 to-green-600 border-green-500 text-white scale-110'
-            : isActive
-            ? 'bg-gradient-to-br from-blue-500 to-blue-600 border-blue-500 text-white animate-pulse'
-            : 'bg-white border-gray-300 text-gray-400 hover:border-gray-400'}
-        `}
-        >
-          {isCompleted ? (
-            <CheckCircle className="w-5 h-5" />
-          ) : isActive ? (
-            <Clock className="w-5 h-5" />
-          ) : (
-            <Circle className="w-5 h-5" />
-          )}
+  const currentStatusIndex = getCurrentStatus();
+  const nextStatusIndex = getNextStatus();
+
+return (
+    <div className="max-w-md mx-auto bg-white rounded-xl shadow-lg p-6">
+
+      <div className="relative">
+        {/* เส้นเชื่อมต่อแนวตั้ง - เส้นประ */}
+        <div className="absolute left-6 top-0 bottom-0 w-0.5">
+          <div className="h-full bg-gray-200 border-l-2 border-dashed border-gray-300"></div>
         </div>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        <div
-          className={`
-          bg-white rounded-xl p-4 shadow-sm border transition-all duration-300
-          ${isCompleted
-            ? 'border-green-200 bg-gradient-to-r from-green-50 to-green-25'
-            : isActive
-            ? 'border-blue-200 bg-gradient-to-r from-blue-50 to-blue-25 shadow-md'
-            : 'border-gray-100 hover:shadow-sm'}
-        `}
+        <div 
+          className="absolute left-6 top-0 w-0.5 transition-all duration-500"
+          style={{ 
+            height: nextStatusIndex >= 0 ? `${((nextStatusIndex) / statusConfig.filter((_, i) => i <= nextStatusIndex).length) * 100}%` : currentStatusIndex >= 0 ? '100%' : '0%'
+          }}
         >
-          <div className="flex items-center space-x-3">
-            <span className="text-2xl" role="img" aria-label={title}>
-              {icon}
-            </span>
-            <h3
-              className={`font-semibold text-lg transition-colors duration-300 ${
-                isCompleted
-                  ? 'text-green-700'
-                  : isActive
-                  ? 'text-blue-700'
-                  : 'text-gray-600'
-              }`}
-            >
-              {title}
-            </h3>
-          </div>
+          <div className="h-full bg-gray-100 border-l-2 border-dashed"></div>
+        </div>
 
-          {timestamp ? (
-            <div
-              className={`
-              inline-flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium
-              ${
-                isCompleted
-                  ? 'bg-green-100 text-green-800'
-                  : 'bg-gray-100 text-gray-700'
-              }
-            `}
-            >
-              <Clock className="w-4 h-4" />
-              <span>{timestamp}</span>
-            </div>
-          ) : (
-            isActive && (
-              <div className="w-full mt-2 flex justify-start">
-                <input
-                  aria-label="Date and time"
-                  type="datetime-local"
-                  onChange={(e) => formatDatetime(e)}
-                  id={key}
-                  name={key}
-                  className="text-center w-100 p-3 border border-blue-200 rounded-md text-xs 
-                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                  bg-white shadow-sm transition-all duration-200"
-                  placeholder="เลือกวันที่และเวลา"
-                />
-              </div>
-            )
-          )}
+        {statusConfig.map((status, index) => {
+          const isCompleted = isStatusCompleted(status.key);
+          const isCurrent = index === currentStatusIndex;
+          const isNext = index === nextStatusIndex;
+          const IconComponent = status.icon;
 
-          {/* Image upload เฉพาะกรณีสถานะที่กำหนด */}
-          {shouldShowImageUpload && (
-            <Card className="mt-4 bg-gray-50 shadow-md border-0 ring-1 ring-gray-200/50 hover:ring-gray-300/50 transition-all duration-300">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2 text-sm">
-                  <ImagePlus className="h-5 w-5" />
-                  <span>แนบเอกสารรูปภาพ</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <input
-                  ref={inputRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleFileChange}
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                />
+          // ซ่อนสถานะที่ยังไม่ถึงเลย (เกินสถานะถัดไป)
+          if (!isCompleted && !isNext) {
+            return null;
+          }
 
-                {images.length > 0 && (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4">
-                    {images.map((file, index) => (
-                      <div key={index} className="relative group">
-                        <img
-                          src={URL.createObjectURL(file)}
-                          alt={`preview-${index}`}
-                          className="w-full object-cover rounded-lg border border-gray-300 shadow"
-                        />
-                        <button
-                          onClick={() => removeImage(index)}
-                          className="absolute top-1 right-1 bg-white bg-opacity-70 text-red-500 rounded-full p-1 shadow"
-                          title="ลบรูปนี้"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
+          return (
+            
+            <div key={status.key} className="relative flex flex-col items-start mb-6 last:mb-0 space-y-3 ">
+              
+              <div className="flex items-center flex-1 min-w-0">
+                
+                {/* วงกลมสถานะ */}
+                <button
+                  onClick={() => {
+                    if (isCompleted || isNext) {
+                      openModal(status);  
+                    }
+                  }}
+                  disabled={!isCompleted && !isNext}
+                  className={`relative z-10 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 shrink-0 ${
+                    isCompleted || isNext ? 'hover:scale-110 cursor-pointer' : 'cursor-not-allowed'
+                  } ${
+                    isCompleted
+                      ? 'bg-green-500 text-white shadow-lg'
+                      : isNext
+                      ? 'bg-orange-500 text-white shadow-lg'
+                      : 'bg-gray-200 text-gray-400'
+                  }`}
+                >
+                  {isCompleted ? (
+                    <Check className="w-6 h-6" />
+                  ) : (
+                    <IconComponent className="w-6 h-6" />
+                  )}
+                </button>
+
+                {/* ข้อมูลสถานะ */}
+                <div className="ml-4 flex-1 min-w-0">
+                  <h3 className={`font-semibold truncate ${isCompleted ? 'text-gray-800' : isNext ? 'text-orange-600' : 'text-gray-400'}`}>
+                    {status.title}
+                  </h3>
+                  <p className={`text-xs md:text-sm ${isCompleted ? 'text-gray-600' : isNext ? 'text-orange-500' : 'text-gray-400'}`}>
+                    {isCompleted ? formatDateTime(db[status.key]) : 'รอดำเนินการ'}
+                  </p>
+                </div>
+
+                {/* ไอคอนสถานะถัดไป */}
+                {isNext && (
+                  <div className="ml-2 shrink-0">
+                    <div className="w-3 h-3 bg-orange-500 rounded-full animate-pulse"></div>
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
+              </div>
 
-export default TimelineStep
+              {/* Input สำหรับใส่เวลา */}
+{isNext && (
+       <Card className="bg-gray-50 shadow-md hover:shadow-lg transition-all duration-300 border-0 ring-1 ring-gray-200/50 hover:ring-gray-300/50">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Clock className="h-5 w-5" />
+                <span>บันทึกเวลา</span>
+              </CardTitle>
+            </CardHeader>
+              <div className="p-2 shrink-0">
+                <input 
+                  type="datetime-local" 
+                  className="w-full border bg-white border-gray-300 rounded-md px-3 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition-colors"
+                />
+              </div>
+               </Card>
+            
+              )}
+              {/* Input รูปภาพ */}
+{/* {isNext && (
+              <div className="w-full md:w-auto shrink-0">
+                <ImagesFn 
+                onImagesChange={handleImagesChange}
+                jobId={db.load_id}
+                imagesOf={status.key}
+                existingImages={existingImages}
+                /> 
+              </div>
+              )} */}
+
+
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Modal */}
+      {isModalOpen && selectedStatus && (
+         <div className="fixed inset-0 bg-opacity-50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+         <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md border-1 border-gray-600">
+            <button
+              onClick={closeModal}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            <div className="text-center mb-4">
+              <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full ${selectedStatus.color} text-white mb-4`}>
+                <selectedStatus.icon className="w-8 h-8" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">
+                {selectedStatus.title}
+              </h3>
+              <p className="text-gray-600 text-sm mb-4">
+                {selectedStatus.description}
+              </p>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600 text-sm">วันที่-เวลา:</span>
+                <span className="font-semibold text-gray-800">
+                  {formatDateTime(db[selectedStatus.key])}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-center">
+              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                isStatusCompleted(selectedStatus.key)
+                  ? 'bg-green-100 text-green-800'
+                  : 'bg-gray-100 text-gray-600'
+              }`}>
+                {isStatusCompleted(selectedStatus.key) ? (
+                  <>
+                    <Check className="w-4 h-4 mr-1" />
+                    เสร็จสิ้น
+                  </>
+                ) : (
+                  <>
+                    <Clock className="w-4 h-4 mr-1" />
+                    รอดำเนินการ
+                  </>
+                )}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
