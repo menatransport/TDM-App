@@ -39,17 +39,17 @@ const IMAGE_CATEGORIES = [
   { value: 'other', label: 'อื่นๆ' }
 ];
 
+type TicketProps = {
+  onLoadingChange: (loading: boolean) => void;
+};
 
+export const Picture = ({ onLoadingChange }: TicketProps) => {
 
-export const Picture = () => {
   const fileInputRef = useRef<HTMLInputElement>(null); 
   const [uploadImages, setUploadImages] = useState<ImageFile[]>([]);
-  const [databaseImages, setDatabaseImages] = useState<ImageFile[]>([]); //สำหรับรูปภาพจาก Database
-console.log('databaseImages : ',databaseImages)
- // State สำหรับการดูรูปเต็ม
+  const [databaseImages, setDatabaseImages] = useState<ImageFile[]>([]); 
   const [viewingImage, setViewingImage] = useState<string | null>(null);
-  
-  // State สำหรับ Alert การลบ
+
   const [deleteAlert, setDeleteAlert] = useState<{
     show: boolean;
     imageId: string;
@@ -59,8 +59,7 @@ console.log('databaseImages : ',databaseImages)
     imageId: '',
     imageType: 'upload'
   });
-  
-  // State สำหรับการอัปโหลด
+
   const [isUploading, setIsUploading] = useState(false);
   const [JobId, setJobId] = useState<string | null>(null);
 
@@ -83,8 +82,10 @@ useEffect(() => {
       const getimages = await res.json();
       console.log("getimages : ",getimages)
       setDatabaseImages(getimages.images);
+      onLoadingChange(false)
     } catch (error) {
       console.error("Error fetching data:", error);
+      onLoadingChange(false)
     }
   };
 

@@ -12,16 +12,18 @@ import {
   Clock,
   ArrowRight,
   ArrowLeft,
-  ImagePlus,
   CircleEllipsis,
-  X,
   Save,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-export const Ticket = () => {
+type TicketProps = {
+  onLoadingChange: (loading: boolean) => void;
+};
+
+export const Ticket = ({ onLoadingChange }: TicketProps) => {
  
  const router = useRouter();
 
@@ -35,7 +37,6 @@ export const Ticket = () => {
    const [access_token, setAccesstoken] = useState<any>({});
    const [timeline, setTimeline] = useState<Record<string, string>>({});
    const [isLoading, setIsLoading] = useState(false);
-
 
 useEffect(() => {
 
@@ -62,10 +63,12 @@ useEffect(() => {
        setDatajobs(data);
        setTickets(data.ticket);
        setPallet(data.palletdata);
-
+       onLoadingChange(false);
       
      } catch (error) {
        console.error("Error fetching data:", error);
+       onLoadingChange(false);
+
      }
    };
  
@@ -125,6 +128,7 @@ Swal.fire({
     console.error("เกิดข้อผิดพลาดในการเชื่อมต่อ:", error);
     alert("เกิดข้อผิดพลาดในการเชื่อมต่อ");
     setIsLoading(false);
+    router.back();
   }
 };
  
@@ -241,7 +245,7 @@ Swal.fire({
    <Button
    onClick={() => {
       if (!isLoading) {
-        router.back();
+         router.push("/job");
       }
     }}
     className={`flex items-center gap-2 rounded-md bg-white px-4 py-2 text-gray-700 shadow hover:bg-gray-100 transition-all duration-200 ${
@@ -275,7 +279,7 @@ Swal.fire({
                 </Badge>
 </div>
 </div>
-
+<div className="flex flex-col w-full md:w-1/2 md:self-center-safe">
           {/* Header Info */}
           <Card className="mb-4 bg-gray-50 shadow-md hover:shadow-lg transition-all duration-300 border-0 ring-1 ring-gray-200/50 hover:ring-gray-300/50">
             <CardHeader>
@@ -621,9 +625,8 @@ Swal.fire({
     </>
   )}
 </Button>
-
+</div>
           </div>
-       
       </div>
  )
  }

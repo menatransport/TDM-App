@@ -288,25 +288,21 @@ return (
 
               {/* Input สำหรับใส่เวลา */}
 {isNext && (
-       <Card className="bg-gray-50 shadow-md hover:shadow-lg transition-all duration-300 border-0 ring-1 ring-gray-200/50 hover:ring-gray-300/50">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Clock className="h-5 w-5" />
-                <span>บันทึกเวลา</span>
-              </CardTitle>
-            </CardHeader>
-              <div className="p-2 shrink-0">
-                <input 
-                  type="datetime-local"
-                  id={status.key} 
-                  onChange={(e) => {
-    const formatted = formatOnsend(e.target.value);
-    formchange(db.load_id ,status.key ,formatted );
-  }}
-                  className="w-full border bg-white border-gray-300 rounded-md px-3 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition-colors"
-                />
-              </div>
-               </Card>
+   <div className="w-full rounded-xl border border-gray-200 bg-gray-50 p-4 shadow-sm hover:shadow-md transition-all duration-300">
+  <div className="mb-2 flex items-center space-x-2 text-gray-700">
+    <Clock className="h-5 w-5 text-orange-500" />
+    <span className="font-medium">บันทึกเวลา</span>
+  </div>
+  <input
+    type="datetime-local"
+    id={status.key}
+    onChange={(e) => {
+      const formatted = formatOnsend(e.target.value);
+      formchange(db.load_id, status.key, formatted);
+    }}
+    className="w-full appearance-none rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-all"
+  />
+</div>
             
               )}
              

@@ -15,9 +15,12 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import Swal from "sweetalert2";
+type TicketProps = {
+  onLoadingChange: (loading: boolean) => void;
+};
 
+export const Jobcomponent = ({ onLoadingChange }: TicketProps) => {
 
-export const Jobcomponent = () => {
   const [filterStatus, setFilterStatus] = useState("ทั้งหมด");
   const [DialogResult, setDialogResult] = useState(false);
   const [datajobs, setDatajobs] = useState<any[]>([]);
@@ -37,8 +40,10 @@ export const Jobcomponent = () => {
         });
         const data = await res_data.json();
         setDatajobs(data.jobs);
+        onLoadingChange(false)
       } catch (error) {
         console.error("Error fetching data:", error);
+        onLoadingChange(false)
       }
     };
 
