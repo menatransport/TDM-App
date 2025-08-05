@@ -192,7 +192,7 @@ return (
                 : "translate-y-4 opacity-0"
             }`}
           >
-            Deverloped by Process Improvment Team 2025
+            Developed by Process Improvment Team 2025
           </p>
         </div>
 

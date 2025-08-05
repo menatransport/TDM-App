@@ -93,10 +93,11 @@ console.log('timeline : ',timeline)
     allowOutsideClick: false,
   });
 
-  if (!result.isConfirmed) return;
-   setIsLoading(true);
-  if(Object.keys(timeline).length === 0) return alert('โปรดกรอกเวลาสถานะก่อน กดบันทึก')
+  if (!result.isConfirmed) return setIsLoading(false);
+ 
+  if(Object.keys(timeline).length === 0) return alert('โปรดกรอกเวลาสถานะก่อน กดบันทึก');setIsLoading(false);
   try {
+      setIsLoading(true);
     const res = await fetch("/api/orders_job", {
       method: "POST",
       headers: {

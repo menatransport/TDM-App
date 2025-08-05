@@ -2,9 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft,
   Upload,
@@ -97,64 +95,49 @@ useEffect(() => {
 
        
 
-  const handleUpload = async () => {
-    if (uploadImages.length === 0) {
-      alert('กรุณาเลือกรูปภาพที่จะอัปโหลด');
-      return;
-    }
-    
-    // ตรวจสอบว่าข้อมูลครบหรือไม่
-    if (!validateUploadData()) {
-      alert('กรุณาเลือกประเภทรูปภาพให้ครบทุกรูป');
-      return;
-    }
-    
-    setIsUploading(true);
-    
-    try {
-     
-       const formData = new FormData();
+ const handleUpload = async () => {
+  if (uploadImages.length === 0) {
+    alert('กรุณาเลือกรูปภาพที่จะอัปโหลด');
+    return;
+  }
+
+  if (!validateUploadData()) {
+    alert('กรุณาเลือกประเภทรูปภาพให้ครบทุกรูป');
+    return;
+  }
+
+  setIsUploading(true);
+
+  try {
+    const formData = new FormData();
     uploadImages.forEach((img) => {
       if (img.file) {
         const renamedFile = new File([img.file], img.name, { type: img.file.type });
-        formData.append('file', renamedFile); // ชื่อ `file` ให้ตรงกับ API
+        formData.append('file', renamedFile);
       }
     });
-      
-       try {
-          const res = await fetch("/api/upload", {
-            method: "POST",
-            body: formData,
-          });
-      
-          if (res.ok) {
-             alert('อัปโหลดสำเร็จ!');
-        const uploadedImages = uploadImages.map(img => ({
-        ...img,
-        isUploaded: true,
-      }));
 
+    const res = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData,
+    });
 
-      setDatabaseImages(prev => [...prev, ...uploadedImages]);
-      setUploadImages([]);
-      
-          } else {
-    alert('พบปัญหาการส่งข้อมูล!');
-     
-          }
-        } catch (err) {
-          console.error("Upload error", err);
-
-        }
-
-  
-    } catch (error) {
-      alert('อัปโหลดไม่สำเร็จ กรุณาลองใหม่');
-    } finally {
-      setIsUploading(false);
+    if (res.ok) {
+   
+      location.reload();
+      // หรือถ้าต้องการเคลียร์รายการรูป
+      // setUploadImages([]);
+    } else {
+      alert('พบปัญหาการส่งข้อมูล!');
     }
-  };
-  
+  } catch (err) {
+    console.error('Upload error', err);
+    alert('เกิดข้อผิดพลาดขณะอัปโหลด');
+  } finally {
+    setIsUploading(false);
+  }
+};
+
 
 const validateUploadData = () => {
     const incompleteImages = uploadImages.filter(img => !img.category || img.category === '');
@@ -201,37 +184,36 @@ const validateUploadData = () => {
   };
 
 // ยืนยันการลบ
-  const confirmDelete = async () => {
-    const { imageId, imageType } = deleteAlert;
-    
-    if (imageType === 'upload') {
-      setUploadImages(prev => prev.filter(img => img.id !== imageId));
-    } else {
-    const image = databaseImages.find(img => img.id == imageId);
-     if (!image) {
+ const confirmDelete = async () => {
+  const { imageId, imageType } = deleteAlert;
+
+  if (imageType === "upload") {
+    setUploadImages((prev) => prev.filter((img) => img.id !== imageId));
+  } else {
+    const image = databaseImages.find((img) => img.id == imageId);
+    if (!image) {
       alert("ไม่พบรูปภาพในระบบ");
       return;
     }
-    console.log("image : ",image.key)
-    fetch("/api/upload", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key: image.key }),
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("ลบไฟล์ไม่สำเร็จ");
-        alert('ลบสำเร็จ!');
-    //    setDatabaseImages(prev => prev.filter(img => img.id !== imageId));
-      
-      })
-      .catch((err) => {
-        console.error("❌ ลบไฟล์ล้มเหลว:", err);
+
+    try {
+      const res = await fetch("/api/upload", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: image.key }),
       });
-      
+
+      if (!res.ok) throw new Error("ลบไฟล์ไม่สำเร็จ");
+location.reload();
+      // router.push(`/picture?id=${JobId}`)
+    } catch (err) {
+      console.error("❌ ลบไฟล์ล้มเหลว:", err);
+      alert("เกิดข้อผิดพลาดในการลบไฟล์");
     }
-    
-    setDeleteAlert({ show: false, imageId: '', imageType: 'upload' });
-  };
+  }
+
+  setDeleteAlert({ show: false, imageId: "", imageType: "upload" });
+};
 
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -278,25 +260,23 @@ const updateImageCategory = (imageId: string, category: string) => {
     const currentImage = prev.find(img => img.id === imageId);
     const extension = getFileExtension(currentImage?.name || "");
 
-    // ชื่อที่มีอยู่ใน uploadImages (ยกเว้นตัวที่กำลังอัปเดต)
+    const baseName = `${JobId}_${category}`;
+
+    // รวมชื่อที่มีอยู่ทั้งหมด (จาก upload + database) ยกเว้น id เดิม
     const uploadNames = prev
       .filter(img => img.id !== imageId)
-      .map(img => img.name);
+      .map(img => removeFileExtension(img.name));
 
-    // ชื่อที่มีอยู่ใน databaseImages ทั้งหมด
-    const databaseNames = databaseImages.map(img => img.name);
+    const databaseNames = databaseImages.map(img => removeFileExtension(img.name));
 
-    // รวมชื่อทั้งหมดที่ห้ามซ้ำ
     const allExistingNames = [...uploadNames, ...databaseNames];
 
-    let baseName = `${JobId}_${category}`;
-    let finalName = `${baseName}_1${extension}`;
     let counter = 1;
+    let finalName = `${baseName}_${counter}${extension}`;
 
-    // ถ้าชื่อซ้ำ ให้เติม _1, _2, ... จนไม่ซ้ำ
-    while (allExistingNames.includes(finalName)) {
-      finalName = `${baseName}_${counter}${extension}`;
+    while (allExistingNames.includes(`${baseName}_${counter}`)) {
       counter++;
+      finalName = `${baseName}_${counter}${extension}`;
     }
 
     return prev.map(img =>
@@ -310,6 +290,11 @@ const updateImageCategory = (imageId: string, category: string) => {
     );
   });
 };
+
+// helper: ตัดนามสกุลไฟล์ออก
+function removeFileExtension(filename: string): string {
+  return filename.replace(/\.[^/.]+$/, "");
+}
 
 
 
