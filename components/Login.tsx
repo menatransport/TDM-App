@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   Truck,
@@ -11,6 +11,21 @@ import {
   Check,
 } from "lucide-react";
 
+const MOCKNAME = [
+  'ต้อย ธุปทอง',
+  'กิตติศักดิ์ พิกุลทอง',
+  'กันติชา ดาวเรือง',
+  'ทินกร ถนอมญาติ',
+  'ปิยะพันธุ์ ต้องกระโทก',
+  'พนมพร รูปสูง',
+  'พฤหัส คำรุ่ง',
+  'พิภู พิมมาตร',
+  'มงคล สืบมา',
+  'สถาพร สองศรี',
+  'พีรพล คุ้มเงิน'
+];
+
+
 export const Logincomponent = () => {
 
   const [username, setUsername] = useState("");
@@ -20,6 +35,9 @@ export const Logincomponent = () => {
   const [error, setError] = useState("");
   const [isVisible, setIsVisible] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+
   const router = useRouter();
   const local_remember = () => {
     if (typeof window !== "undefined") {
@@ -51,6 +69,36 @@ export const Logincomponent = () => {
     const timer = setTimeout(() => setIsVisible(true), 100);
     return () => clearTimeout(timer);
   }, []);
+
+  const filteredNames = useMemo(() => {
+    if (username.length < 3) return [];
+    
+    return MOCKNAME.filter(name => 
+      name.toLowerCase().includes(username.toLowerCase())
+    );
+  }, [username]);
+
+    const handleUsernameChange = (e:any) => {
+    const value = e.target.value;
+    setUsername(value);
+    setShowSuggestions(value.length >= 3);
+    if (error) setError(''); 
+  };
+
+  const handleNameSelect = (name:string) => {
+    setUsername(name);
+    setShowSuggestions(false);
+  };
+
+  const handleUsernameFocus = () => {
+    if (username.length >= 3) {
+      setShowSuggestions(true);
+    }
+  };
+
+  const handleUsernameBlur = () => {
+    setTimeout(() => setShowSuggestions(false), 200);
+  };
 
   const handleLogin = async () => {
     setIsLoading(true);
@@ -176,12 +224,52 @@ return (
               </div>
               <input
                 type="text"
-                placeholder="ชื่อผู้ใช้"
+                placeholder="ชื่อผู้ใช้ (พิมพ์อย่างน้อย 3 ตัวอักษร)"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={handleUsernameChange}
+                  onFocus={handleUsernameFocus}
+                  onBlur={handleUsernameBlur}
                 className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-400 focus:ring-4 focus:ring-green-100 transition-all duration-200 outline-none bg-gray-50 focus:bg-white text-gray-800 placeholder-gray-400"
               />
             </div>
+
+            
+              {/* Suggestions Dropdown */}
+              {showSuggestions && (
+                <div className="absolute m-4 top-33 left-0 right-0 mt-2 bg-white border-2 border-gray-200 rounded-xl shadow-xl z-10 max-h-40 overflow-y-auto">
+                  {filteredNames.length > 0 ? (
+                    <>
+                      <div className="px-4 py-2 text-sm text-gray-500 border-b border-gray-100 bg-gray-50 rounded-t-xl">
+                        พบ {filteredNames.length} รายการ
+                      </div>
+                      {filteredNames.map((name, index) => (
+                        <div
+                          key={index}
+                          onClick={() => handleNameSelect(name)}
+                          className="px-4 py-3 hover:bg-green-50 cursor-pointer transition-colors duration-150 flex items-center space-x-3 border-b border-gray-50 last:border-b-0"
+                        >
+                          <User className="h-4 w-4 text-green-500" />
+                          <span className="text-gray-800">{name}</span>
+                        </div>
+                      ))}
+                    </>
+                  ) : (
+                    <div className="px-4 py-6 text-center text-gray-500">
+                      <p>ไม่พบชื่อที่ตรงกับการค้นหา</p>
+                      <p className="text-sm text-gray-400 mt-1">"{username}"</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+               {/* Search status info */}
+              {username.length > 0 && username.length < 3 && (
+                <div className="mt-1 text-xs text-orange-500">
+                  พิมพ์อีก {3 - username.length} ตัวอักษรเพื่อค้นหา
+                </div>
+              )}
+              
+         
 
             {/* Password field */}
             <div className="relative group">
@@ -256,11 +344,11 @@ return (
             </button>
 
             {/* Forgot password */}
-            <div className="text-center">
+            {/* <div className="text-center">
               <button className="text-sm text-gray-500 hover:text-green-600 transition-colors duration-200 hover:underline">
                 ลืมรหัสผ่าน?
               </button>
-            </div>
+            </div> */}
           </div>
 
           {/* Demo credentials */}
@@ -272,13 +360,13 @@ return (
               <p className="text-green-700 flex items-center">
                 <span className="w-16">ชื่อผู้ใช้:</span>
                 <code className="bg-green-100 px-2 py-1 rounded text-green-800">
-                  user
+                  พีรพล คุ้มเงิน
                 </code>
               </p>
               <p className="text-green-700 flex items-center">
                 <span className="w-16">รหัสผ่าน:</span>
                 <code className="bg-green-100 px-2 py-1 rounded text-green-800">
-                  1234
+                  680177
                 </code>
               </p>
             </div>

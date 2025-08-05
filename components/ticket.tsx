@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Swal from "sweetalert2";
-import { ImagesFn } from "@/components/ImagesFn";
 import { TimelineStep } from "@/components/Timeline";
 import Image from 'next/image'
 
@@ -33,16 +32,17 @@ export const Ticket = () => {
    const [job, setDatajobs] = useState<any>({});
    const [tickets, setTickets] = useState<any>({});
    const [pallet, setPallet] = useState<any>({});
-   const [existingImages_tollway, setExistingImages_tollway] = useState<{ key: string; url: string }[]>([]);
-   const [existingImages_timeline, setExistingImages_timeline] = useState<{ key: string; url: string }[]>([]);
-   const [images_Tollway, setImages_Tollway] = useState<File[]>([]);
+   const [access_token, setAccesstoken] = useState<any>({});
+   const [timeline, setTimeline] = useState<Record<string, string>>({});
+   const [isLoading, setIsLoading] = useState(false);
+
 
 useEffect(() => {
 
     const params = new URLSearchParams(window.location.search);
     const jobId = params.get("id");
    const access_token = localStorage.getItem("access_token");
- 
+ setAccesstoken(access_token)
 
  
    const fetchData = async () => {
@@ -56,24 +56,9 @@ useEffect(() => {
          },
        });
 
-       const res_images = await fetch("/api/upload", {
-         method: "GET",
-         headers: {
-          id: jobId ?? "",
-         },
-       });
+      
        const data = await res_data.json();
-       const getimages = await res_images.json();
-       console.log('getimages : ',getimages)
-       const tollwayImages = getimages.images.filter((img: { key: string }) =>
-      img.key.includes("tollway")
-      );
-       const timelineImages = getimages.images.filter((img: { key: string }) =>
-      img.key.includes("end")
-      );
-
-       setExistingImages_timeline(timelineImages);
-       setExistingImages_tollway(tollwayImages);
+  
        setDatajobs(data);
        setTickets(data.ticket);
        setPallet(data.palletdata);
@@ -88,17 +73,10 @@ useEffect(() => {
  }, []);
  
  
-   const handleImages_Tollway = (files: File[]) => {
-    console.log('files Tollway :  ',files)
-     setImages_Tollway(files);
-     console.log(
-       "✅ รูปภาพใหม่:",
-       files.map((f) => f.name)
-     );
-   };
+
  
    const handleSaved = async () => {
-  console.log("จำนวนภาพใน images4:", images_Tollway.length);
+console.log('timeline : ',timeline)
 
   const result = await Swal.fire({
     title: "คุณต้องการยืนยันบันทึกข้อมูลหรือไม่?",
@@ -113,36 +91,40 @@ useEffect(() => {
   });
 
   if (!result.isConfirmed) return;
-
-  const formData = new FormData();
-  if(images_Tollway.length > 0){
-  images_Tollway.forEach((file, index) => {
-    // console.log('file Fromdata : ',file)
-    formData.append("file", file);
-  });
-}
-  console.log([...formData.entries()]);
+   setIsLoading(true);
+  if(Object.keys(timeline).length === 0) return alert('โปรดกรอกเวลาสถานะก่อน กดบันทึก')
   try {
-    const res = await fetch("/api/upload", {
+    const res = await fetch("/api/orders_job", {
       method: "POST",
-      body: formData,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${access_token}`, 
+      },
+      body: JSON.stringify(timeline), 
     });
 
-    if (res.ok) {
-      Swal.fire({
-        title: "บันทึกข้อมูลสำเร็จ",
-        text: "ข้อมูลของคุณถูกบันทึกเรียบร้อยแล้ว",
-        icon: "success",
-        confirmButtonText: "ตกลง",
-        allowOutsideClick: false,
-      });
-      router.push("/job");
-    } else {
-      Swal.fire("เกิดข้อผิดพลาด", "ไม่สามารถอัปโหลดภาพได้", "error");
+  if (!res.ok) {
+      const errorData = await res.json();
+      console.error("เกิดข้อผิดพลาด:", errorData);
+      alert("ไม่สามารถบันทึกข้อมูลได้ กรุณาตรวจสอบอีกครั้ง");
+      setIsLoading(false);
+      return;
     }
-  } catch (err) {
-    console.error("Upload error", err);
-    Swal.fire("เกิดข้อผิดพลาด", "ไม่สามารถเชื่อมต่อ API ได้", "error");
+Swal.fire({
+           title: "บันทึกข้อมูลสำเร็จ",
+           text: "ข้อมูลของคุณถูกบันทึกเรียบร้อยแล้ว",
+           icon: "success",
+           confirmButtonText: "ตกลง",
+           allowOutsideClick: false,
+         }).then(() => {
+          setIsLoading(false);
+           router.push("/job");
+         });
+
+  } catch (error) {
+    console.error("เกิดข้อผิดพลาดในการเชื่อมต่อ:", error);
+    alert("เกิดข้อผิดพลาดในการเชื่อมต่อ");
+    setIsLoading(false);
   }
 };
  
@@ -241,7 +223,7 @@ useEffect(() => {
      }
    };
 
-   console.log('TimelineStep : ',existingImages_timeline)
+
  
  return(
  <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex justify-center p-5 relative overflow-hidden">
@@ -257,8 +239,14 @@ useEffect(() => {
     <div className="flex items-center justify-between mb-2">
   {/* ปุ่มกลับฝั่งซ้าย */}
    <Button
-  onClick={() => router.back()}
-  className="flex items-center gap-2 rounded-md bg-white px-4 py-2 text-gray-700 shadow hover:bg-gray-100 transition-all duration-200"
+   onClick={() => {
+      if (!isLoading) {
+        router.back();
+      }
+    }}
+    className={`flex items-center gap-2 rounded-md bg-white px-4 py-2 text-gray-700 shadow hover:bg-gray-100 transition-all duration-200 ${
+      isLoading ? 'opacity-50 pointer-events-none' : 'hover:opacity-80'
+    }`}
 >
   <ArrowLeft className="h-4 w-4 text-emerald-500" />
   <span className="font-medium">งาน</span>
@@ -267,10 +255,18 @@ useEffect(() => {
 <div className="flex flex-col justify-center text-center item-center cursor-pointer">
  <Image
       src="/cameralord.gif"
-      onClick={() => router.push(`/picture?id=${job.load_id}`)}
+       onClick={() => {
+      if (!isLoading) {
+        router.push(`/picture?id=${job.load_id}`);
+      }
+    }}
+    className={`cursor-pointer transition-opacity duration-300 ${
+      isLoading ? 'opacity-50 pointer-events-none' : 'hover:opacity-80'
+    }`}
+      
       width={60}
       height={60}
-      alt="images"
+      alt="images"   
     />
  <Badge
                   className={`border-white/30 text-xs rounded-full backdrop-blur-sm`}
@@ -414,14 +410,14 @@ useEffect(() => {
             <CardContent>
               <div className="space-y-6">
                 
-                    <TimelineStep db={tickets} existingImages={existingImages_timeline} />
+                    <TimelineStep db={tickets} onTimeChange={setTimeline} />
                      
               </div>
             </CardContent>
           </Card>
 
           {/* รายละเอียดเพิ่มเติม*/}
-          <Card className="mb-25 bg-gray-50 shadow-md hover:shadow-lg transition-all duration-300 border-0 ring-1 ring-gray-200/50 hover:ring-gray-300/50">
+          <Card className="mb-10 bg-gray-50 shadow-md hover:shadow-lg transition-all duration-300 border-0 ring-1 ring-gray-200/50 hover:ring-gray-300/50">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <CircleEllipsis className="h-5 w-5" />
@@ -581,39 +577,53 @@ useEffect(() => {
 
                 )}
 
-                              {/* <div
-          className="flex items-center justify-between text-sm font-medium p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg cursor-pointer hover:from-blue-100 hover:to-blue-150 transition-all duration-200 shadow-sm"
-          onClick={() => setIsOpen4(!isOpen4)}
-        >
-          <span className="text-blue-800">4. บิลทางด่วน</span>
-          {isOpen4 ? (
-            <ChevronUp size={20} className="text-blue-600" />
-          ) : (
-            <ChevronDown size={20} className="text-blue-600" />
-          )}
-        </div>
-               
-                {isOpen4 && <ImagesFn 
-                onImagesChange={handleImages_Tollway}
-                jobId={tickets.load_id}
-                imagesOf="tollway"
-                existingImages={existingImages_tollway}
-                />} */}
+                             
               </div>
             </CardContent>
           </Card>
 
           {/* Button saved */}
-          <div className="fixed bottom-0 right-0 m-2.5 z-50">
+          
             <Button
-              onClick={handleSaved}
-              className="fixed bottom-4 right-4 z-50 h-12 bg-blue-500 text-white hover:bg-blue-700 transition-all duration-200 flex items-center space-x-2 px-4 py-2 shadow-lg"
-            >
-              <Save size={18} />
-              <span className="">บันทึกข้อมูล</span>
-            </Button>
+  onClick={handleSaved}
+  disabled={isLoading}
+  className={`flex w-full justify-center items-center z-50 h-15 transition-all duration-200 space-x-2 px-4 py-5 shadow-lg 
+    ${isLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-700 text-white'}`}
+>
+  {isLoading ? (
+    <div className="flex items-center space-x-2">
+      <svg
+        className="animate-spin h-5 w-5 text-white"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <circle
+          className="opacity-25"
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          strokeWidth="4"
+        ></circle>
+        <path
+          className="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8v8z"
+        ></path>
+      </svg>
+      <span>กำลังบันทึก...</span>
+    </div>
+  ) : (
+    <>
+      <Save size={18} />
+      <span>บันทึกข้อมูล</span>
+    </>
+  )}
+</Button>
+
           </div>
-        </div>
+       
       </div>
  )
  }

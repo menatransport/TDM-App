@@ -1,0 +1,20 @@
+{
+  "name": "TDM Fastship Tracking",
+  "short_name": "App",
+  "start_url": "/login",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "description": "This is Transport Application",
+  "icons": [
+    {
+      "src": "/public/Rimberio.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/public/Rimberio.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}

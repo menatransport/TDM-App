@@ -1,7 +1,6 @@
 "use client";
 import React, { useRef, useState } from 'react'
 import { MapPin, Truck, Package, Home, Check, Clock, ArrowRight, X } from 'lucide-react';
-import { ImagesFn } from "@/components/ImagesFn";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface Typedata {
@@ -17,11 +16,9 @@ interface Typedata {
   end_unload_datetime: string
 }
 
-export const TimelineStep = ({db,existingImages}: {db: Typedata; existingImages: { key: string; url: string }[];}) => {
+export const TimelineStep = ({db,onTimeChange }: {db: Typedata;onTimeChange : any}) => {
 
-
-  console.log('existingImages [Timeline] : ',existingImages)
-
+console.log('db : ',db)
 const [selectedStatus, setSelectedStatus] = useState<StatusItem | null>(null);
 const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 const [imageStatus, setImagesStatus] = useState<File[]>([]);
@@ -100,13 +97,6 @@ const [imageStatus, setImagesStatus] = useState<File[]>([]);
   
   ];
 
-  const handleImagesChange = (files: File[]) => {
-     setImagesStatus(files);
-     console.log(
-       "✅ รูปภาพใหม่:",
-       files.map((f) => f.name)
-     );
-   };
 
    const openModal = (status: any) => {
     console.log('status :timeline: ',status)
@@ -159,6 +149,44 @@ const formatDateTime = (dateTimeString: any) => {
    const isStatusCompleted = (statusKey: keyof Typedata): boolean => {
   return db[statusKey] !== null && db[statusKey] !== '';
 };
+
+const formatOnsend = (date: string) => {
+  if (!date) return '';
+
+  const d = new Date(date);
+
+  if (isNaN(d.getTime())) return 'รูปแบบวันที่ไม่ถูกต้อง';
+
+  const day = d.getDate();
+  const month = d.getMonth() + 1; // JavaScript เดือนเริ่มที่ 0
+  const year = d.getFullYear();
+  const hour = d.getHours();
+  const minute = d.getMinutes();
+  const second = d.getSeconds();
+
+  // เพิ่ม padding ด้วย .toString().padStart(2, "0")
+  const formatted = `${day}/${month}/${year}, ${hour.toString().padStart(2, '0')}:${minute
+    .toString()
+    .padStart(2, '0')}:${second.toString().padStart(2, '0')}`;
+
+  return formatted;
+
+};
+
+const formchange = (id : string ,key : string ,date : string) => {
+//  let value = {
+//     'load_id':id,
+//     [key]:date
+//   }
+ 
+ onTimeChange({
+    'load_id':id,
+     [key]:date
+  })
+
+  // console.log('value_sending : ',value)
+
+}
 
   const getNextStatus = () => {
     for (let i = 0; i < statusConfig.length; i++) {
@@ -269,26 +297,19 @@ return (
             </CardHeader>
               <div className="p-2 shrink-0">
                 <input 
-                  type="datetime-local" 
+                  type="datetime-local"
+                  id={status.key} 
+                  onChange={(e) => {
+    const formatted = formatOnsend(e.target.value);
+    formchange(db.load_id ,status.key ,formatted );
+  }}
                   className="w-full border bg-white border-gray-300 rounded-md px-3 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition-colors"
                 />
               </div>
                </Card>
             
               )}
-              {/* Input รูปภาพ */}
-{/* {isNext && (
-              <div className="w-full md:w-auto shrink-0">
-                <ImagesFn 
-                onImagesChange={handleImagesChange}
-                jobId={db.load_id}
-                imagesOf={status.key}
-                existingImages={existingImages}
-                /> 
-              </div>
-              )} */}
-
-
+             
             </div>
           );
         })}
