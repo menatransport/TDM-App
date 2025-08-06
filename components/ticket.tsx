@@ -42,13 +42,13 @@ useEffect(() => {
 
     const params = new URLSearchParams(window.location.search);
     const jobId = params.get("id");
-   const access_token = localStorage.getItem("access_token");
+   const access_token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJhZG1pbiIsImV4cCI6MTc1NjI3MTE2MH0.STxWRhTw3Jk6_6TDPvsSQcydH_mSEi7Slwq6vt25xCg'//localStorage.getItem("access_token");
  setAccesstoken(access_token)
 
  
    const fetchData = async () => {
      try {
-       const res_data = await fetch("/api/orders_job", {
+       const res_data = await fetch("/api/ticket", {
          method: "GET",
          headers: {
            "Content-Type": "application/json",
@@ -98,7 +98,7 @@ console.log('timeline : ',timeline)
   if(Object.keys(timeline).length === 0) return alert('โปรดกรอกเวลาสถานะก่อน กดบันทึก');setIsLoading(false);
   try {
       setIsLoading(true);
-    const res = await fetch("/api/orders_job", {
+    const res = await fetch("/api/ticket", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

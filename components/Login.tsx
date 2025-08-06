@@ -124,7 +124,8 @@ export const Logincomponent = () => {
           localStorage.setItem("isLoggedIn", "true");
           localStorage.setItem("jwtToken", data.jwtToken);
           localStorage.setItem("access_token", data.access_token);
-          router.push("/job");
+          if(data.role === 'user') return router.push("/job");
+          if(data.role === 'admin') return router.push("/admin");
         } else {
           setError(data.error || "เกิดข้อผิดพลาดในการเข้าสู่ระบบ");
           setIsLoading(false);
