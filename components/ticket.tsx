@@ -42,13 +42,11 @@ useEffect(() => {
 
     const params = new URLSearchParams(window.location.search);
     const jobId = params.get("id");
-   const access_token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJhZG1pbiIsImV4cCI6MTc1NjI3MTE2MH0.STxWRhTw3Jk6_6TDPvsSQcydH_mSEi7Slwq6vt25xCg'//localStorage.getItem("access_token");
+   const access_token = localStorage.getItem("access_token");
  setAccesstoken(access_token)
-
- 
    const fetchData = async () => {
      try {
-       const res_data = await fetch("/api/ticket", {
+       const res_data = await fetch("/api/tickets", {
          method: "GET",
          headers: {
            "Content-Type": "application/json",
@@ -59,7 +57,7 @@ useEffect(() => {
 
       
        const data = await res_data.json();
-  
+       console.log('data ticket : ',data)
        setDatajobs(data);
        setTickets(data.ticket);
        setPallet(data.palletdata);

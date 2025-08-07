@@ -23,3 +23,23 @@ export async function POST(req: Request) {
 
   return NextResponse.json({ success: true, jwtToken: token, access_token: db.access_token ,role: db.role });
 }
+
+
+export async function GET(req: Request) {
+  console.log('req : ',req)
+try {
+    const externalRes = await fetch('https://backend-tdm.onrender.com/user', {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': '=E=QY]!{PjD53Mq',
+    }
+  });
+  const data = await externalRes.json();
+
+  return NextResponse.json(data);
+  } catch (err: any) {
+    console.error('❌ DB Error:', err.message);
+    return NextResponse.json({ error: 'Failed to fetch table list' }, { status: 500 });
+  }
+}

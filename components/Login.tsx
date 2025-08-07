@@ -36,6 +36,7 @@ export const Logincomponent = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [listname, setListname] = useState<string[]>([]);
 
 
   const router = useRouter();
@@ -52,6 +53,32 @@ export const Logincomponent = () => {
       }
     }
   };
+
+useEffect(() => {
+  const fetchLogin = async () => {
+    try {
+      const res = await fetch("/api/auth", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": process.env.USER_XAPI || "", 
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
+      const data = await res.json();
+      const usernames = data.users.map((user: { username: string }) => user.username);
+      setListname(usernames)
+    } catch (error) {
+      console.error("Login failed", error);
+    }
+  };
+
+  fetchLogin();
+}, []);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -73,7 +100,7 @@ export const Logincomponent = () => {
   const filteredNames = useMemo(() => {
     if (username.length < 3) return [];
     
-    return MOCKNAME.filter(name => 
+    return listname.filter(name => 
       name.toLowerCase().includes(username.toLowerCase())
     );
   }, [username]);
