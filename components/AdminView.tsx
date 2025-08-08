@@ -21,7 +21,7 @@ import {
   Fuel ,
   Phone ,
 } from "lucide-react";
-
+import Swal from "sweetalert2";
 interface TransportItem {
   load_id: string;
   date_plan: string;
@@ -88,7 +88,14 @@ export function AdminView({ jobView, closeModal }: AdminViewProps) {
   };
 
   const handleSaved = () => {
-    
+     Swal.fire({
+            title: "บันทึกข้อมูลสำเร็จ",
+            text: "ข้อมูลของคุณถูกบันทึกเรียบร้อยแล้ว",
+            icon: "success",
+            confirmButtonText: "ตกลง",
+            allowOutsideClick: false,
+          });
+          setSavedAlert(false)
   }
 
   return (

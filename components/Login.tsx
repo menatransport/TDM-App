@@ -196,7 +196,7 @@ return (
                 : "translate-y-4 opacity-0"
             }`}
           >
-            Smart - TDM Tracking Status
+            ระบบติดตามสถานะขนส่ง TDM
           </h1>
           <p
             className={`text-gray-500 text-sm transform transition-all duration-700 ease-out delay-300 ${
@@ -205,7 +205,7 @@ return (
                 : "translate-y-4 opacity-0"
             }`}
           >
-            Developed by Process Improvment Team 2025
+            TDM Fast Ship Tracking Application {/* Developed by Process Improvment Team 2025 */}
           </p>
         </div>
 
@@ -219,7 +219,7 @@ return (
             <h2 className="text-xl font-semibold text-gray-800 mb-1">
               เข้าสู่ระบบ
             </h2>
-            <p className="text-gray-500 text-sm">ยินดีต้อนรับกลับมา</p>
+            {/* <p className="text-gray-500 text-sm">ยินดีต้อนรับกลับมา</p> */}
           </div>
 
           {/* Error message */}
@@ -379,7 +379,7 @@ return (
               <p className="text-green-700 flex items-center">
                 <span className="w-16">รหัสผ่าน:</span>
                 <code className="bg-green-100 px-2 py-1 rounded text-green-800">
-                  1234 (ใช้สำหรับพรีวิว)
+                  1234 (ใช้สำหรับทดสอบก่อน UAT)
                 </code>
               </p>
             </div>
