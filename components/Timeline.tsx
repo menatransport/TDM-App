@@ -1,7 +1,7 @@
 "use client";
-import React, { useRef, useState } from 'react'
+import React, { useState } from 'react'
 import { MapPin, Truck, Package, Home, Check, Clock, ArrowRight, X } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 
 interface Typedata {
   load_id: string,

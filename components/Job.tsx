@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { Jobcards } from "@/components/Jobcards";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Funnel, Inbox, X } from "lucide-react";
+import { Funnel, Inbox, X, CheckCircle, Loader, AlertCircle, Package, Filter } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -37,7 +37,6 @@ export const Jobcomponent = ({ onLoadingChange }: TicketProps) => {
           },
         });
         const data = await res_data.json();
-        console.log('data Job : ',data.jobs)
         const filterStatus = data.jobs.filter(
           (job: any) =>
             job.status !== "ตกคิว" &&
@@ -45,7 +44,6 @@ export const Jobcomponent = ({ onLoadingChange }: TicketProps) => {
             job.status !== "ยกเลิก" &&
             job.status !== "ซ่อม"
         );
-        console.log("data json : ", filterStatus);
         setDatajobs(filterStatus);
         onLoadingChange(false);
       } catch (error) {
@@ -105,7 +103,6 @@ export const Jobcomponent = ({ onLoadingChange }: TicketProps) => {
       .length,
   };
 
-  console.log("count", count);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex justify-center px-4 py-3 relative overflow-hidden">
@@ -243,51 +240,91 @@ export const Jobcomponent = ({ onLoadingChange }: TicketProps) => {
             </Dialog>
           </div>
         </div>
+<div className="flex flex-wrap gap-2 items-center">
+          <div className="flex flex-wrap gap-3 items-center">
+            <div className="flex items-center gap-2 text-gray-700 font-semibold">
+              <div className="p-2 bg-green-100 rounded-xl">
+                <Filter className="h-4 w-4 text-green-600" />
+              </div>
+              <span>กรองตาม:</span>
+            </div>
+            
+            <button
+              onClick={() => setFilterStatus("ทั้งหมด")}
+              className={`inline-flex items-center gap-3 px-2 py-2 rounded-xl font-semibold text-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1 ${
+                filterStatus === "ทั้งหมด"
+                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg border-2 border-blue-300"
+                  : "bg-white bg-opacity-90 backdrop-blur-sm text-gray-700 border-2 border-gray-200 hover:border-gray-300 hover:bg-opacity-100"
+              }`}
+            >
+              <Package className="h-4 w-4" />
+              <span>ทั้งหมด</span>
+              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                filterStatus === "ทั้งหมด" 
+                  ? "bg-white bg-opacity-20 text-gray-800" 
+                  : "bg-gray-100 text-gray-600"
+              }`}>
+                {count.totalCount}
+              </span>
+            </button>
 
-        {/* Filter Buttons */}
-        <div className="flex flex-wrap gap-2 items-center">
-          <Funnel />
-          <button
-            onClick={() => setFilterStatus("ทั้งหมด")}
-            className={`inline-flex items-center gap-x-2 p-2 px-2 text-sm rounded-xl border font-medium hover:shadow-lg hover:-translate-y-1 ${
-              filterStatus === "ทั้งหมด"
-                ? "bg-black text-white"
-                : "bg-white border-gray-200"
-            }`}
-          >
-            <span>ทั้งหมด</span>
-            <span className="bg-gray-100 text-black rounded-full px-2 text-sm">
-              {count.totalCount}
-            </span>
-          </button>
+            <button
+              onClick={() => setFilterStatus("รอดำเนินงาน")}
+              className={`inline-flex items-center gap-3 px-2 py-2 rounded-xl font-semibold text-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1 ${
+                filterStatus === "รอดำเนินงาน"
+                  ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg border-2 border-amber-300"
+                  : "bg-white bg-opacity-90 backdrop-blur-sm text-gray-700 border-2 border-gray-200 hover:border-gray-300 hover:bg-opacity-100"
+              }`}
+            >
+              <AlertCircle className="h-4 w-4" />
+              <span>รอดำเนินงาน</span>
+              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                filterStatus === "รอดำเนินงาน" 
+                  ? "bg-white bg-opacity-20 text-gray-800" 
+                  : "bg-gray-100 text-gray-600"
+              }`}>
+                {count.inProgressCount}
+              </span>
+            </button>
 
-          <button
-            onClick={() => setFilterStatus("รอดำเนินงาน")}
-            className={`inline-flex items-center gap-x-2 p-2 px-2 text-sm rounded-xl border font-medium hover:shadow-lg hover:-translate-y-1 ${
-              filterStatus === "รอดำเนินงาน"
-                ? "bg-black text-white"
-                : "bg-white border-gray-200"
-            }`}
-          >
-            <span>รอดำเนินงาน</span>
-            <span className="bg-gray-100 text-black rounded-full px-2 text-sm">
-              {count.inProgressCount}
-            </span>
-          </button>
+            {/* <button
+              onClick={() => setFilterStatus("กำลังขนส่ง")}
+              className={`inline-flex items-center gap-3 px-5 py-3 rounded-2xl font-semibold text-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1 ${
+                filterStatus === "กำลังขนส่ง"
+                  ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg border-2 border-blue-300"
+                  : "bg-white bg-opacity-90 backdrop-blur-sm text-gray-700 border-2 border-gray-200 hover:border-gray-300 hover:bg-opacity-100"
+              }`}
+            >
+              <Loader className={`h-4 w-4 ${filterStatus === "กำลังขนส่ง" ? "animate-spin" : ""}`} />
+              <span>กำลังขนส่ง</span>
+              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                filterStatus === "กำลังขนส่ง" 
+                  ? "bg-white bg-opacity-20 text-white" 
+                  : "bg-gray-100 text-gray-600"
+              }`}>
+                {count.inProgressCount}
+              </span>
+            </button> */}
 
-          <button
-            onClick={() => setFilterStatus("ขนส่งสำเร็จ")}
-            className={`inline-flex items-center gap-x-2 p-2 px-2 text-sm rounded-xl border font-medium hover:shadow-lg hover:-translate-y-1 ${
-              filterStatus === "ขนส่งสำเร็จ"
-                ? "bg-black text-white"
-                : "bg-white border-gray-200"
-            }`}
-          >
-            <span>สำเร็จ</span>
-            <span className="bg-gray-100 text-black rounded-full px-2 text-sm">
-              {count.completedCount}
-            </span>
-          </button>
+            <button
+              onClick={() => setFilterStatus("จัดส่งแล้ว (POD)")}
+              className={`inline-flex items-center gap-3 px-2 py-2 rounded-xl font-semibold text-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1 ${
+                filterStatus === "จัดส่งแล้ว (POD)"
+                  ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg border-2 border-green-300"
+                  : "bg-white bg-opacity-90 backdrop-blur-sm text-gray-700 border-2 border-gray-200 hover:border-gray-300 hover:bg-opacity-100"
+              }`}
+            >
+              <CheckCircle className="h-4 w-4" />
+              <span>จัดส่งสำเร็จ</span>
+              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                filterStatus === "จัดส่งแล้ว (POD)" 
+                  ? "bg-white bg-opacity-20 text-gray-800" 
+                  : "bg-gray-100 text-gray-600"
+              }`}>
+                {count.completedCount}
+              </span>
+            </button>
+          </div>
         </div>
 
         {/* Job Cards */}

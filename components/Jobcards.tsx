@@ -13,13 +13,12 @@ interface JobcardsProps {
 
 export const Jobcards = ({ filterStatus, datajobs }: JobcardsProps) => {
   const jobs = datajobs;
-  console.log("Jobs from props: ", jobs);
   const filteredJobs = jobs.filter((job:any) => {
     if (filterStatus === "ทั้งหมด") {
       return true;
     }
     if (filterStatus === "รอดำเนินงาน") {
-      return job.status !== "ขนส่งสำเร็จ";
+      return job.status !== "จัดส่งแล้ว (POD)";
     }
     return job.status === filterStatus;
   });
@@ -29,14 +28,14 @@ export const Jobcards = ({ filterStatus, datajobs }: JobcardsProps) => {
   const getStatusConfig = (job: any) => {
     switch (job.status) {
       case "พร้อมรับงาน":
-      case "ขนส่งสำเร็จ":
+      case "จัดส่งแล้ว (POD)":
         return {
           color: "bg-gradient-to-r from-green-500 to-green-600 text-white",
           bgColor: "bg-green-50 border-green-200",
           iconColor: "text-green-600",
           btn: "bg-green-200 ",
         };
-      case "รับงานแล้ว":
+      case "รับงาน":
       case "ถึงต้นทาง":
       case "เริ่มขึ้นสินค้า":
       case "ขึ้นสินค้าเสร็จ":
@@ -73,7 +72,6 @@ export const Jobcards = ({ filterStatus, datajobs }: JobcardsProps) => {
   };
 
   const getEstimateTime = (estimateTime: string) => {
-    console.log("Estimate Time: ", estimateTime);
   return estimateTime ? "flex" : "hidden";
 };
 
@@ -113,7 +111,6 @@ export const Jobcards = ({ filterStatus, datajobs }: JobcardsProps) => {
 
 
 const handleJob = (idjob: (typeof jobs)[0]) => {
-  console.log("OBJ : ", idjob);
   router.push(`/ticket?id=${idjob}`);
 };
 
@@ -121,11 +118,11 @@ const handleJob = (idjob: (typeof jobs)[0]) => {
     <div className="w-full mx-auto p-4">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {filteredJobs.map((job:any) => {
-          const statusConfig = getStatusConfig("null");
+          const statusConfig = getStatusConfig(job);
           return (
             <Card
               key={job.load_id}
-              className={`transition-all duration-300 hover:shadow-lg hover:-translate-y-1  rounded-xl border-2 ${statusConfig.bgColor} group overflow-hidden`}
+              className={`transition-all duration-300 hover:shadow-lg hover:-translate-y-1  rounded-xl border-2 bg-white border-gray-300 group overflow-hidden`}
             >
               <CardContent className="p-0">
                 {/* Header with gradient */}
@@ -143,7 +140,7 @@ const handleJob = (idjob: (typeof jobs)[0]) => {
                     <div className="flex flex-col items-end  space-x-2">
                       <Badge
                         className={`${
-                          getStatusConfig(job.status).color
+                          statusConfig.color
                         } border-white/30 text-xs px-2 py-0.5 rounded-full backdrop-blur-sm`}
                       >
                         {job.status}

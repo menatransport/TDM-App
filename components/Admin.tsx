@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import {
   Search, Filter, Calendar, User, Truck, Package,
-  Eye, Edit, Trash2, Plus, Download, RefreshCw, MapPin, Clock, Phone, NotebookPen, ChevronUp, ChevronDown, AlertCircle
+  Eye, Edit, Trash2, Plus, Download, RefreshCw, MapPin, Clock, Phone, NotebookPen, ChevronUp, ChevronDown, AlertCircle , BookOpenCheck, CircleX, Check
 } from "lucide-react";
 import Swal from "sweetalert2";
 import { AdminView } from "@/components/AdminView";
@@ -35,13 +35,15 @@ type TransportItem = {
 };
 
 const itemsPerPage = 10;
-
+const today = new Date().toISOString().split("T")[0];
+const sevenDaysAgo = new Date(new Date(today).getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 export const Admintool= () => {
   const [filters, setFilters] = useState({
-    dateRange: { start: '', end: '' },
-    loadId: '',
-    driverName: '',
-    vehicleNumber: ''
+    date_plan: { date_plan_start: sevenDaysAgo, date_plan_end: today },
+    load_id: '',
+    driver_name: '',
+    h_plate: '',
+    status:''
   });
 
  const [transportData, setTransportData] = useState<TransportItem[]>([]);
@@ -67,21 +69,50 @@ export const Admintool= () => {
   });
 
 
-  // ✅ ค้นหาข้อมูลจาก mockData
   const handleSearch = async () => {
     setLoading(true);
+// 1. แยก date_plan ออกก่อน
+const { date_plan, ...restFilters } = filters;
 
+// 2. กรองค่าที่ไม่ว่าง
+const filtered = Object.fromEntries(
+  Object.entries(restFilters).filter(
+    ([_, value]) => value !== "" && value !== null && value !== undefined
+  )
+);
+
+const searchParams = new URLSearchParams();
+
+Object.entries(filtered).forEach(([key, value]) => {
+  if (typeof value === "string" && value.includes(",")) {
+    value.split(",").forEach(v => {
+      searchParams.append(key, v.trim());
+    });
+  } else {
+    searchParams.append(key, String(value));
+  }
+});
+
+if (date_plan?.date_plan_start) {
+  searchParams.append("date_plan_start", date_plan.date_plan_start);
+}
+if (date_plan?.date_plan_end) {
+  searchParams.append("date_plan_end", date_plan.date_plan_end);
+}
+
+const queryString = searchParams.toString();
     try {
-        const access_token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJhZG1pbiIsImV4cCI6MTc1NjI1NDA1Mn0.dYpgnv3Tu6aYlsYRw0Igu3gwCCOPxz6DiacGEVYLQho' //localStorage.getItem("access_token");
-        const res_data = await fetch("/api/jobs", {
+         const access_token = localStorage.getItem("access_token");
+         const res = await fetch("/api/admin", {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${access_token}`,
+            query: queryString
           },
         });
-       const data = await res_data.json();
-       console.log('data : ',data.jobs)
+       const data = await res.json();
+      
        setTransportData(data.jobs);
        setLoading(false);
       } catch (error) {
@@ -100,10 +131,11 @@ export const Admintool= () => {
   // ✅ รีเซ็ตข้อมูล filter
   const resetFilters = () => {
     setFilters({
-      dateRange: { start: '', end: '' },
-      loadId: '',
-      driverName: '',
-      vehicleNumber: ''
+    date_plan: { date_plan_start: sevenDaysAgo, date_plan_end: today },
+    load_id: '',
+    driver_name: '',
+    h_plate: '',
+    status:''
     });
     setTransportData([]);
   };
@@ -116,7 +148,6 @@ export const Admintool= () => {
   }
 };
   const handleClose = (close: boolean) => {
-    console.log('close : ',close)
   setmodalView(prev => ({ ...prev, show: close }));
 
 };
@@ -139,7 +170,7 @@ const getStatusColor = (status: string) => {
     case 'ลงสินค้าเสร็จ':
       return 'bg-purple-100 text-purple-800';
     case 'จัดส่งแล้ว (POD)':
-      return 'bg-green-600 text-green-900';
+      return 'bg-green-300 text-green-900';
     case 'อบรมที่บริษัท':
     case 'ซ่อม':
     case 'ยกเลิก':
@@ -197,9 +228,8 @@ const getStatusColor = (status: string) => {
 
    const confirmDelete = async () => {
    let value = {status:cancel}
-   console.log('cancel : ',cancel)
    let jobid = deleteAlert.load_id
-   const access_token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJhZG1pbiIsImV4cCI6MTc1NjI3NzEwNn0.9opVP3dv9Tv3fLvn1b3X0Hwrc1PipwBeCiyTL5spL3A'
+   const access_token = localStorage.getItem("access_token");
    try {
    setDeleteAlert({ show: false, load_id: ''})
    const res_data = await fetch("/api/jobs", {
@@ -227,7 +257,7 @@ const getStatusColor = (status: string) => {
   )
 );
         Swal.fire({
-        title: "ลบข้อมูลสำเร็จ!",
+        title: "แก้ไขข้อมูลสำเร็จ!",
         icon: "success",
         draggable: true
       });
@@ -271,10 +301,10 @@ const getStatusColor = (status: string) => {
                 <Plus size={20} />
                 <span className="hidden sm:inline">เพิ่มงานใหม่</span>
               </button> */}
-              <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl">
+              {/* <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl">
                 <Download size={20} />
                 <span className="hidden sm:inline">ส่งออก</span>
-              </button>
+              </button> */}
             </div>
           </div>
         </div>
@@ -290,7 +320,7 @@ const getStatusColor = (status: string) => {
               onClick={() => setShowFilters(!showFilters)}
               className="md:hidden bg-gray-200 hover:bg-gray-300 p-2 rounded-lg transition-colors"
             >
-              <Filter size={20} />
+              <ChevronDown size={20} />
             </button>
           </div>
 
@@ -303,10 +333,10 @@ const getStatusColor = (status: string) => {
               </label>
               <input
                 type="date"
-                value={filters.dateRange.start}
+                value={filters.date_plan.date_plan_start}
                 onChange={(e) => setFilters(prev => ({
                   ...prev,
-                  dateRange: { ...prev.dateRange, start: e.target.value }
+                  date_plan: { ...prev.date_plan, date_plan_start: e.target.value }
                 }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
               />
@@ -319,10 +349,10 @@ const getStatusColor = (status: string) => {
               </label>
               <input
                 type="date"
-                value={filters.dateRange.end}
+                value={filters.date_plan.date_plan_end}
                 onChange={(e) => setFilters(prev => ({
                   ...prev,
-                  dateRange: { ...prev.dateRange, end: e.target.value }
+                  date_plan: { ...prev.date_plan, date_plan_end: e.target.value }
                 }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
               />
@@ -336,8 +366,8 @@ const getStatusColor = (status: string) => {
               </label>
               <input
                 type="text"
-                value={filters.loadId}
-                onChange={(e) => setFilters(prev => ({ ...prev, loadId: e.target.value }))}
+                value={filters.load_id}
+                onChange={(e) => setFilters(prev => ({ ...prev, load_id: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
               />
             </div>
@@ -346,12 +376,12 @@ const getStatusColor = (status: string) => {
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
                 <User size={16} />
-                ชื่อคนขับ
+                ชื่อพจส.
               </label>
               <input
                 type="text"
-                value={filters.driverName}
-                onChange={(e) => setFilters(prev => ({ ...prev, driverName: e.target.value }))}
+                value={filters.driver_name}
+                onChange={(e) => setFilters(prev => ({ ...prev, driver_name: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
               />
             </div>
@@ -364,8 +394,22 @@ const getStatusColor = (status: string) => {
               </label>
               <input
                 type="text"
-                value={filters.vehicleNumber}
-                onChange={(e) => setFilters(prev => ({ ...prev, vehicleNumber: e.target.value }))}
+                value={filters.h_plate}
+                onChange={(e) => setFilters(prev => ({ ...prev, h_plate: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+              />
+            </div>
+
+            {/* Vehicle Number */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                <BookOpenCheck  size={16} />
+                สถานะ
+              </label>
+              <input
+                type="text"
+                value={filters.status}
+                onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
               />
             </div>
@@ -383,10 +427,11 @@ const getStatusColor = (status: string) => {
             <button
               onClick={() => {
                 setFilters({
-                  dateRange: { start: '', end: '' },
-                  loadId: '',
-                  driverName: '',
-                  vehicleNumber: ''
+                  date_plan: { date_plan_start: '', date_plan_end: '' },
+                  load_id: '',
+                  driver_name: '',
+                  h_plate: '',
+                  status:''
                 });
                 setTransportData([]);
               }}
@@ -399,7 +444,7 @@ const getStatusColor = (status: string) => {
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
           <div className="bg-white backdrop-blur-md rounded-xl shadow-lg border border-white/30 p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -412,10 +457,24 @@ const getStatusColor = (status: string) => {
             </div>
           </div>
 
+          <div className="bg-white backdrop-blur-md rounded-xl shadow-lg border border-white/30 p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">ยกเลิก</p>
+                <p className="text-2xl font-bold text-yellow-600">
+                  {transportData.filter(item => (item.status === 'ยกเลิก') || (item.status === 'ตกคิว') || (item.status === 'ซ่อม')|| (item.status === 'อบรมที่บริษัท')).length}
+                </p>
+              </div>
+              <div className="bg-red-100 p-3 rounded-full">
+                <CircleX className="text-red-600" size={24} />
+              </div>
+            </div>
+          </div>
+
            <div className="bg-white backdrop-blur-md rounded-xl shadow-lg border border-white/30 p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">รอรับงาน</p>
+                <p className="text-sm text-gray-600">พร้อมรับงาน</p>
                 <p className="text-2xl font-bold text-yellow-600">
                   {transportData.filter(item => item.status === 'พร้อมรับงาน').length}
                 </p>
@@ -449,7 +508,7 @@ const getStatusColor = (status: string) => {
                 </p>
               </div>
               <div className="bg-green-100 p-3 rounded-full">
-                <Package className="text-green-600" size={24} />
+                <Check className="text-green-600" size={24} />
               </div>
             </div>
           </div>
@@ -677,13 +736,13 @@ const getStatusColor = (status: string) => {
                 onClick={() => setDeleteAlert({ show: false, load_id: ''})}
                 className="px-6 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
               >
-                ยกเลิก
+                ปิด
               </button>
               <button
                 onClick={() => {confirmDelete()}}
                 className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
               >
-                ลบงาน
+                จัดการ
               </button>
             </div>
           </div>

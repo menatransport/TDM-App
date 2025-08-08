@@ -11,20 +11,6 @@ import {
   Check,
 } from "lucide-react";
 
-const MOCKNAME = [
-  'ต้อย ธุปทอง',
-  'กิตติศักดิ์ พิกุลทอง',
-  'กันติชา ดาวเรือง',
-  'ทินกร ถนอมญาติ',
-  'ปิยะพันธุ์ ต้องกระโทก',
-  'พนมพร รูปสูง',
-  'พฤหัส คำรุ่ง',
-  'พิภู พิมมาตร',
-  'มงคล สืบมา',
-  'สถาพร สองศรี',
-  'พีรพล คุ้มเงิน'
-];
-
 
 export const Logincomponent = () => {
 
@@ -145,7 +131,6 @@ useEffect(() => {
             body: JSON.stringify({ username, password }),
           });
           const data = await res.json();
-        console.log("[API] Response:", data);
         if (data.access_token) {
           local_remember();
           localStorage.setItem("isLoggedIn", "true");
@@ -388,13 +373,13 @@ return (
               <p className="text-green-700 flex items-center">
                 <span className="w-16">ชื่อผู้ใช้:</span>
                 <code className="bg-green-100 px-2 py-1 rounded text-green-800">
-                  พีรพล คุ้มเงิน
+                  ชื่อจริง
                 </code>
               </p>
               <p className="text-green-700 flex items-center">
                 <span className="w-16">รหัสผ่าน:</span>
                 <code className="bg-green-100 px-2 py-1 rounded text-green-800">
-                  680177
+                  1234 (ใช้สำหรับพรีวิว)
                 </code>
               </p>
             </div>

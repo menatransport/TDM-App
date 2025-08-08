@@ -2,7 +2,6 @@ import React from 'react'
 import { Truck,  Package } from 'lucide-react'
 
 export const Loading = () => {
-console.log('Loading_Page')
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center relative overflow-hidden">
       {/* Background Animated Elements */}

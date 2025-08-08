@@ -78,7 +78,7 @@ useEffect(() => {
       });
 
       const getimages = await res.json();
-      console.log("getimages : ",getimages)
+      // console.log("getimages : ",getimages)
       setDatabaseImages(getimages.images);
       onLoadingChange(false)
     } catch (error) {
@@ -501,7 +501,7 @@ function removeFileExtension(filename: string): string {
               <div className="p-2 bg-blue-100 rounded-lg">
                 <ImageIcon className="h-5 w-5 text-blue-600" />
               </div>
-              <h2 className="text-xl font-semibold text-gray-800">รูปภาพที่บันทึกแล้ว</h2>
+              <h2 className="text-xl font-semibold text-gray-800">รูปภาพที่บันทึก</h2>
               <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm font-medium">
                 {/* {databaseImages.length} รูป */}
               </span>

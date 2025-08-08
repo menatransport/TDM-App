@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
 
 
 const extractType = (filename: string): string => {
-  const match = filename.match(/_(origin|desination|pallet|damage|bill|other)_/);
+  const match = filename.match(/_(origin|destination|pallet|damage|bill|other)_/);
   return match ? match[1] : "unknown";
 };
 
