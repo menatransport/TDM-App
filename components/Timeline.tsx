@@ -99,7 +99,7 @@ const [imageStatus, setImagesStatus] = useState<File[]>([]);
 
 
    const openModal = (status: any) => {
-    console.log('status :timeline: ',status)
+    // console.log('status :timeline: ',status)
     setSelectedStatus(status);
     setIsModalOpen(true);
   };
@@ -112,7 +112,7 @@ const [imageStatus, setImagesStatus] = useState<File[]>([]);
 const formatDateTime = (dateTimeString: any) => {
   if (!dateTimeString) return 'ยังไม่มีข้อมูล';
 
-  console.log('formatDateTime : ', dateTimeString);
+  // console.log('formatDateTime : ', dateTimeString);
 
   try {
     // รองรับ "22/7/2025, 8:00:00" หรือ "22/7/2025 8:00:00"

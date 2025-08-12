@@ -391,6 +391,18 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
                     </p>
                   </div>
                 </div>
+
+                <div className="grid grid-cols gap-2">
+                  <div className="bg-white rounded-lg p-2 shadow-sm">
+                    <div className="flex items-center space-x-1 mb-0.5">
+                      <p className="text-xs text-gray-500 uppercase tracking-wide">
+                        จำนวนเที่ยวทอย
+                      </p>
+                    </div>
+                    <input className="text-xs font-bold text-center text-gray-900 w-full border border-gray-300 rounded-lg h-8" />
+                  </div>
+                </div>
+
               </div>
             </CardContent>
           </Card>

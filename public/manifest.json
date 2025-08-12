@@ -7,12 +7,12 @@
   "description": "This is Transport Application",
   "icons": [
     {
-      "src": "/public/Rimberio.png",
+      "src": "/Rimberio.png",
       "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "/public/Rimberio.png",
+      "src": "/Rimberio.png",
       "type": "image/png",
       "sizes": "512x512"
     }

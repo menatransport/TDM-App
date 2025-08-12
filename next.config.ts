@@ -1,11 +1,22 @@
-import type { NextConfig } from 'next'
- 
-const nextConfig: NextConfig = {
-  eslint: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has ESLint errors.
-    ignoreDuringBuilds: true,
+/** @type {import('next').NextConfig} */
+const nextPWA = require("next-pwa");
+
+const isDev = process.env.NODE_ENV === 'development';
+
+const withPWA = nextPWA({
+  dest: "public",
+  disable: isDev,
+  register: true,
+  skipWaiting: true,
+});
+
+const nextConfig = {
+  experimental: {
+    appDir: true,
   },
-}
- 
-export default nextConfig
+  eslint: {
+    ignoreDuringBuilds: true, // ปิดการตรวจ ESLint ตอน build
+  },
+};
+
+module.exports = withPWA(nextConfig);

@@ -13,7 +13,6 @@ try {
     }
   });
   const data = await externalRes.json();
-  console.log('ORDERS [API] ดึงข้อมูลจาก external API:', data);
   return NextResponse.json(data);
   } catch (err: any) {
     console.error('❌ DB Error:', err.message);

@@ -48,7 +48,6 @@ export const ImagesFn: React.FC<ImagesFnProps> = ({ onImagesChange, jobId, image
       .then((res) => {
         if (!res.ok) throw new Error("ลบไฟล์ไม่สำเร็จ");
         setExistingImages((prev) => prev.filter((img) => img.key !== imageToRemove.key));
-        console.log("✅ ลบรูปสำเร็จ:", imageToRemove.key);
       })
       .catch((err) => {
         console.error("❌ ลบไฟล์ล้มเหลว:", err);

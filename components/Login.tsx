@@ -205,7 +205,7 @@ return (
                 : "translate-y-4 opacity-0"
             }`}
           >
-            TDM Fast Ship Tracking Application {/* Developed by Process Improvment Team 2025 */}
+            Smart Fast Ship Tracking
           </p>
         </div>
 

@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TDM FastShip Tracking",
-  description: "deverloped by Process Improvement Team",
+  title: "Smart Fast Ship Tracking",
+  description: "developed by Process Improvement Team",
 };
 
 export default function RootLayout({

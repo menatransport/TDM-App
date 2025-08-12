@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import Swal from "sweetalert2";
 import { AdminView } from "@/components/AdminView";
+import { AdminCreate } from "@/components/AdminCreate";
 
 
 type TransportItem = {
@@ -66,6 +67,12 @@ export const Admintool= () => {
   }>({
     show: false,
     job: null,
+  });
+
+  const [modalCreate, setmodalCreate] = useState<{
+    show: boolean
+  }>({
+    show: false
   });
 
 
@@ -149,7 +156,7 @@ const queryString = searchParams.toString();
 };
   const handleClose = (close: boolean) => {
   setmodalView(prev => ({ ...prev, show: close }));
-
+  setmodalCreate(prev => ({ ...prev, show: close }));
 };
   
 
@@ -297,10 +304,10 @@ const getStatusColor = (status: string) => {
               <p className="text-gray-600">จัดการและติดตามงานขนส่งทั้งหมด</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              {/* <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl">
+              <button onClick={() => setmodalCreate({ show: true })} className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl">
                 <Plus size={20} />
                 <span className="hidden sm:inline">เพิ่มงานใหม่</span>
-              </button> */}
+              </button>
               {/* <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl">
                 <Download size={20} />
                 <span className="hidden sm:inline">ส่งออก</span>
@@ -754,6 +761,10 @@ const getStatusColor = (status: string) => {
         <AdminView jobView={modalView.job}  closeModal={(close: boolean) => handleClose(close)}  />
       )}
 
+      {modalCreate.show && (
+        <AdminCreate closeModal={(close: boolean) => handleClose(close)}  />
+      )}
+    
 
 
     </div>

@@ -3,7 +3,21 @@ import { useState, useEffect, useRef } from "react";
 import { Jobcards } from "@/components/Jobcards";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Funnel, Inbox, X, CheckCircle, Loader, AlertCircle, Package, Filter } from "lucide-react";
+import {
+  Funnel,
+  Inbox,
+  X,
+  CheckCircle,
+  Loader,
+  AlertCircle,
+  Package,
+  Filter,
+  MapPin,
+  ChevronDown,
+  Check,
+  Grid3X3,
+  Briefcase,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -21,10 +35,15 @@ type TicketProps = {
 
 export const Jobcomponent = ({ onLoadingChange }: TicketProps) => {
   const [filterStatus, setFilterStatus] = useState("ทั้งหมด");
+  const [finished_status, setFinished_status] = useState<any[]>([]);
   const [DialogResult, setDialogResult] = useState(false);
   const [datajobs, setDatajobs] = useState<any[]>([]);
+  const [pending, setPending] = useState<any[]>([]);
   const [images, setImages] = useState<File[]>([]);
-
+  const [isExpanded_1, setIsExpanded_1] = useState(false);
+  const [isExpanded_2, setIsExpanded_2] = useState(false);
+  const [isExpanded_3, setIsExpanded_3] = useState(false);
+  const [isExpanded_finished, setIsExpanded_finished] = useState(false);
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -44,7 +63,16 @@ export const Jobcomponent = ({ onLoadingChange }: TicketProps) => {
             job.status !== "ยกเลิก" &&
             job.status !== "ซ่อม"
         );
+
+        const finished_status = data.jobs.filter(
+          (job: any) => job.status === "จัดส่งแล้ว (POD)"
+        );
+        const pending_status = data.jobs.filter(
+          (job: any) => job.status !== "จัดส่งแล้ว (POD)"
+        );
         setDatajobs(filterStatus);
+        setPending(pending_status);
+        setFinished_status(finished_status);
         onLoadingChange(false);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -103,6 +131,32 @@ export const Jobcomponent = ({ onLoadingChange }: TicketProps) => {
       .length,
   };
 
+  const toggleExpanded_1 = () => {
+    setIsExpanded_1(!isExpanded_1);
+    setIsExpanded_2(false);
+    setIsExpanded_3(false);
+    setIsExpanded_finished(false);
+  };
+  const toggleExpanded_2 = () => {
+    setIsExpanded_1(false);
+    setIsExpanded_2(!isExpanded_2);
+    setIsExpanded_3(false);
+    setIsExpanded_finished(false);
+  };
+
+  const toggleExpanded_3 = () => {
+    setIsExpanded_1(false);
+    setIsExpanded_2(false);
+    setIsExpanded_3(!isExpanded_3);
+    setIsExpanded_finished(false);
+  };
+
+  const toggleExpanded_finished = () => {
+    setIsExpanded_1(false);
+    setIsExpanded_2(false);
+    setIsExpanded_3(false);
+    setIsExpanded_finished(!isExpanded_finished);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex justify-center px-4 py-3 relative overflow-hidden">
@@ -115,7 +169,7 @@ export const Jobcomponent = ({ onLoadingChange }: TicketProps) => {
       </div>
 
       {/* Main Content */}
-      <div className="flex flex-col z-10 w-full space-y-4">
+      <div className="flex flex-col z-10 w-full space-y-4 mb-20">
         {/* Heading + Top Buttons */}
         <div className="flex justify-between items-center gap-2">
           <p className="hidden text-xl sm:text-xl text-center font-semibold text-gray-800">
@@ -240,103 +294,278 @@ export const Jobcomponent = ({ onLoadingChange }: TicketProps) => {
             </Dialog>
           </div>
         </div>
-<div className="flex flex-wrap gap-2 items-center">
-          <div className="flex flex-wrap gap-3 items-center">
-            <div className="flex items-center gap-2 text-gray-700 font-semibold">
-              <div className="p-2 bg-green-100 rounded-xl">
-                <Filter className="h-4 w-4 text-green-600" />
-              </div>
-              <span>กรองตาม:</span>
+
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mb-6">
+          <div
+            className="flex flex-row items-center gap-4 p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+            onClick={toggleExpanded_1}
+          >
+            <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl text-white shadow-lg">
+              <MapPin className="w-6 h-6" />
             </div>
-            
-            <button
-              onClick={() => setFilterStatus("ทั้งหมด")}
-              className={`inline-flex items-center gap-3 px-2 py-2 rounded-xl font-semibold text-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1 ${
-                filterStatus === "ทั้งหมด"
-                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg border-2 border-blue-300"
-                  : "bg-white bg-opacity-90 backdrop-blur-sm text-gray-700 border-2 border-gray-200 hover:border-gray-300 hover:bg-opacity-100"
-              }`}
-            >
-              <Package className="h-4 w-4" />
-              <span>ทั้งหมด</span>
-              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                filterStatus === "ทั้งหมด" 
-                  ? "bg-white bg-opacity-20 text-gray-800" 
-                  : "bg-gray-100 text-gray-600"
-              }`}>
-                {count.totalCount}
-              </span>
-            </button>
+            <div className="flex-1">
+              <h2 className="text-lg font-bold text-gray-800">
+                งานเที่ยวเดียว
+              </h2>
+              {datajobs.length > 0 && (
+                <div className="mt-1">
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-700">
+                    รอดำเนินการ {pending.length}  งาน
+                  </span>
+                </div>
+              )}
+            </div>
 
-            <button
-              onClick={() => setFilterStatus("รอดำเนินงาน")}
-              className={`inline-flex items-center gap-3 px-2 py-2 rounded-xl font-semibold text-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1 ${
-                filterStatus === "รอดำเนินงาน"
-                  ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg border-2 border-amber-300"
-                  : "bg-white bg-opacity-90 backdrop-blur-sm text-gray-700 border-2 border-gray-200 hover:border-gray-300 hover:bg-opacity-100"
-              }`}
-            >
-              <AlertCircle className="h-4 w-4" />
-              <span>รอดำเนินงาน</span>
-              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                filterStatus === "รอดำเนินงาน" 
-                  ? "bg-white bg-opacity-20 text-gray-800" 
-                  : "bg-gray-100 text-gray-600"
-              }`}>
-                {count.inProgressCount}
+            <div className="flex items-center gap-2">
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  datajobs.length > 0 ? "bg-green-500" : "bg-gray-400"
+                }`}
+              ></div>
+              <span className="text-sm text-gray-600">
+                {datajobs.length > 0 ? "มีงาน" : "ว่าง"}
               </span>
-            </button>
+            </div>
 
-            {/* <button
-              onClick={() => setFilterStatus("กำลังขนส่ง")}
-              className={`inline-flex items-center gap-3 px-5 py-3 rounded-2xl font-semibold text-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1 ${
-                filterStatus === "กำลังขนส่ง"
-                  ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg border-2 border-blue-300"
-                  : "bg-white bg-opacity-90 backdrop-blur-sm text-gray-700 border-2 border-gray-200 hover:border-gray-300 hover:bg-opacity-100"
+            {/* Toggle Icon */}
+            <div
+              className={`p-2 rounded-lg bg-gray-100 text-gray-600 transition-all duration-200 ${
+                isExpanded_1 ? "rotate-180" : ""
               }`}
             >
-              <Loader className={`h-4 w-4 ${filterStatus === "กำลังขนส่ง" ? "animate-spin" : ""}`} />
-              <span>กำลังขนส่ง</span>
-              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                filterStatus === "กำลังขนส่ง" 
-                  ? "bg-white bg-opacity-20 text-white" 
-                  : "bg-gray-100 text-gray-600"
-              }`}>
-                {count.inProgressCount}
-              </span>
-            </button> */}
-
-            <button
-              onClick={() => setFilterStatus("จัดส่งแล้ว (POD)")}
-              className={`inline-flex items-center gap-3 px-2 py-2 rounded-xl font-semibold text-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1 ${
-                filterStatus === "จัดส่งแล้ว (POD)"
-                  ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg border-2 border-green-300"
-                  : "bg-white bg-opacity-90 backdrop-blur-sm text-gray-700 border-2 border-gray-200 hover:border-gray-300 hover:bg-opacity-100"
-              }`}
-            >
-              <CheckCircle className="h-4 w-4" />
-              <span>จัดส่งสำเร็จ</span>
-              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                filterStatus === "จัดส่งแล้ว (POD)" 
-                  ? "bg-white bg-opacity-20 text-gray-800" 
-                  : "bg-gray-100 text-gray-600"
-              }`}>
-                {count.completedCount}
-              </span>
-            </button>
+              <ChevronDown className="w-5 h-5" />
+            </div>
           </div>
-        </div>
 
-        {/* Job Cards */}
+         {/* Job Cards */}
         {datajobs.length === 0 ? (
           <div className="flex flex-col items-center bg-white rounded-lg border border-gray-200 justify-center text-gray-500 py-10">
             <Inbox className="w-10 h-10 mb-2" />
             <p className="text-sm">ยังไม่มีงานตอนนี้</p>
           </div>
         ) : (
-          <Jobcards filterStatus={filterStatus} datajobs={datajobs} />
+          <div
+            className={`transition-all duration-300 ease-in-out ${
+              isExpanded_1
+                ? "max-h-screen opacity-100"
+                : "max-h-0 opacity-0 overflow-hidden"
+            }`}
+          >
+            <Jobcards filterStatus="รอดำเนินงาน" datajobs={datajobs} />
+          </div>
         )}
+
+        </div>
+
+
+
+        <div className="hidden bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mb-6">
+          <div
+            className="flex flex-row items-center gap-4 p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+            onClick={toggleExpanded_2}
+          >
+            <div className="p-2  bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl text-white shadow-lg">
+              <Package className="w-6 h-6" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-lg font-bold text-gray-800">
+                งานดรอป
+              </h2>
+              {datajobs.length > 0 && (
+                <div className="mt-1">
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-700">
+                    รอดำเนินการ {datajobs.length}  งาน
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div
+                className={`w-2 h-2 rounded-full bg-gray-400`}
+              ></div>
+              <span className="text-sm text-gray-600">
+                {/* {datajobs.length > 0 ? "มีงาน" : "ว่าง"} */} ว่าง
+              </span>
+            </div>
+
+            {/* Toggle Icon */}
+            <div
+              className={`p-2 rounded-lg bg-gray-100 text-gray-600 transition-all duration-200 ${
+                isExpanded_2 ? "rotate-180" : ""
+              }`}
+            >
+              <ChevronDown className="w-5 h-5" />
+            </div>
+          </div>
+               {/* Job Cards */}
+        {datajobs.length === 0 ? (
+          <div className="flex flex-col items-center bg-white rounded-lg border border-gray-200 justify-center text-gray-500 py-10">
+            <Inbox className="w-10 h-10 mb-2" />
+            <p className="text-sm">ยังไม่มีงานตอนนี้</p>
+          </div>
+        ) : (
+          <div
+            className={`transition-all duration-300 ease-in-out ${
+              isExpanded_2
+                ? "max-h-screen opacity-100"
+                : "max-h-0 opacity-0 overflow-hidden"
+            }`}
+          >
+            <Jobcards filterStatus="รอดำเนินงาน" datajobs={datajobs} />
+          </div>
+        )}
+        </div>
+
+           {/* ทอย */}
+
+           <div className="hidden bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mb-6">
+          <div
+            className="flex flex-row items-center gap-4 p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+            onClick={toggleExpanded_3}
+          >
+            <div className="p-2  bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl text-white shadow-lg">
+              <Package className="w-6 h-6" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-lg font-bold text-gray-800">
+                งานทอย
+              </h2>
+              {datajobs.length > 0 && (
+                <div className="mt-1">
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-700">
+                    รอดำเนินการ {datajobs.length}  งาน
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div
+                className={`w-2 h-2 rounded-full bg-gray-400`}
+              ></div>
+              <span className="text-sm text-gray-600">
+                {/* {datajobs.length > 0 ? "มีงาน" : "ว่าง"} */} ว่าง
+              </span>
+            </div>
+
+            {/* Toggle Icon */}
+            <div
+              className={`p-2 rounded-lg bg-gray-100 text-gray-600 transition-all duration-200 ${
+                isExpanded_3 ? "rotate-180" : ""
+              }`}
+            >
+              <ChevronDown className="w-5 h-5" />
+            </div>
+          </div>
+               {/* Job Cards */}
+        {datajobs.length === 0 ? (
+          <div className="flex flex-col items-center bg-white rounded-lg border border-gray-200 justify-center text-gray-500 py-10">
+            <Inbox className="w-10 h-10 mb-2" />
+            <p className="text-sm">ยังไม่มีงานตอนนี้</p>
+          </div>
+        ) : (
+          <div
+            className={`transition-all duration-300 ease-in-out ${
+              isExpanded_3
+                ? "max-h-screen opacity-100"
+                : "max-h-0 opacity-0 overflow-hidden"
+            }`}
+          >
+            <Jobcards filterStatus="รอดำเนินงาน" datajobs={datajobs} />
+          </div>
+        )}
+        </div>
+
+
+        <hr className="my-4 border-gray-200" />
+
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mb-6">
+          <div
+            className="flex flex-row items-center gap-4 p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+            onClick={toggleExpanded_finished}
+          >
+            <div className="p-2  bg-gradient-to-br from-green-500 to-teal-600 rounded-2xl text-white shadow-lg">
+              <Check className="w-6 h-6" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-lg font-bold text-gray-800">
+                งานจัดส่งแล้ว
+              </h2>
+               {finished_status.length > 0 && (
+                <div className="mt-1">
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-700">
+                    เสร็จสิ้น {finished_status.length}  งาน
+                  </span>
+                </div>
+              )}
+            </div>
+            {/* Toggle Icon */}
+            <div
+              className={`p-2 rounded-lg bg-gray-100 text-gray-600 transition-all duration-200 ${
+                isExpanded_finished ? "rotate-180" : ""
+              }`}
+            >
+              <ChevronDown className="w-5 h-5" />
+            </div>
+          </div>
+               {/* Job Cards */}
+        {datajobs.length === 0 ? (
+          <div className="flex flex-col items-center bg-white rounded-lg border border-gray-200 justify-center text-gray-500 py-10">
+            <Inbox className="w-10 h-10 mb-2" />
+            <p className="text-sm">ยังไม่มีงานตอนนี้</p>
+          </div>
+        ) : (
+          <div
+            className={`transition-all duration-300 ease-in-out ${
+              isExpanded_finished
+                ? "max-h-screen opacity-100"
+                : "max-h-0 opacity-0 overflow-hidden"
+            }`}
+          >
+            <Jobcards filterStatus="จัดส่งแล้ว (POD)" datajobs={datajobs} />
+          </div>
+        )}
+        </div>
       </div>
+
+
+
+        
+
+
+       <div className="hidden bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2 z-50">
+        <div className="flex justify-center gap-20 max-w-md mx-auto">
+          <button
+            // onClick={() => setActiveTab('jobs')}
+            className={`flex flex-col items-center p-3 w-15 rounded-lg transition-all ${
+              // activeTab === 'jobs' 
+                'bg-blue-100 text-blue-600' 
+                // : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Briefcase className="w-6 h-6 mb-1" />
+            <span className="text-xs font-medium">งาน</span>
+          </button>
+          
+          <button
+            // onClick={() => setActiveTab('palette')}
+            className={`flex flex-col items-center p-3 w-15 rounded-lg transition-all ${
+              // activeTab === 'palette' 
+                 'bg-blue-100 text-blue-600' 
+                // : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Grid3X3 className="w-6 h-6 mb-1" />
+            <span className="text-xs font-medium">พาเลท</span>
+          </button>
+        </div>
+      </div>
+
     </div>
+
+
+
+
   );
 };
