@@ -34,13 +34,14 @@ interface TransportItem {
   phone: string;
   status: string;
   remark: string;
+  job_type: string;
   locat_recive: string;
   locat_deliver: string;
   date_recive: string;
-  date_deliver: string;
-  pallet_type: string;
-  pallet_plan: number;
-  unload_cost: string;
+  date_deliver:string;
+  pallet_type:string;
+  pallet_plan:number;
+  unload_cost:string;
   create_by: string;
   create_at: string;
   update_by: string;
@@ -252,7 +253,7 @@ export function AdminView({ jobView, closeModal }: AdminViewProps) {
                 <div>
                   <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                     <Weight  className="w-4 h-4" />
-                    น้ำหนักรถ
+                    น้ำหนักรถจำกัด (ตัน)
                   </label>
                   <input
                     type="text"
@@ -293,6 +294,24 @@ export function AdminView({ jobView, closeModal }: AdminViewProps) {
                     onChange={(e) => handleChange("phone", e.target.value)}
                     readOnly={btn === "edit"}
                   />
+                </div>
+
+                {/* Job_type */}
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                    <Package className="w-4 h-4" />
+                    ประเภทงาน
+                  </label>
+                  <select
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm sm:text-base"
+                    value={formData?.job_type || ""}
+                    onChange={(e) => handleChange("job_type", e.target.value)}
+                    disabled={btn === "edit"}
+                  >
+                    <option value="">เลือกประเภทงาน</option>
+                    <option value="ดรอป">ดรอป</option>
+                    <option value="ทอย">ทอย</option>
+                    </select>
                 </div>
 
                 {/* Location Receive */}

@@ -125,8 +125,7 @@ useEffect(() => {
     if (res.ok) {
    
       location.reload();
-      // หรือถ้าต้องการเคลียร์รายการรูป
-      // setUploadImages([]);
+
     } else {
       alert('พบปัญหาการส่งข้อมูล!');
     }

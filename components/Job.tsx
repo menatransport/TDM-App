@@ -17,6 +17,7 @@ import {
   Check,
   Grid3X3,
   Briefcase,
+  Truck,
 } from "lucide-react";
 import {
   Dialog,
@@ -40,7 +41,7 @@ export const Jobcomponent = ({ onLoadingChange }: TicketProps) => {
   const [datajobs, setDatajobs] = useState<any[]>([]);
   const [pending, setPending] = useState<any[]>([]);
   const [images, setImages] = useState<File[]>([]);
-  const [isExpanded_1, setIsExpanded_1] = useState(false);
+  const [isExpanded_1, setIsExpanded_1] = useState(true);
   const [isExpanded_2, setIsExpanded_2] = useState(false);
   const [isExpanded_3, setIsExpanded_3] = useState(false);
   const [isExpanded_finished, setIsExpanded_finished] = useState(false);
@@ -56,6 +57,7 @@ export const Jobcomponent = ({ onLoadingChange }: TicketProps) => {
           },
         });
         const data = await res_data.json();
+        console.log("Fetched jobs data:", data.jobs);
         const filterStatus = data.jobs.filter(
           (job: any) =>
             job.status !== "ตกคิว" &&
@@ -300,12 +302,12 @@ export const Jobcomponent = ({ onLoadingChange }: TicketProps) => {
             className="flex flex-row items-center gap-4 p-4 cursor-pointer hover:bg-gray-50 transition-colors"
             onClick={toggleExpanded_1}
           >
-            <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl text-white shadow-lg">
-              <MapPin className="w-6 h-6" />
+            <div className="p-2 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-2xl text-white shadow-lg">
+              <Truck className="w-6 h-6" />
             </div>
             <div className="flex-1">
               <h2 className="text-lg font-bold text-gray-800">
-                งานเที่ยวเดียว
+                งานรอดำเนินการ
               </h2>
               {datajobs.length > 0 && (
                 <div className="mt-1">

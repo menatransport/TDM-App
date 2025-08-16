@@ -101,6 +101,16 @@ const getEmptyJobData = (): JobData => ({
   };
 
    const handleSaved = () => {
+    if(forms.length === 0) return alert("กรุณาเพิ่มข้อมูลอย่างน้อย 1 งาน");
+    const db = forms.map(form => form.data);
+    if(!db.every(item => item.date_plan && item.h_plate && item.t_plate && item.driver_name && item.locat_recive && item.date_recive && item.locat_deliver && item.date_deliver)) {
+      return alert("กรุณากรอกข้อมูล * ให้ครบถ้วน");
+    }
+
+
+
+
+    console.log("Saving data to database:", db);
      Swal.fire({
             title: "บันทึกข้อมูลสำเร็จ",
             text: "ข้อมูลของคุณถูกบันทึกเรียบร้อยแล้ว",
@@ -133,9 +143,9 @@ status,
 remark,
 job_type,
 locat_recive,
-date_recive (รูปแบบ dd/mm/yyyy, HH:mm),
+date_recive (รูปแบบ "yyyy-MM-dd HH:mm:ss" โซนเวลา Asia/Bangkok),
 locat_deliver,
-date_deliver (รูปแบบ dd/mm/yyyy, HH:mm),
+date_deliver (รูปแบบ "yyyy-MM-dd HH:mm:ss" โซนเวลา Asia/Bangkok),
 unload_cost,
 pallet_plan (ตัวเลข),
 pallet_type
@@ -255,10 +265,10 @@ pallet_type
               <div className="sm:col-span-2 lg:col-span-1">
                 <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                   <Calendar className="w-4 h-4" />
-                  วันที่วางแผน
+                  วันที่วางแผน <span className="mr-2 text-red-600">*</span>
                 </label>
                 <input
-                  type="text"
+                  type="date"
                   value={formData.data.date_plan}
                   className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm sm:text-base"
                   onChange={(e) => handleChange(formData.id, "date_plan", e.target.value)}
@@ -269,7 +279,7 @@ pallet_type
               <div>
                 <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                   <Truck className="w-4 h-4" />
-                  ทะเบียนหัว
+                  ทะเบียนหัว <span className="mr-2 text-red-600">*</span>
                 </label>
                 <input
                   type="text"
@@ -283,7 +293,7 @@ pallet_type
               <div>
                 <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                   <Truck className="w-4 h-4" />
-                  ทะเบียนหาง
+                  ทะเบียนหาง <span className="mr-2 text-red-600">*</span>
                 </label>
                 <input
                   type="text"
@@ -297,7 +307,7 @@ pallet_type
               <div>
                 <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                   <Fuel className="w-4 h-4" />
-                  ประเภทเชื้อเพลิง
+                  ประเภทเชื้อเพลิง 
                 </label>
                 <select
                   className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm sm:text-base"
@@ -329,7 +339,7 @@ pallet_type
               <div>
                 <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                   <Weight className="w-4 h-4" />
-                  น้ำหนักรถ
+                  น้ำหนักรถจำกัด (ตัน)
                 </label>
                 <input
                   type="text"
@@ -343,7 +353,7 @@ pallet_type
               <div>
                 <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                   <User className="w-4 h-4" />
-                  ชื่อพจส.
+                  ชื่อพจส. <span className="mr-2 text-red-600">*</span>
                 </label>
                 <input
                   type="text"
@@ -353,25 +363,29 @@ pallet_type
                 />
               </div>
 
-              {/* Phone */}
-              <div>
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                  <Phone className="w-4 h-4" />
-                  เบอร์โทร
-                </label>
-                <input
-                  type="tel"
-                  value={formData.data.phone}
-                  className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm sm:text-base"
-                  onChange={(e) => handleChange(formData.id, "phone", e.target.value)}
-                />
-              </div>
+              {/* Job_type */}
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                    <Package className="w-4 h-4" />
+                    ประเภทงาน
+                  </label>
+                  <select
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm sm:text-base"
+                    value={formData.data.job_type || ""}
+                    onChange={(e) => handleChange(formData.id, "job_type", e.target.value)}
+                    disabled={btn === "edit"}
+                  >
+                    <option value="">เลือกประเภทงาน</option>
+                    <option value="ดรอป">ดรอป</option>
+                    <option value="ทอย">ทอย</option>
+                    </select>
+                </div>
 
               {/* Location Receive */}
               <div className="sm:col-span-2 lg:col-span-1">
                 <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                   <MapPin className="w-4 h-4" />
-                  สถานที่ขึ้นสินค้า
+                  สถานที่ขึ้นสินค้า <span className="mr-2 text-red-600">*</span>
                 </label>
                 <input
                   type="text"
@@ -385,7 +399,7 @@ pallet_type
               <div className="sm:col-span-2 lg:col-span-1">
                 <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                   <MapPin className="w-4 h-4" />
-                  สถานที่ลงสินค้า
+                  สถานที่ลงสินค้า <span className="mr-2 text-red-600">*</span>
                 </label>
                 <input
                   type="text"
@@ -401,10 +415,10 @@ pallet_type
               <div>
                 <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                   <Calendar className="w-4 h-4" />
-                  วันที่ขึ้นสินค้า
+                  วันที่ขึ้นสินค้า <span className="mr-2 text-red-600">*</span>
                 </label>
                 <input
-                  type="text"
+                  type="datetime-local"
                   value={formData.data.date_recive}
                   className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm sm:text-base"
                   onChange={(e) => handleChange(formData.id, "date_recive", e.target.value)}
@@ -415,10 +429,10 @@ pallet_type
               <div>
                 <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                   <Calendar className="w-4 h-4" />
-                  วันที่ลงสินค้า
+                  วันที่ลงสินค้า <span className="mr-2 text-red-600">*</span>
                 </label>
                 <input
-                  type="text"
+                  type="datetime-local"
                   value={formData.data.date_deliver}
                   className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm sm:text-base"
                   onChange={(e) => handleChange(formData.id, "date_deliver", e.target.value)}

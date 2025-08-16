@@ -57,6 +57,7 @@ useEffect(() => {
 
       const data = await res.json();
       const usernames = data.users.map((user: { username: string }) => user.username);
+      console.log("Fetched usernames:", usernames);
       setListname(usernames)
     } catch (error) {
       console.error("Login failed", error);
@@ -196,7 +197,7 @@ return (
                 : "translate-y-4 opacity-0"
             }`}
           >
-            ระบบติดตามสถานะขนส่ง TDM
+            ระบบติดตามสถานะขนส่ง 
           </h1>
           <p
             className={`text-gray-500 text-sm transform transition-all duration-700 ease-out delay-300 ${
@@ -229,7 +230,7 @@ return (
             </div>
           )}
 
-          <div className="space-y-4">
+          <div className="space-y-5">
             {/* Username field */}
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none transition-colors duration-200 group-focus-within:text-green-500">
@@ -365,7 +366,7 @@ return (
           </div>
 
           {/* Demo credentials */}
-          <div className="mt-6 p-4 bg-green-50 rounded-xl border border-green-200">
+          <div className="hidden mt-6 p-4 bg-green-50 rounded-xl border border-green-200">
             <p className="text-sm text-green-800 font-medium mb-2">
               ข้อมูลสำหรับทดสอบ:
             </p>

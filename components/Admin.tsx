@@ -8,32 +8,7 @@ import {
 import Swal from "sweetalert2";
 import { AdminView } from "@/components/AdminView";
 import { AdminCreate } from "@/components/AdminCreate";
-
-
-type TransportItem = {
-  load_id: string;
-  date_plan: string;
-  h_plate: string;
-  t_plate: string;
-  fuel_type: string;
-  height: string;
-  weight: string;
-  driver_name: string;
-  phone: string;
-  status: string;
-  remark: string;
-  locat_recive: string;
-  locat_deliver: string;
-  date_recive: string;
-  date_deliver:string;
-  pallet_type:string;
-  pallet_plan:number;
-  unload_cost:string;
-  create_by: string;
-  create_at: string;
-  update_by: string;
-  update_at: string;
-};
+import { TransportItem } from "@/lib/type";
 
 const itemsPerPage = 10;
 const today = new Date().toISOString().split("T")[0];
@@ -159,8 +134,6 @@ const queryString = searchParams.toString();
   setmodalCreate(prev => ({ ...prev, show: close }));
 };
   
-
-  // ✅ สีป้ายสถานะ
 const getStatusColor = (status: string) => {
   switch (status) {
     case 'พร้อมรับงาน':
@@ -413,12 +386,31 @@ const getStatusColor = (status: string) => {
                 <BookOpenCheck  size={16} />
                 สถานะ
               </label>
-              <input
-                type="text"
-                value={filters.status}
-                onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
-              />
+              <select
+  value={filters.status}
+  onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+>
+  <option value="">เลือกสถานะ</option>
+  <optgroup className="text-gray-600" label="สถานะงาน">
+    <option value="พร้อมรับงาน">พร้อมรับงาน</option>
+    <option value="รับงาน">รับงาน</option>
+    <option value="ถึงต้นทาง">ถึงต้นทาง</option>
+    <option value="เริ่มขึ้นสินค้า">เริ่มขึ้นสินค้า</option>
+    <option value="ขึ้นสินค้าเสร็จ">ขึ้นสินค้าเสร็จ</option>
+    <option value="เริ่มขนส่ง">เริ่มขนส่ง</option>
+    <option value="ถึงปลายทาง">ถึงปลายทาง</option>
+    <option value="เริ่มลงสินค้า">เริ่มลงสินค้า</option>
+    <option value="ลงสินค้าเสร็จ">ลงสินค้าเสร็จ</option>
+    <option value="จัดส่งแล้ว (POD)">จัดส่งแล้ว (POD)</option>
+  </optgroup>
+  <optgroup className="text-red-600" label="สถานะอื่นๆ">
+    <option value="ตกคิว">ตกคิว</option>
+    <option value="ซ่อม">ซ่อม</option>
+    <option value="อบรมที่บริษัท">อบรมที่บริษัท</option>
+    <option value="ยกเลิก">ยกเลิก</option>
+  </optgroup>
+</select>
             </div>
           </div>
 

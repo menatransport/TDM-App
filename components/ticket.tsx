@@ -33,6 +33,9 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
   const [job, setDatajobs] = useState<any>({});
   const [tickets, setTickets] = useState<any>({});
   const [pallet, setPallet] = useState<any>({});
+  const [damage, setDamage] = useState("");
+  const [ldt, setLdt] = useState("");
+  const [roll_trip, setRolltrip] = useState("");
   const [access_token, setAccesstoken] = useState<any>({});
   const [timeline, setTimeline] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -54,10 +57,13 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
         });
 
         const data = await res_data.json();
-        // console.log("data ticket : ", data);
+        console.log("data ticket : ", data);
         setDatajobs(data);
         setTickets(data.ticket);
-        setPallet(data.palletdata);
+        setPallet({ ...data.palletdata, load_id: data.load_id });
+        setDamage(data.damage_detail || "");
+        setLdt(data.ldt || "");
+        setRolltrip(data.roll_trip || "0");
         onLoadingChange(false);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -70,6 +76,11 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
 
   const handleSaved = async () => {
     // console.log("timeline : ", timeline);
+
+    console.log("pallet : ", pallet);
+    console.log("damage : ", damage);
+    console.log("ldt : ", ldt);
+    console.log("trip_roll : ", roll_trip);
 
     const result = await Swal.fire({
       title: "คุณต้องการยืนยันบันทึกข้อมูลหรือไม่?",
@@ -85,16 +96,17 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
 
     if (!result.isConfirmed) return setIsLoading(false);
 
-    if (Object.keys(timeline).length === 0 && job.status !== "จัดส่งแล้ว (POD)")
-      return Swal.fire({
-        title: "โปรบันทึกเวลาก่อน กดปุ่มบันทึกข้อมูล!",
-        icon: "error",
-        draggable: true,
-      });
+    // if (Object.keys(timeline).length === 0 && job.status !== "จัดส่งแล้ว (POD)")
+    //   return Swal.fire({
+    //     title: "โปรบันทึกเวลาก่อน กดปุ่มบันทึกข้อมูล!",
+    //     icon: "error",
+    //     draggable: true,
+    //   });
     setIsLoading(false);
     try {
       setIsLoading(true);
-      const res = await fetch("/api/tickets", {
+
+      const res_ticket = await fetch("/api/tickets", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -103,10 +115,41 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
         body: JSON.stringify(timeline),
       });
 
-      if (!res.ok) {
-        const errorData = await res.json();
+      const res_data = await fetch("/api/jobs", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${access_token}`,
+          id: job.load_id ?? "",
+        },
+        body: JSON.stringify({
+          damage_detail: damage,
+          roll_trip: roll_trip,
+          ldt: ldt,
+        }),
+      });
+
+      const res_pallet = await fetch("/api/pallet", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${access_token}`,
+        },
+        body: JSON.stringify(pallet),
+      });
+
+      if (!res_ticket.ok || !res_data.ok || !res_pallet.ok) {
+        const errorData = {
+          ticket: await res_ticket.json(),
+          data: await res_data.json(),
+          pallet: await res_pallet.json(),
+        };
         console.error("เกิดข้อผิดพลาด:", errorData);
-        alert("ไม่สามารถบันทึกข้อมูลได้ กรุณาตรวจสอบอีกครั้ง");
+        alert(
+          `ไม่สามารถบันทึกข้อมูลได้ โปรดแจ้งเจ้าหน้าที่หรือลองใหม่อีกครั้ง : ${JSON.stringify(
+            errorData
+          )}`
+        );
         setIsLoading(false);
         return;
       }
@@ -121,7 +164,9 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
       });
     } catch (error) {
       console.error("เกิดข้อผิดพลาดในการเชื่อมต่อ:", error);
-      alert("เกิดข้อผิดพลาดในการเชื่อมต่อ");
+      alert(
+        "เกิดข้อผิดพลาดในการเชื่อมต่อ โปรดแจ้งเจ้าหน้าที่หรือลองใหม่อีกครั้ง"
+      );
       setIsLoading(false);
       location.reload();
     }
@@ -129,13 +174,9 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
 
   const formatDate = (dateStr: string | undefined) => {
     if (!dateStr || typeof dateStr !== "string") return "-";
-
-    const [datePart] = dateStr.split(",");
-    if (!datePart) return "-";
-
-    const [day, month, year] = datePart.split("/").map(Number);
-    const d = new Date(year, month - 1, day);
-
+    // Accepts ISO 8601 format: '2025-12-08T13:00:00'
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return "-";
     return d.toLocaleDateString("th-TH", {
       day: "2-digit",
       month: "short",
@@ -143,24 +184,18 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
   };
 
   const formatTime = (dateStr: string | undefined) => {
+    // Accepts ISO 8601 format: '2025-12-08T13:00:00'
     if (!dateStr || typeof dateStr !== "string") return "-";
-
-    const [datePart, timePart] = dateStr.split(",");
-    if (!datePart || !timePart) return "-";
-
-    const [day, month, year] = datePart.split("/").map(Number);
-    const [hour, minute] = timePart.trim().split(":").map(Number);
-    const d = new Date(year, month - 1, day, hour, minute);
-
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return "-";
     return d.toLocaleTimeString("th-TH", {
       hour: "2-digit",
       minute: "2-digit",
     });
   };
-
   interface Pallet {
     change_pallet?: string;
-    transfer_pallet?: string;
+    tranfer_pallet?: string;
     drop_pallet?: string;
     return_pallet?: string;
     borrow_customer_pallet?: string;
@@ -168,7 +203,7 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
     [key: string]: string | undefined;
   }
 
-  const handleInputChange = (field: keyof Pallet, value: string) => {
+  const handleOnchange_pallet = (field: keyof Pallet, value: string) => {
     setPallet((prev: Pallet) => ({
       ...prev,
       [field]: value,
@@ -273,12 +308,18 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
         </div>
         <div className="flex flex-col w-full md:w-1/2 md:self-center-safe">
           {/* Header Info */}
-          <Card className="mb-4 bg-gray-50 shadow-md hover:shadow-lg transition-all duration-300 border-0 ring-1 ring-gray-200/50 hover:ring-gray-300/50">
+          <Card className="mb-2 bg-gray-50 shadow-md hover:shadow-lg transition-all duration-300 border-0 ring-1 ring-gray-200/50 hover:ring-gray-300/50">
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="relative flex justify-between items-start">
+                <div>
                 <CardTitle className="text-lg font-bold">
                   📦{job.load_id}
                 </CardTitle>
+                <p className="ml-5 text-dark/90 text-xs font-medium">
+                        {job.h_plate} • {job.t_plate}
+                      </p>
+                </div>
+                <div className="flex flex-col items-end  space-x-2 space-y-2">
                 <Badge
                   className={`${
                     getStatusConfig(job.status).color
@@ -286,40 +327,58 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
                 >
                   {job.status}
                 </Badge>
+                <Badge
+                  className={` ${job.job_type ? "" : "hidden"} ${
+                    job.job_type == "ดรอป"
+                      ? "bg-purple-200 text-purple-900"
+                      : "bg-orange-200 text-orange-900"
+                  } border-white/30 text-xs px-2 py-0.5 rounded-full backdrop-blur-sm`}
+                >
+                  ประเภทงาน: {job.job_type}
+                </Badge>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="p-2 space-y-2">
+              <div className="p-1 space-y-1">
+                <div className="flex justify-between">
+                 <p className="text-sm font-semibold">ต้นทาง</p>
+                 <p className="text-sm font-semibold">ปลายทาง</p>
+                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <div
-                    className={`flex items-center space-x-1 flex-1 min-w-0 ${
-                      getStatusConfig(job.status).btn
-                    } rounded-lg p-2 shadow-sm`}
-                  >
-                    <MapPin
-                      className={`h-3 w-3 ${
-                        getStatusConfig(job.status).iconColor
-                      } flex-shrink-0`}
-                    />
-                    <span className="font-medium text-white-900 truncate">
-                      {job.locat_recive}
-                    </span>
-                  </div>
-                  <ArrowRight
+                <div
+                  className={`flex items-center space-x-1 flex-1 min-w-0 ${
+                    getStatusConfig(job.status).btn
+                  } rounded-lg p-2 shadow-sm`}
+                >
+                 
+                  <MapPin
                     className={`h-3 w-3 ${
                       getStatusConfig(job.status).iconColor
-                    } mx-2 flex-shrink-0`}
+                    } flex-shrink-0`}
                   />
-                  <div
-                    className={`flex items-center space-x-1 flex-1 min-w-0 ${
-                      getStatusConfig(job.status).btn
-                    } rounded-lg p-2 shadow-sm`}
-                  >
-                    <span className="font-medium text-gray-900 truncate">
-                      {job.locat_deliver}
-                    </span>
-                  </div>
+                  <span className="font-medium text-white-900 whitespace-normal break-words flex-1">
+                    {job.locat_recive}
+                  </span>
                 </div>
+
+                <ArrowRight
+                  className={`h-3 w-3 ${
+                    getStatusConfig(job.status).iconColor
+                  } mx-2 flex-shrink-0`}
+                />
+
+                <div
+                  className={`flex items-center space-x-1 flex-1 min-w-0 ${
+                    getStatusConfig(job.status).btn
+                  } rounded-lg p-2 shadow-sm`}
+                >
+                  <span className="font-medium text-gray-900 whitespace-normal break-words flex-1">
+                    {job.locat_deliver}
+                  </span>
+                </div>
+              </div>
+
 
                 {/* Dates in compact grid */}
                 <div className="grid grid-cols-2 gap-2 ">
@@ -399,10 +458,14 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
                         จำนวนเที่ยวทอย
                       </p>
                     </div>
-                    <input className="text-xs font-bold text-center text-gray-900 w-full border border-gray-300 rounded-lg h-8" />
+                    <input
+                      type="number"
+                      value={roll_trip}
+                      onChange={(e) => setRolltrip(e.target.value)}
+                      className="text-xs font-bold text-center text-gray-900 w-full border border-gray-300 rounded-lg h-8"
+                    />
                   </div>
                 </div>
-
               </div>
             </CardContent>
           </Card>
@@ -451,9 +514,9 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
                       </label>
                       <input
                         type="text"
-                        value={pallet.change_pallet || 0}
+                        value={pallet.change_pallet}
                         onChange={(e) =>
-                          handleInputChange("change_pallet", e.target.value)
+                          handleOnchange_pallet("change_pallet", e.target.value)
                         }
                         placeholder="กรอกจำนวนพาเลทที่แลกเปลี่ยน"
                         className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm"
@@ -466,9 +529,12 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
                       </label>
                       <input
                         type="text"
-                        value={pallet.transfer_pallet || 0}
+                        value={pallet.tranfer_pallet}
                         onChange={(e) =>
-                          handleInputChange("transfer_pallet", e.target.value)
+                          handleOnchange_pallet(
+                            "tranfer_pallet",
+                            e.target.value
+                          )
                         }
                         placeholder="กรอกจำนวนพาเลทที่โอน"
                         className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm"
@@ -481,11 +547,11 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
                       </label>
                       <input
                         type="text"
-                        value={pallet.drop_pallet || 0}
+                        value={pallet.drop_pallet}
                         onChange={(e) =>
-                          handleInputChange("drop_pallet", e.target.value)
+                          handleOnchange_pallet("drop_pallet", e.target.value)
                         }
-                        placeholder="กรอกจำนวนพาเลทที่นำฝาก"
+                        placeholder="กรอกจำนวนพาเลทที่นำฝากไว้"
                         className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm"
                       />
                     </div>
@@ -496,11 +562,11 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
                       </label>
                       <input
                         type="text"
-                        value={pallet.return_pallet || 0}
+                        value={pallet.return_pallet}
                         onChange={(e) =>
-                          handleInputChange("return_pallet", e.target.value)
+                          handleOnchange_pallet("return_pallet", e.target.value)
                         }
-                        placeholder="กรอกจำนวนพาเลทที่รับคืน"
+                        placeholder="กรอกจำนวนพาเลทที่รับคืนกลับ"
                         className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm"
                       />
                     </div>
@@ -511,9 +577,9 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
                       </label>
                       <input
                         type="text"
-                        value={pallet.borrow_customer_pallet || 0}
+                        value={pallet.borrow_customer_pallet}
                         onChange={(e) =>
-                          handleInputChange(
+                          handleOnchange_pallet(
                             "borrow_customer_pallet",
                             e.target.value
                           )
@@ -529,9 +595,9 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
                       </label>
                       <input
                         type="text"
-                        value={pallet.return_customer_pallet || 0}
+                        value={pallet.return_customer_pallet}
                         onChange={(e) =>
-                          handleInputChange(
+                          handleOnchange_pallet(
                             "return_customer_pallet",
                             e.target.value
                           )
@@ -566,6 +632,8 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
                       </label>
                       <textarea
                         rows={4}
+                        value={damage}
+                        onChange={(e) => setDamage(e.target.value)}
                         placeholder="กรุณาระบุรายละเอียดของสินค้าที่ชำรุด เช่น ประเภทความเสียหาย สาเหตุ จำนวน เป็นต้น"
                         className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm resize-none"
                       />
@@ -593,6 +661,8 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
                     <div className="space-y-1">
                       <input
                         type="text"
+                        value={ldt}
+                        onChange={(e) => setLdt(e.target.value)}
                         placeholder="กรอกเลข LDT"
                         className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm"
                       />

@@ -44,7 +44,7 @@ export async function PUT(req: Request) {
     const accessToken = req.headers.get('Authorization')?.replace('Bearer ', '');
     const jobID = req.headers.get('id');
     const value = await req.json();
-
+    console.log('PUT *****************:', [jobID, value]);
     const externalRes = await fetch(`https://backend-tdm.onrender.com/jobs?load_id=${jobID}`, {
       method: 'PUT',
       headers: {

@@ -77,15 +77,11 @@ export const Jobcards = ({ filterStatus, datajobs }: JobcardsProps) => {
 
 
 
- const formatDate = (dateStr: string | undefined) => {
+const formatDate = (dateStr: string | undefined) => {
   if (!dateStr || typeof dateStr !== "string") return "-";
-
-  const [datePart] = dateStr.split(",");
-  if (!datePart) return "-";
-
-  const [day, month, year] = datePart.split("/").map(Number);
-  const d = new Date(year, month - 1, day);
-
+  // Accepts ISO 8601 format: '2025-12-08T13:00:00'
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "-";
   return d.toLocaleDateString("th-TH", {
     day: "2-digit",
     month: "short",
@@ -93,22 +89,16 @@ export const Jobcards = ({ filterStatus, datajobs }: JobcardsProps) => {
 };
 
 
-  const formatTime = (dateStr: string | undefined) => {
-    if (!dateStr || typeof dateStr !== "string") return "-";
-
-    const [datePart, timePart] = dateStr.split(",");
-    if (!datePart || !timePart) return "-";
-
-    const [day, month, year] = datePart.split("/").map(Number);
-    const [hour, minute] = timePart.trim().split(":").map(Number);
-    const d = new Date(year, month - 1, day, hour, minute);
-
-    return d.toLocaleTimeString("th-TH", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
+const formatTime = (dateStr: string | undefined) => {
+  // Accepts ISO 8601 format: '2025-12-08T13:00:00'
+  if (!dateStr || typeof dateStr !== "string") return "-";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "-";
+  return d.toLocaleTimeString("th-TH", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
 
 const handleJob = (idjob: (typeof jobs)[0]) => {
   router.push(`/ticket?id=${idjob}`);
@@ -137,13 +127,22 @@ const handleJob = (idjob: (typeof jobs)[0]) => {
                         {job.h_plate} • {job.t_plate}
                       </p>
                     </div>
-                    <div className="flex flex-col items-end  space-x-2">
+                    <div className="flex flex-col items-end  space-x-2 space-y-2">
                       <Badge
                         className={`${
                           statusConfig.color
                         } border-white/30 text-xs px-2 py-0.5 rounded-full backdrop-blur-sm`}
                       >
                         {job.status}
+                      </Badge>
+                      <Badge
+                        className={` ${
+                          job.job_type ? "":"hidden"
+                        } ${
+                          job.job_type == "ดรอป" ? "bg-purple-200 text-purple-900":"bg-orange-200 text-orange-900"
+                        } border-white/30 text-xs px-2 py-0.5 rounded-full backdrop-blur-sm`}
+                      >
+                        ประเภทงาน: {job.job_type}
                       </Badge>
                       <div className={`${getEstimateTime(job.estimate_time)} hidden flex-col items-end space-x-1`}>
                         <p className="text-xs  text-red-700">
@@ -157,25 +156,34 @@ const handleJob = (idjob: (typeof jobs)[0]) => {
                   </div>
                 </div>
 
-                <div className="p-2 space-y-3">
-                  {/* Route in single row - more compact */}
+                 <div className="p-1 space-y-1">
+                  <div className="bg-white rounded-lg p-2 border border-gray-100 shadow-sm">
                   <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center space-x-1 flex-1 min-w-0">
+                    <div className="flex flex-col items-center space-x-1 flex-1 min-w-0">
+                      <p className="text-sm font-semibold">ต้นทาง</p>
+                      <div className="flex flex-row">
                       <MapPin
-                        className={`h-3 w-3 ${statusConfig.iconColor} flex-shrink-0`}
+                        className={`h-3 w-3 ${statusConfig.iconColor} flex-shrink-0 mr-2`}
                       />
-                      <span className="font-medium text-gray-900 truncate">
+                      <span className="font-medium text-gray-900">
                         {job.locat_recive}
                       </span>
+                      </div>
                     </div>
-                    <ArrowRight
-                      className={`h-3 w-3 ${statusConfig.iconColor} mx-2 flex-shrink-0`}
+                    <div className="flex flex-col items-center space-x-1 flex-1 min-w-0">
+                      <div className="flex flex-col items-center space-x-1 flex-1 min-w-0">
+                      <p className="text-sm font-semibold">ปลายทาง</p>
+                      <div className="flex flex-row">
+                       <ArrowRight
+                      className={`h-3 w-3 ${statusConfig.iconColor} flex-shrink-0 mr-2`}
                     />
-                    <div className="flex items-center space-x-1 flex-1 min-w-0">
-                      <span className="font-medium text-gray-900 truncate">
+                      <span className="font-medium text-gray-900">
                         {job.locat_deliver}
                       </span>
+                      </div>
+                </div>
                     </div>
+                  </div>
                   </div>
 
                   {/* Dates in compact grid */}
