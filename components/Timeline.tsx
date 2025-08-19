@@ -429,12 +429,12 @@ export const TimelineStep = ({
               >
                 {isStatusCompleted(selectedStatus.key) ? (
                   <>
-                    <Check className="w-4 h-4 mr-1" />
+                    <Check className="w-4 h-4 mr-1" onClick={closeModal} />
                     เสร็จสิ้น
                   </>
                 ) : (
                   <>
-                    <Clock className="w-4 h-4 mr-1" />
+                    <Clock className="w-4 h-4 mr-1" onClick={closeModal} />
                     รอดำเนินการ
                   </>
                 )}

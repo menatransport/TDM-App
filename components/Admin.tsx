@@ -2,8 +2,28 @@
 
 import { useState, useEffect, useMemo } from "react";
 import {
-  Search, Filter, Calendar, User, Truck, Package,
-  Eye, Edit, Trash2, Plus, Download, RefreshCw, MapPin, Clock, Phone, NotebookPen, ChevronUp, ChevronDown, AlertCircle , BookOpenCheck, CircleX, Check
+  Search,
+  Filter,
+  Calendar,
+  User,
+  Truck,
+  Package,
+  Eye,
+  Edit,
+  Trash2,
+  Plus,
+  Download,
+  RefreshCw,
+  MapPin,
+  Clock,
+  Phone,
+  NotebookPen,
+  ChevronUp,
+  ChevronDown,
+  AlertCircle,
+  BookOpenCheck,
+  CircleX,
+  Check,
 } from "lucide-react";
 import Swal from "sweetalert2";
 import { AdminView } from "@/components/AdminView";
@@ -12,21 +32,30 @@ import { TransportItem } from "@/lib/type";
 
 const itemsPerPage = 10;
 const today = new Date().toISOString().split("T")[0];
-const sevenDaysAgo = new Date(new Date(today).getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-export const Admintool= () => {
+const sevenDaysAgo = new Date(
+  new Date(today).getTime() - 7 * 24 * 60 * 60 * 1000
+)
+  .toISOString()
+  .split("T")[0];
+const tomorrow = new Date(new Date(today).getTime() + 1 * 24 * 60 * 60 * 1000)
+  .toISOString()
+  .split("T")[0];
+export const Admintool = () => {
   const [filters, setFilters] = useState({
-    date_plan: { date_plan_start: sevenDaysAgo, date_plan_end: today },
-    load_id: '',
-    driver_name: '',
-    h_plate: '',
-    status:''
+    date_plan: { date_plan_start: sevenDaysAgo, date_plan_end: tomorrow },
+    load_id: "",
+    driver_name: "",
+    h_plate: "",
+    status: "",
   });
 
- const [transportData, setTransportData] = useState<TransportItem[]>([]);
+  const [transportData, setTransportData] = useState<TransportItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [sortColumn, setSortColumn] = useState<keyof TransportItem | null>(null);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [sortColumn, setSortColumn] = useState<keyof TransportItem | null>(
+    null
+  );
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [currentPage, setCurrentPage] = useState(1);
   const [cancel, setCancel] = useState("ยกเลิก");
   const [deleteAlert, setDeleteAlert] = useState<{
@@ -34,7 +63,7 @@ export const Admintool= () => {
     load_id: string;
   }>({
     show: false,
-    load_id: '',
+    load_id: "",
   });
   const [modalView, setmodalView] = useState<{
     show: boolean;
@@ -45,62 +74,61 @@ export const Admintool= () => {
   });
 
   const [modalCreate, setmodalCreate] = useState<{
-    show: boolean
+    show: boolean;
   }>({
-    show: false
+    show: false,
   });
-
 
   const handleSearch = async () => {
     setLoading(true);
-// 1. แยก date_plan ออกก่อน
-const { date_plan, ...restFilters } = filters;
+    // 1. แยก date_plan ออกก่อน
+    const { date_plan, ...restFilters } = filters;
 
-// 2. กรองค่าที่ไม่ว่าง
-const filtered = Object.fromEntries(
-  Object.entries(restFilters).filter(
-    ([_, value]) => value !== "" && value !== null && value !== undefined
-  )
-);
+    // 2. กรองค่าที่ไม่ว่าง
+    const filtered = Object.fromEntries(
+      Object.entries(restFilters).filter(
+        ([_, value]) => value !== "" && value !== null && value !== undefined
+      )
+    );
 
-const searchParams = new URLSearchParams();
+    const searchParams = new URLSearchParams();
 
-Object.entries(filtered).forEach(([key, value]) => {
-  if (typeof value === "string" && value.includes(",")) {
-    value.split(",").forEach(v => {
-      searchParams.append(key, v.trim());
-    });
-  } else {
-    searchParams.append(key, String(value));
-  }
-});
-
-if (date_plan?.date_plan_start) {
-  searchParams.append("date_plan_start", date_plan.date_plan_start);
-}
-if (date_plan?.date_plan_end) {
-  searchParams.append("date_plan_end", date_plan.date_plan_end);
-}
-
-const queryString = searchParams.toString();
-    try {
-         const access_token = localStorage.getItem("access_token");
-         const res = await fetch("/api/admin", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${access_token}`,
-            query: queryString
-          },
+    Object.entries(filtered).forEach(([key, value]) => {
+      if (typeof value === "string" && value.includes(",")) {
+        value.split(",").forEach((v) => {
+          searchParams.append(key, v.trim());
         });
-       const data = await res.json();
-      
-       setTransportData(data.jobs);
-       setLoading(false);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        setLoading(false);
+      } else {
+        searchParams.append(key, String(value));
       }
+    });
+
+    if (date_plan?.date_plan_start) {
+      searchParams.append("date_plan_start", date_plan.date_plan_start);
+    }
+    if (date_plan?.date_plan_end) {
+      searchParams.append("date_plan_end", date_plan.date_plan_end);
+    }
+
+    const queryString = searchParams.toString();
+    try {
+      const access_token = localStorage.getItem("access_token");
+      const res = await fetch("/api/admin", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${access_token}`,
+          query: queryString,
+        },
+      });
+      const data = await res.json();
+
+      setTransportData(data.jobs);
+      setLoading(false);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      setLoading(false);
+    }
 
     // setTimeout(() => {
     //   let filteredData = mockData;
@@ -113,56 +141,53 @@ const queryString = searchParams.toString();
   // ✅ รีเซ็ตข้อมูล filter
   const resetFilters = () => {
     setFilters({
-    date_plan: { date_plan_start: sevenDaysAgo, date_plan_end: today },
-    load_id: '',
-    driver_name: '',
-    h_plate: '',
-    status:''
+      date_plan: { date_plan_start: sevenDaysAgo, date_plan_end: today },
+      load_id: "",
+      driver_name: "",
+      h_plate: "",
+      status: "",
     });
     setTransportData([]);
   };
 
   // ✅ ดู / แก้ไข / ลบ
   const handleView = (id: any) => {
-  const jobData = transportData.find(item => item.load_id === id); // ✅ ใช้ find
-  if (jobData) {
-    setmodalView({ show: true, job: jobData });
-  }
-};
+    const jobData = transportData.find((item) => item.load_id === id); // ✅ ใช้ find
+    if (jobData) {
+      setmodalView({ show: true, job: jobData });
+    }
+  };
   const handleClose = (close: boolean) => {
-  setmodalView(prev => ({ ...prev, show: close }));
-  setmodalCreate(prev => ({ ...prev, show: close }));
-};
-  
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'พร้อมรับงาน':
-      return 'bg-green-100 text-green-800';
-    case 'รับงาน':
-    case 'ถึงต้นทาง':
-    case 'เริ่มขึ้นสินค้า':
-    case 'ขึ้นสินค้าเสร็จ':
-      return 'bg-blue-100 text-blue-800';
-    case 'เริ่มขนส่ง':
-      return 'bg-yellow-100 text-yellow-800';
-    case 'ถึงปลายทาง':
-    case 'เริ่มลงสินค้า':
-    case 'ลงสินค้าเสร็จ':
-      return 'bg-purple-100 text-purple-800';
-    case 'จัดส่งแล้ว (POD)':
-      return 'bg-green-300 text-green-900';
-    case 'อบรมที่บริษัท':
-    case 'ซ่อม':
-    case 'ยกเลิก':
-    case 'ตกคิว':
-      return 'bg-red-100 text-red-900';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
-};
+    setmodalView((prev) => ({ ...prev, show: close }));
+    setmodalCreate((prev) => ({ ...prev, show: close }));
+  };
 
-
-
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "พร้อมรับงาน":
+        return "bg-green-100 text-green-800";
+      case "รับงาน":
+      case "ถึงต้นทาง":
+      case "เริ่มขึ้นสินค้า":
+      case "ขึ้นสินค้าเสร็จ":
+        return "bg-blue-100 text-blue-800";
+      case "เริ่มขนส่ง":
+        return "bg-yellow-100 text-yellow-800";
+      case "ถึงปลายทาง":
+      case "เริ่มลงสินค้า":
+      case "ลงสินค้าเสร็จ":
+        return "bg-purple-100 text-purple-800";
+      case "จัดส่งแล้ว (POD)":
+        return "bg-green-300 text-green-900";
+      case "อบรมที่บริษัท":
+      case "ซ่อม":
+      case "ยกเลิก":
+      case "ตกคิว":
+        return "bg-red-100 text-red-900";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
 
   // Sort data
   const sortedData = useMemo(() => {
@@ -172,91 +197,90 @@ const getStatusColor = (status: string) => {
       const aVal = a[sortColumn];
       const bVal = b[sortColumn];
 
-      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
-      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
       return 0;
     });
   }, [transportData, sortColumn, sortDirection]);
 
   // Paging data
   const totalPages = Math.ceil(sortedData.length / itemsPerPage);
-  const currentData = sortedData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const currentData = sortedData.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const handleSort = (column: keyof TransportItem) => {
     if (sortColumn === column) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
       setSortColumn(column);
-      setSortDirection('asc');
+      setSortDirection("asc");
     }
   };
 
- const renderSortIcons = (column: keyof TransportItem) => (
+  const renderSortIcons = (column: keyof TransportItem) => (
     <span className="inline ml-1">
       <ChevronUp
         onClick={() => handleSort(column)}
-        className={`w-4 h-4 inline cursor-pointer hover:text-blue-600 ${sortColumn === column && sortDirection === 'asc' ? 'text-blue-600' : 'text-gray-600'}`}
+        className={`w-4 h-4 inline cursor-pointer hover:text-blue-600 ${
+          sortColumn === column && sortDirection === "asc"
+            ? "text-blue-600"
+            : "text-gray-600"
+        }`}
       />
       <ChevronDown
         onClick={() => handleSort(column)}
-        className={`w-4 h-4 inline cursor-pointer hover:text-blue-600 ${sortColumn === column && sortDirection === 'desc' ? 'text-blue-600' : 'text-gray-600'}`}
+        className={`w-4 h-4 inline cursor-pointer hover:text-blue-600 ${
+          sortColumn === column && sortDirection === "desc"
+            ? "text-blue-600"
+            : "text-gray-600"
+        }`}
       />
     </span>
   );
 
- 
+  const confirmDelete = async () => {
+    let value = { status: cancel };
+    let jobid = deleteAlert.load_id;
+    const access_token = localStorage.getItem("access_token");
+    try {
+      setDeleteAlert({ show: false, load_id: "" });
+      const res_data = await fetch("/api/jobs", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${access_token}`,
+          id: jobid ?? "",
+        },
+        body: JSON.stringify(value),
+      });
 
-   const confirmDelete = async () => {
-   let value = {status:cancel}
-   let jobid = deleteAlert.load_id
-   const access_token = localStorage.getItem("access_token");
-   try {
-   setDeleteAlert({ show: false, load_id: ''})
-   const res_data = await fetch("/api/jobs", {
-         method: "PUT",
-         headers: {
-           "Content-Type": "application/json",
-           Authorization: `Bearer ${access_token}`,
-           id: jobid ?? "",
-         },
-        body: JSON.stringify(value)
-       });
-    // const res_image = await fetch("/api/upload", {
-    //      method: "DELETE",
-    //      headers: {
-    //        "Content-Type": "application/json",
-    //        Authorization: `Bearer ${access_token}`,
-    //        id: jobid ?? "",
-    //      },
-    //    });
-
-        if (!res_data.ok) throw new Error("ลบไฟล์ไม่สำเร็จ");
-        setTransportData(prev =>
-  prev.map(item =>
-    item.load_id === jobid ? { ...item, status: value.status } : item
-  )
-);
-        Swal.fire({
+      if (!res_data.ok) throw new Error("ลบไฟล์ไม่สำเร็จ");
+      setTransportData((prev) =>
+        prev.map((item) =>
+          item.load_id === jobid ? { ...item, status: value.status } : item
+        )
+      );
+      Swal.fire({
         title: "แก้ไขข้อมูลสำเร็จ!",
         icon: "success",
-        draggable: true
+        draggable: true,
       });
-      } catch (error){
-        console.log('error : ',error)
-        Swal.fire({
+    } catch (error) {
+      console.log("error : ", error);
+      Swal.fire({
         title: "" + error,
         icon: "error",
-        draggable: true
+        draggable: true,
       });
-      }
-   }
+    }
+  };
 
   // ✅ โหลดข้อมูลเริ่มต้น
   useEffect(() => {
     handleSearch();
   }, []);
-
-  
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 relative overflow-hidden">
@@ -273,18 +297,19 @@ const getStatusColor = (status: string) => {
         <div className="bg-white backdrop-blur-md rounded-2xl shadow-xl border border-white/30 p-6 mb-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-800 mb-2">🚛 ระบบจัดการงานขนส่ง</h1>
+              <h1 className="text-3xl font-bold text-gray-800 mb-2">
+                🚛 ระบบจัดการงานขนส่ง
+              </h1>
               <p className="text-gray-600">จัดการและติดตามงานขนส่งทั้งหมด</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <button onClick={() => setmodalCreate({ show: true })} className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl">
+              <button
+                onClick={() => setmodalCreate({ show: true })}
+                className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
                 <Plus size={20} />
                 <span className="hidden sm:inline">เพิ่มงานใหม่</span>
               </button>
-              {/* <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl">
-                <Download size={20} />
-                <span className="hidden sm:inline">ส่งออก</span>
-              </button> */}
             </div>
           </div>
         </div>
@@ -304,7 +329,11 @@ const getStatusColor = (status: string) => {
             </button>
           </div>
 
-          <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 ${showFilters ? 'block' : 'hidden md:grid'}`}>
+          <div
+            className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 ${
+              showFilters ? "block" : "hidden md:grid"
+            }`}
+          >
             {/* Date Range */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
@@ -314,10 +343,15 @@ const getStatusColor = (status: string) => {
               <input
                 type="date"
                 value={filters.date_plan.date_plan_start}
-                onChange={(e) => setFilters(prev => ({
-                  ...prev,
-                  date_plan: { ...prev.date_plan, date_plan_start: e.target.value }
-                }))}
+                onChange={(e) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    date_plan: {
+                      ...prev.date_plan,
+                      date_plan_start: e.target.value,
+                    },
+                  }))
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
               />
             </div>
@@ -330,10 +364,15 @@ const getStatusColor = (status: string) => {
               <input
                 type="date"
                 value={filters.date_plan.date_plan_end}
-                onChange={(e) => setFilters(prev => ({
-                  ...prev,
-                  date_plan: { ...prev.date_plan, date_plan_end: e.target.value }
-                }))}
+                onChange={(e) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    date_plan: {
+                      ...prev.date_plan,
+                      date_plan_end: e.target.value,
+                    },
+                  }))
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
               />
             </div>
@@ -342,12 +381,14 @@ const getStatusColor = (status: string) => {
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
                 <Package size={16} />
-                รหัสขนส่ง (Load ID)
+                รหัสขนส่ง (Shipment ID)
               </label>
               <input
                 type="text"
                 value={filters.load_id}
-                onChange={(e) => setFilters(prev => ({ ...prev, load_id: e.target.value }))}
+                onChange={(e) =>
+                  setFilters((prev) => ({ ...prev, load_id: e.target.value }))
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
               />
             </div>
@@ -361,7 +402,12 @@ const getStatusColor = (status: string) => {
               <input
                 type="text"
                 value={filters.driver_name}
-                onChange={(e) => setFilters(prev => ({ ...prev, driver_name: e.target.value }))}
+                onChange={(e) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    driver_name: e.target.value,
+                  }))
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
               />
             </div>
@@ -375,7 +421,9 @@ const getStatusColor = (status: string) => {
               <input
                 type="text"
                 value={filters.h_plate}
-                onChange={(e) => setFilters(prev => ({ ...prev, h_plate: e.target.value }))}
+                onChange={(e) =>
+                  setFilters((prev) => ({ ...prev, h_plate: e.target.value }))
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
               />
             </div>
@@ -383,54 +431,64 @@ const getStatusColor = (status: string) => {
             {/* Vehicle Number */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                <BookOpenCheck  size={16} />
+                <BookOpenCheck size={16} />
                 สถานะ
               </label>
               <select
-  value={filters.status}
-  onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
->
-  <option value="">เลือกสถานะ</option>
-  <optgroup className="text-gray-600" label="สถานะงาน">
-    <option value="พร้อมรับงาน">พร้อมรับงาน</option>
-    <option value="รับงาน">รับงาน</option>
-    <option value="ถึงต้นทาง">ถึงต้นทาง</option>
-    <option value="เริ่มขึ้นสินค้า">เริ่มขึ้นสินค้า</option>
-    <option value="ขึ้นสินค้าเสร็จ">ขึ้นสินค้าเสร็จ</option>
-    <option value="เริ่มขนส่ง">เริ่มขนส่ง</option>
-    <option value="ถึงปลายทาง">ถึงปลายทาง</option>
-    <option value="เริ่มลงสินค้า">เริ่มลงสินค้า</option>
-    <option value="ลงสินค้าเสร็จ">ลงสินค้าเสร็จ</option>
-    <option value="จัดส่งแล้ว (POD)">จัดส่งแล้ว (POD)</option>
-  </optgroup>
-  <optgroup className="text-red-600" label="สถานะอื่นๆ">
-    <option value="ตกคิว">ตกคิว</option>
-    <option value="ซ่อม">ซ่อม</option>
-    <option value="อบรมที่บริษัท">อบรมที่บริษัท</option>
-    <option value="ยกเลิก">ยกเลิก</option>
-  </optgroup>
-</select>
+                value={filters.status}
+                onChange={(e) =>
+                  setFilters((prev) => ({ ...prev, status: e.target.value }))
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+              >
+                <option value="">เลือกสถานะ</option>
+                <optgroup className="text-gray-600" label="สถานะงาน">
+                  <option value="พร้อมรับงาน">พร้อมรับงาน</option>
+                  <option value="รับงาน">รับงาน</option>
+                  <option value="ถึงต้นทาง">ถึงต้นทาง</option>
+                  <option value="เริ่มขึ้นสินค้า">เริ่มขึ้นสินค้า</option>
+                  <option value="ขึ้นสินค้าเสร็จ">ขึ้นสินค้าเสร็จ</option>
+                  <option value="เริ่มขนส่ง">เริ่มขนส่ง</option>
+                  <option value="ถึงปลายทาง">ถึงปลายทาง</option>
+                  <option value="เริ่มลงสินค้า">เริ่มลงสินค้า</option>
+                  <option value="ลงสินค้าเสร็จ">ลงสินค้าเสร็จ</option>
+                  <option value="จัดส่งแล้ว (POD)">จัดส่งแล้ว (POD)</option>
+                </optgroup>
+                <optgroup className="text-red-600" label="สถานะอื่นๆ">
+                  <option value="ตกคิว">ตกคิว</option>
+                  <option value="ซ่อม">ซ่อม</option>
+                  <option value="อบรมที่บริษัท">อบรมที่บริษัท</option>
+                  <option value="ยกเลิก">ยกเลิก</option>
+                </optgroup>
+              </select>
             </div>
           </div>
 
-          <div className={`flex flex-col sm:flex-row gap-3 mt-6 ${showFilters ? 'block' : 'hidden md:flex'}`}>
+          <div
+            className={`flex flex-col sm:flex-row gap-3 mt-6 ${
+              showFilters ? "block" : "hidden md:flex"
+            }`}
+          >
             <button
               onClick={handleSearch}
               disabled={loading}
               className="bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl"
             >
-              {loading ? <RefreshCw size={20} className="animate-spin" /> : <Search size={20} />}
-              {loading ? 'กำลังค้นหา...' : 'ค้นหาข้อมูล'}
+              {loading ? (
+                <RefreshCw size={20} className="animate-spin" />
+              ) : (
+                <Search size={20} />
+              )}
+              {loading ? "กำลังค้นหา..." : "ค้นหาข้อมูล"}
             </button>
             <button
               onClick={() => {
                 setFilters({
-                  date_plan: { date_plan_start: '', date_plan_end: '' },
-                  load_id: '',
-                  driver_name: '',
-                  h_plate: '',
-                  status:''
+                  date_plan: { date_plan_start: "", date_plan_end: "" },
+                  load_id: "",
+                  driver_name: "",
+                  h_plate: "",
+                  status: "",
                 });
                 setTransportData([]);
               }}
@@ -448,7 +506,9 @@ const getStatusColor = (status: string) => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">งานทั้งหมด</p>
-                <p className="text-2xl font-bold text-gray-800">{transportData.length}</p>
+                <p className="text-2xl font-bold text-gray-800">
+                  {transportData.length}
+                </p>
               </div>
               <div className="bg-blue-100 p-3 rounded-full">
                 <Package className="text-blue-600" size={24} />
@@ -461,7 +521,15 @@ const getStatusColor = (status: string) => {
               <div>
                 <p className="text-sm text-gray-600">ยกเลิก</p>
                 <p className="text-2xl font-bold text-yellow-600">
-                  {transportData.filter(item => (item.status === 'ยกเลิก') || (item.status === 'ตกคิว') || (item.status === 'ซ่อม')|| (item.status === 'อบรมที่บริษัท')).length}
+                  {
+                    transportData.filter(
+                      (item) =>
+                        item.status === "ยกเลิก" ||
+                        item.status === "ตกคิว" ||
+                        item.status === "ซ่อม" ||
+                        item.status === "อบรมที่บริษัท"
+                    ).length
+                  }
                 </p>
               </div>
               <div className="bg-red-100 p-3 rounded-full">
@@ -470,12 +538,16 @@ const getStatusColor = (status: string) => {
             </div>
           </div>
 
-           <div className="bg-white backdrop-blur-md rounded-xl shadow-lg border border-white/30 p-4">
+          <div className="bg-white backdrop-blur-md rounded-xl shadow-lg border border-white/30 p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">พร้อมรับงาน</p>
                 <p className="text-2xl font-bold text-yellow-600">
-                  {transportData.filter(item => item.status === 'พร้อมรับงาน').length}
+                  {
+                    transportData.filter(
+                      (item) => item.status === "พร้อมรับงาน"
+                    ).length
+                  }
                 </p>
               </div>
               <div className="bg-yellow-100 p-3 rounded-full">
@@ -489,7 +561,19 @@ const getStatusColor = (status: string) => {
               <div>
                 <p className="text-sm text-gray-600">กำลังขนส่ง</p>
                 <p className="text-2xl font-bold text-blue-600">
-                  {transportData.filter(item => (item.status === 'รับงาน')||(item.status === 'ถึงต้นทาง')||(item.status === 'เริ่มขึ้นสินค้า')||(item.status === 'ขึ้นสินค้าเสร็จ')||(item.status === 'เริ่มขนส่ง')||(item.status === 'ถึงปลายทาง')||(item.status === 'เริ่มลงสินค้า')||(item.status === 'ลงสินค้าเสร็จ')).length}
+                  {
+                    transportData.filter(
+                      (item) =>
+                        item.status === "รับงาน" ||
+                        item.status === "ถึงต้นทาง" ||
+                        item.status === "เริ่มขึ้นสินค้า" ||
+                        item.status === "ขึ้นสินค้าเสร็จ" ||
+                        item.status === "เริ่มขนส่ง" ||
+                        item.status === "ถึงปลายทาง" ||
+                        item.status === "เริ่มลงสินค้า" ||
+                        item.status === "ลงสินค้าเสร็จ"
+                    ).length
+                  }
                 </p>
               </div>
               <div className="bg-blue-100 p-3 rounded-full">
@@ -503,7 +587,11 @@ const getStatusColor = (status: string) => {
               <div>
                 <p className="text-sm text-gray-600">เสร็จสิ้น</p>
                 <p className="text-2xl font-bold text-green-600">
-                  {transportData.filter(item => item.status === 'จัดส่งแล้ว (POD)').length}
+                  {
+                    transportData.filter(
+                      (item) => item.status === "จัดส่งแล้ว (POD)"
+                    ).length
+                  }
                 </p>
               </div>
               <div className="bg-green-100 p-3 rounded-full">
@@ -511,62 +599,76 @@ const getStatusColor = (status: string) => {
               </div>
             </div>
           </div>
-
-         
         </div>
 
         {/* Data Table */}
         <div className="bg-white backdrop-blur-md rounded-2xl shadow-xl border border-white/30 overflow-hidden">
           <div className="p-4 bg-gray-500 border-b border-gray-200">
-            <h2 className="text-xl text-white font-semibold text-gray-800">ข้อมูลงานขนส่ง</h2>
-            <p className="text-white mt-1">พบข้อมูล {transportData.length} รายการ</p>
+            <h2 className="text-xl text-white font-semibold text-gray-800">
+              ข้อมูลงานขนส่ง
+            </h2>
+            <p className="text-white mt-1">
+              พบข้อมูล {transportData.length} รายการ
+            </p>
             <div className="flex justify-end items-center gap-2 text-sm text-gray-600">
-        <button
-          disabled={currentPage === 1}
-          onClick={() => setCurrentPage((p) => p - 1)}
-          className="px-3 py-1 border text-white rounded hover:bg-gray-100 hover:text-gray-600 disabled:opacity-40"
-        >
-          ก่อนหน้า
-        </button>
-        <span className="text-gray-200">
-          หน้า {currentPage} จาก {totalPages}
-        </span>
-        <button
-          disabled={currentPage === totalPages}
-          onClick={() => setCurrentPage((p) => p + 1)}
-          className="px-3 py-1 border text-white rounded hover:bg-gray-100 hover:text-gray-600 disabled:opacity-40"
-        >
-          ถัดไป
-        </button>
-      </div>
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((p) => p - 1)}
+                className="px-3 py-1 border text-white rounded hover:bg-gray-100 hover:text-gray-600 disabled:opacity-40"
+              >
+                ก่อนหน้า
+              </button>
+              <span className="text-gray-200">
+                หน้า {currentPage} จาก {totalPages}
+              </span>
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((p) => p + 1)}
+                className="px-3 py-1 border text-white rounded hover:bg-gray-100 hover:text-gray-600 disabled:opacity-40"
+              >
+                ถัดไป
+              </button>
+            </div>
           </div>
 
           {/* Mobile View */}
           <div className="block lg:hidden">
-            {currentData.map((item : any) => (
+            {currentData.map((item: any) => (
               <div key={item.id} className="border-b border-gray-200 p-4">
                 <div className="flex justify-between items-start mb-3">
                   <div>
-                    <h3 className="font-semibold text-gray-800">{item.load_id}</h3>
+                    <h3 className="font-semibold text-gray-800">
+                      {item.load_id}
+                    </h3>
                     <p className="text-sm text-gray-600">{item.driver_name}</p>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                      item.status
+                    )}`}
+                  >
                     {item.status}
                   </span>
                 </div>
-                
+
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Truck size={16} />
-                    <span>{item.h_plate} - {item.t_plate}</span>
+                    <span>
+                      {item.h_plate} - {item.t_plate}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <MapPin size={16} />
-                    <span>{item.locat_recive} - {item.locat_deliver}</span>
+                    <span>
+                      {item.locat_recive} - {item.locat_deliver}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Clock size={16} />
-                    <span>{item.date_recive} - {item.date_deliver}</span>
+                    <span>
+                      {item.date_recive} - {item.date_deliver}
+                    </span>
                   </div>
                   <div className="flex text-wrap items-center gap-2 text-sm text-gray-600">
                     <NotebookPen size={16} />
@@ -590,11 +692,13 @@ const getStatusColor = (status: string) => {
                     แก้ไข
                   </button> */}
                   <button
-                     onClick={() => setDeleteAlert({ show: true, load_id: item.load_id})}
+                    onClick={() =>
+                      setDeleteAlert({ show: true, load_id: item.load_id })
+                    }
                     className="flex-1 bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors"
                   >
                     <Trash2 size={16} />
-                    ลบ
+                    ยกเลิก
                   </button>
                 </div>
               </div>
@@ -604,77 +708,111 @@ const getStatusColor = (status: string) => {
           {/* Desktop View */}
           <div className="hidden lg:block overflow-x-auto">
             <table className="w-full">
-               <thead className="bg-gray-300">
-            <tr>
-              <th className="px-6 py-4 text-left text-sm font-medium text-gray-600 w-30">
-                รหัสขนส่ง <br /> {renderSortIcons('load_id')}
-              </th>
-              <th className="px-4 py-4 text-left text-sm font-medium text-gray-600">
-                ชื่อพจส. <br /> {renderSortIcons('driver_name')}
-              </th>
-              <th className="px-4 py-4 text-left text-sm font-medium text-gray-600 w-30">
-                ทะเบียนรถ <br /> {renderSortIcons('h_plate')}
-              </th>
-              <th className="px-4 py-4 text-left text-sm font-medium text-gray-600">
-                ต้นทาง <br /> {renderSortIcons('locat_recive')}
-              </th>
-              <th className="px-4 py-4 text-left text-sm font-medium text-gray-600">
-                ปลายทาง <br /> {renderSortIcons('locat_deliver')}
-              </th>
-              <th className="px-4 py-4 text-left text-sm font-medium text-gray-600">
-                วันที่ขึ้นสินค้า <br /> {renderSortIcons('date_recive')}
-              </th>
-              <th className="px-4 py-4 text-left text-sm font-medium text-gray-600">
-                วันที่ลงสินค้า <br /> {renderSortIcons('date_deliver')}
-              </th>
-              <th className="px-4 py-4 text-left text-sm font-medium text-gray-600 w-50">
-                สถานะ <br /> {renderSortIcons('status')}
-              </th>
-              <th className="px-4 py-4 text-left text-sm font-medium text-gray-600">หมายเหตุ</th>
-              <th className="px-4 py-4 text-center text-sm font-medium text-gray-600">จัดการ</th>
-            </tr>
-          </thead>
+              <thead className="bg-gray-300">
+                <tr>
+                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-600 w-30">
+                    รหัสขนส่ง <br /> {renderSortIcons("load_id")}
+                  </th>
+                  <th className="px-4 py-4 text-left text-sm font-medium text-gray-600">
+                    ชื่อพจส. <br /> {renderSortIcons("driver_name")}
+                  </th>
+                  <th className="px-4 py-4 text-left text-sm font-medium text-gray-600 w-30">
+                    ทะเบียนรถ <br /> {renderSortIcons("h_plate")}
+                  </th>
+                  <th className="px-4 py-4 text-left text-sm font-medium text-gray-600">
+                    ต้นทาง <br /> {renderSortIcons("locat_recive")}
+                  </th>
+                  <th className="px-4 py-4 text-left text-sm font-medium text-gray-600">
+                    ปลายทาง <br /> {renderSortIcons("locat_deliver")}
+                  </th>
+                  <th className="px-4 py-4 text-left text-sm font-medium text-gray-600">
+                    วันที่ขึ้นสินค้า <br /> {renderSortIcons("date_recive")}
+                  </th>
+                  <th className="px-4 py-4 text-left text-sm font-medium text-gray-600">
+                    วันที่ลงสินค้า <br /> {renderSortIcons("date_deliver")}
+                  </th>
+                  <th className="px-4 py-4 text-left text-sm font-medium text-gray-600 w-50">
+                    สถานะ <br /> {renderSortIcons("status")}
+                  </th>
+                  <th className="px-4 py-4 text-left text-sm font-medium text-gray-600">
+                    หมายเหตุ
+                  </th>
+                  <th className="px-4 py-4 text-center text-sm font-medium text-gray-600">
+                    จัดการ
+                  </th>
+                </tr>
+              </thead>
 
-            {/* Rows Data */}
+              {/* Rows Data */}
 
               <tbody className="divide-y divide-white">
-            {currentData.map((item) => (
-              <tr key={item.load_id} className="hover:bg-gray-100 transition-colors">
-                <td className="px-6 py-4 text-xs font-medium text-gray-800">{item.load_id}</td>
-                <td className="px-6 py-4 text-xs text-gray-600">{item.driver_name}</td>
-                <td className="px-6 py-4 text-xs text-gray-600">{item.h_plate} / {item.t_plate}</td>
-                <td className="px-6 py-4 text-xs text-gray-600">{item.locat_recive}</td>
-                <td className="px-6 py-4 text-xs text-gray-600">{item.locat_deliver}</td>
-                <td className="px-6 py-4 text-xs text-gray-600">{item.date_recive}</td>
-                <td className="px-6 py-4 text-xs text-gray-600">{item.date_deliver}</td>
-                <td className="px-6 py-4">
-                  <span className={`px-6 py-1 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>
-                    {item.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-600">{item.remark}</td>
-                <td className="px-6 py-4 bg-gray-50">
-                  <div className="flex justify-center gap-2">
-                    <button className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-lg"
-                    onClick={() => handleView(item.load_id)}
-                    >
-                      <Eye size={16} />
-                    </button>
-                    {/* <button className="bg-yellow-500 hover:bg-yellow-600 text-white p-2 rounded-lg">
+                {currentData.map((item) => (
+                  <tr
+                    key={item.load_id}
+                    className="hover:bg-gray-100 transition-colors"
+                  >
+                    <td className="px-6 py-4 text-xs font-medium text-gray-800">
+                      {item.load_id}
+                    </td>
+                    <td className="px-6 py-4 text-xs text-gray-600">
+                      {item.driver_name}
+                    </td>
+                    <td className="px-6 py-4 text-xs text-gray-600">
+                      {item.h_plate} / {item.t_plate}
+                    </td>
+                    <td className="px-6 py-4 text-xs text-gray-600">
+                      {item.locat_recive}
+                    </td>
+                    <td className="px-6 py-4 text-xs text-gray-600">
+                      {item.locat_deliver}
+                    </td>
+                    <td className="px-6 py-4 text-xs text-gray-600">
+                      {item.date_recive}
+                    </td>
+                    <td className="px-6 py-4 text-xs text-gray-600">
+                      {item.date_deliver}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`px-6 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                          item.status
+                        )}`}
+                      >
+                        {item.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {item.remark}
+                    </td>
+                    <td className="px-6 py-4 bg-gray-50">
+                      <div className="flex justify-center gap-2">
+                        <button
+                          className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-lg"
+                          onClick={() => handleView(item.load_id)}
+                        >
+                          <Eye size={16} />
+                        </button>
+                        {/* <button className="bg-yellow-500 hover:bg-yellow-600 text-white p-2 rounded-lg">
                       <Edit size={16} 
                       onClick={() => handleEdit(item.load_id)}
                       />
                     </button> */}
-                    <button className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg">
-                      <Trash2 size={16} 
-                      onClick={() => setDeleteAlert({ show: true, load_id: item.load_id})}
-                      />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
+                        <button className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg">
+                          <Trash2
+                            size={16}
+                            onClick={() =>
+                              setDeleteAlert({
+                                show: true,
+                                load_id: item.load_id,
+                              })
+                            }
+                          />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
             </table>
           </div>
 
@@ -682,30 +820,32 @@ const getStatusColor = (status: string) => {
             <div className="text-center py-12">
               <Package size={48} className="mx-auto text-gray-400 mb-4" />
               <p className="text-gray-500 text-lg">ไม่พบข้อมูลที่ค้นหา</p>
-              <p className="text-gray-400 text-sm mt-2">ลองปรับเปลี่ยนเงื่อนไขการค้นหา</p>
+              <p className="text-gray-400 text-sm mt-2">
+                ลองปรับเปลี่ยนเงื่อนไขการค้นหา
+              </p>
             </div>
           )}
 
-        <div className="flex justify-end items-center m-4 gap-2 text-sm text-gray-600">
-        <button
-          disabled={currentPage === 1}
-          onClick={() => setCurrentPage((p) => p - 1)}
-          className="px-3 py-1 border rounded hover:bg-gray-100  disabled:opacity-40"
-        >
-          ก่อนหน้า
-        </button>
-        <span>
-          หน้า {currentPage} จาก {totalPages}
-        </span>
-        <button
-          disabled={currentPage === totalPages}
-          onClick={() => setCurrentPage((p) => p + 1)}
-          className="px-3 py-1 border rounded hover:bg-gray-100  disabled:opacity-40"
-        >
-          ถัดไป
-        </button>
-      </div>
-    </div>
+          <div className="flex justify-end items-center m-4 gap-2 text-sm text-gray-600">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((p) => p - 1)}
+              className="px-3 py-1 border rounded hover:bg-gray-100  disabled:opacity-40"
+            >
+              ก่อนหน้า
+            </button>
+            <span>
+              หน้า {currentPage} จาก {totalPages}
+            </span>
+            <button
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((p) => p + 1)}
+              className="px-3 py-1 border rounded hover:bg-gray-100  disabled:opacity-40"
+            >
+              ถัดไป
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Alert การลบ */}
@@ -716,29 +856,37 @@ const getStatusColor = (status: string) => {
               <div className="p-2 bg-red-100 rounded-full">
                 <AlertCircle className="h-6 w-6 text-red-600" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-800">ยืนยันการลบ</h3>
+              <h3 className="text-lg font-semibold text-gray-800">
+                ยืนยันการยกเลิก
+              </h3>
             </div>
-            
+
             <p className="text-gray-600 mb-6">
-              คุณแน่ใจหรือไม่ที่จะลบงานนี้? การดำเนินการนี้ไม่สามารถย้อนกลับได้
+              คุณแน่ใจหรือไม่ที่จะยกเลิกงานนี้? การดำเนินการนี้ไม่สามารถย้อนกลับได้
             </p>
             <div className="flex justify-start mb-4">
-            <select value={cancel} onChange={(e) => setCancel(e.target.value)} className="px-6 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
-              <option value="ยกเลิก">สถานะ: ยกเลิก</option>
-              <option value="ตกคิว">สถานะ: ตกคิว</option>
-              <option value="ซ่อม">สถานะ: ซ่อม</option>
-              <option value="อบรมที่บริษัท">สถานะ: อบรมที่บริษัท</option>
+              <select
+                value={cancel}
+                onChange={(e) => setCancel(e.target.value)}
+                className="px-6 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+              >
+                <option value="ยกเลิก">สถานะ: ยกเลิก</option>
+                <option value="ตกคิว">สถานะ: ตกคิว</option>
+                <option value="ซ่อม">สถานะ: ซ่อม</option>
+                <option value="อบรมที่บริษัท">สถานะ: อบรมที่บริษัท</option>
               </select>
             </div>
             <div className="flex gap-3 justify-end">
               <button
-                onClick={() => setDeleteAlert({ show: false, load_id: ''})}
+                onClick={() => setDeleteAlert({ show: false, load_id: "" })}
                 className="px-6 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
               >
                 ปิด
               </button>
               <button
-                onClick={() => {confirmDelete()}}
+                onClick={() => {
+                  confirmDelete();
+                }}
                 className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
               >
                 จัดการ
@@ -750,15 +898,15 @@ const getStatusColor = (status: string) => {
 
       {/* Modal จัดการ */}
       {modalView.show && (
-        <AdminView jobView={modalView.job}  closeModal={(close: boolean) => handleClose(close)}  />
+        <AdminView
+          jobView={modalView.job}
+          closeModal={(close: boolean) => handleClose(close)}
+        />
       )}
 
       {modalCreate.show && (
-        <AdminCreate closeModal={(close: boolean) => handleClose(close)}  />
+        <AdminCreate closeModal={(close: boolean) => handleClose(close)} />
       )}
-    
-
-
     </div>
-  )
+  );
 };

@@ -10,9 +10,12 @@ import {
   ArrowRight,
   Check,
 } from "lucide-react";
+import { useUserStore } from "@/lib/userStore";
 
 
 export const Logincomponent = () => {
+  // Zustand store
+  const { setLoginData, setCredentials, username: storedUsername, password: storedPassword, isRemembered } = useUserStore()
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -133,6 +136,15 @@ useEffect(() => {
           });
           const data = await res.json();
         if (data.access_token) {
+          setLoginData({
+            username,
+            password,
+            jwtToken: data.jwtToken,
+            accessToken: data.access_token,
+            role: data.role,
+            remember: isChecked
+          })
+          
           local_remember();
           localStorage.setItem("isLoggedIn", "true");
           localStorage.setItem("jwtToken", data.jwtToken);
