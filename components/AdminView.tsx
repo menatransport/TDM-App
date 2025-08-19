@@ -28,9 +28,10 @@ import Swal from "sweetalert2";
 interface AdminViewProps {
   jobView: TransportItem | null;
   closeModal: (close: boolean) => void;
+  refreshTable?: () => void;
 }
 
-export function AdminView({ jobView, closeModal }: AdminViewProps) {
+export function AdminView({ jobView, closeModal, refreshTable }: AdminViewProps) {
   const [activeTab, setActiveTab] = useState("jobs");
   const [loadid, setLoadid] = useState("");
   const [formData, setFormData] = useState<TransportItem | null>(null);
@@ -98,6 +99,7 @@ export function AdminView({ jobView, closeModal }: AdminViewProps) {
         confirmButtonText: "ตกลง",
         allowOutsideClick: false,
       });
+      refreshTable?.();
       setIsLoading(false);
       setSavedAlert(false);
     }

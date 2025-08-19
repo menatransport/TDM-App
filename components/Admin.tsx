@@ -29,6 +29,7 @@ import Swal from "sweetalert2";
 import { AdminView } from "@/components/AdminView";
 import { AdminCreate } from "@/components/AdminCreate";
 import { TransportItem } from "@/lib/type";
+import { usegetListName } from "@/lib/userStore";
 
 const itemsPerPage = 10;
 const today = new Date().toISOString().split("T")[0];
@@ -40,7 +41,9 @@ const sevenDaysAgo = new Date(
 const tomorrow = new Date(new Date(today).getTime() + 1 * 24 * 60 * 60 * 1000)
   .toISOString()
   .split("T")[0];
+
 export const Admintool = () => {
+  const listname = usegetListName();
   const [filters, setFilters] = useState({
     date_plan: { date_plan_start: sevenDaysAgo, date_plan_end: tomorrow },
     load_id: "",
@@ -48,7 +51,8 @@ export const Admintool = () => {
     h_plate: "",
     status: "",
   });
-
+  const [showDriverSuggestions, setShowDriverSuggestions] = useState(false);
+  const [filteredDriverNames, setFilteredDriverNames] = useState<string[]>([]);
   const [transportData, setTransportData] = useState<TransportItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -78,6 +82,10 @@ export const Admintool = () => {
   }>({
     show: false,
   });
+
+  useEffect(() => {
+    console.log("📋 Listname จากหน้า Login:", listname);
+  }, []);
 
   const handleSearch = async () => {
     setLoading(true);
@@ -136,6 +144,72 @@ export const Admintool = () => {
     //   setTransportData(filteredData);
     //   setLoading(false);
     // }, 1000);
+  };
+
+  const handleDriverNameChange = (value: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      driver_name: value,
+    }));
+
+    // แยกชื่อตามจุลภาค (comma) และเอาชื่อสุดท้ายมาค้นหา
+    const names = value.split(",").map((name) => name.trim());
+    const lastInputName = names[names.length - 1];
+
+    // กรองชื่อที่ตรงกับชื่อสุดท้ายที่พิมพ์
+    if (lastInputName.length > 0) {
+      const filtered = listname.filter((name) => {
+        // ไม่แสดงชื่อที่เลือกไปแล้ว
+        const isAlreadySelected = names
+          .slice(0, -1)
+          .some(
+            (selectedName) => selectedName.toLowerCase() === name.toLowerCase()
+          );
+
+        return (
+          !isAlreadySelected &&
+          name.toLowerCase().includes(lastInputName.toLowerCase())
+        );
+      });
+      setFilteredDriverNames(filtered);
+      setShowDriverSuggestions(filtered.length > 0);
+    } else {
+      // ถ้าไม่มีการพิมพ์หลัง comma แสดงรายชื่อที่ยังไม่ถูกเลือก
+      const selectedNames = names.slice(0, -1);
+      const availableNames = listname.filter(
+        (name) =>
+          !selectedNames.some(
+            (selectedName) => selectedName.toLowerCase() === name.toLowerCase()
+          )
+      );
+      setFilteredDriverNames(availableNames);
+      setShowDriverSuggestions(availableNames.length > 0);
+    }
+  };
+
+  // ฟังก์ชันเลือกชื่อจาก dropdown
+  const handleSelectDriverName = (name: string) => {
+    const currentValue = filters.driver_name;
+    const names = currentValue.split(",").map((n) => n.trim());
+
+    // แทนที่ชื่อสุดท้ายด้วยชื่อที่เลือก
+    names[names.length - 1] = name;
+
+    // รวมชื่อกลับเป็นสตริง
+    const newValue = names.join(", ");
+    setFilters((prev) => ({
+      ...prev,
+      driver_name: newValue,
+    }));
+    setShowDriverSuggestions(false);
+  };
+
+  // ฟังก์ชันซ่อน suggestions เมื่อคลิกข้างนอก
+  const handleDriverBlur = () => {
+    // ใช้ setTimeout เพื่อให้การคลิกใน dropdown ทำงานก่อน
+    setTimeout(() => {
+      setShowDriverSuggestions(false);
+    }, 200);
   };
 
   // ✅ รีเซ็ตข้อมูล filter
@@ -262,11 +336,13 @@ export const Admintool = () => {
           item.load_id === jobid ? { ...item, status: value.status } : item
         )
       );
+      handleSearch();
       Swal.fire({
-        title: "แก้ไขข้อมูลสำเร็จ!",
+        title: "จัดการข้อมูลสำเร็จ!",
         icon: "success",
         draggable: true,
       });
+      
     } catch (error) {
       console.log("error : ", error);
       Swal.fire({
@@ -394,7 +470,7 @@ export const Admintool = () => {
             </div>
 
             {/* Driver Name */}
-            <div className="space-y-2">
+            <div className="space-y-2 relative">
               <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
                 <User size={16} />
                 ชื่อพจส.
@@ -402,14 +478,70 @@ export const Admintool = () => {
               <input
                 type="text"
                 value={filters.driver_name}
-                onChange={(e) =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    driver_name: e.target.value,
-                  }))
-                }
+                onChange={(e) => handleDriverNameChange(e.target.value)}
+                onBlur={handleDriverBlur}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const currentValue = filters.driver_name;
+                    const names = currentValue.split(",").map((n) => n.trim());
+                    const lastInputName = names[names.length - 1];
+
+                    // หาชื่อที่ตรงแบบแม่นยำ หรือชื่อแรกที่ตรงใน suggestions
+                    const exactMatch = listname.find(
+                      (name) =>
+                        name.toLowerCase() === lastInputName.toLowerCase()
+                    );
+
+                    const firstSuggestion =
+                      filteredDriverNames.length > 0
+                        ? filteredDriverNames[0]
+                        : null;
+
+                    if (exactMatch) {
+                      // ถ้าตรงแบบแม่นยำ ใช้ชื่อนั้น
+                      names[names.length - 1] = exactMatch;
+                      const newValue = names.join(", ") + ", ";
+                      setFilters((prev) => ({
+                        ...prev,
+                        driver_name: newValue,
+                      }));
+                    } else if (firstSuggestion) {
+                      // ถ้าไม่ตรงแม่นยำ ใช้ชื่อแรกใน suggestions
+                      names[names.length - 1] = firstSuggestion;
+                      const newValue = names.join(", ") + ", ";
+                      setFilters((prev) => ({
+                        ...prev,
+                        driver_name: newValue,
+                      }));
+                    } else if (lastInputName.trim().length > 0) {
+                      // ถ้าไม่มีใน suggestions แต่มีการพิมพ์ ให้เพิ่ม comma
+                      const newValue = currentValue + ", ";
+                      setFilters((prev) => ({
+                        ...prev,
+                        driver_name: newValue,
+                      }));
+                    }
+                    setShowDriverSuggestions(false);
+                  }
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
               />
+
+              {/* Autocomplete dropdown */}
+              {showDriverSuggestions && filteredDriverNames.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                  {filteredDriverNames.map((name, index) => (
+                    <div
+                      key={index}
+                      className="px-3 py-2 hover:bg-emerald-50 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
+                      onClick={() => handleSelectDriverName(name)}
+                    >
+                      {name}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Vehicle Number */}
@@ -428,22 +560,37 @@ export const Admintool = () => {
               />
             </div>
 
-            {/* Vehicle Number */}
+            {/* Status */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
                 <BookOpenCheck size={16} />
                 สถานะ
               </label>
               <select
-                value={filters.status}
+                value={
+                  filters.status === "รับงาน,ถึงต้นทาง,เริ่มขึ้นสินค้า,ขึ้นสินค้าเสร็จ,เริ่มขนส่ง,ถึงปลายทาง,เริ่มลงสินค้า,ลงสินค้าเสร็จ"
+                    ? "กำลังขนส่ง"
+                    : filters.status === "ตกคิว,ซ่อม,อบรมที่บริษัท,ยกเลิก"
+                    ? "ยกเลิกงาน"
+                    : filters.status
+                }
                 onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, status: e.target.value }))
+                  setFilters((prev) => {
+                    if (e.target.value == 'กำลังขนส่ง')  return { ...prev, status: "รับงาน,ถึงต้นทาง,เริ่มขึ้นสินค้า,ขึ้นสินค้าเสร็จ,เริ่มขนส่ง,ถึงปลายทาง,เริ่มลงสินค้า,ลงสินค้าเสร็จ"};
+                    if (e.target.value == 'ยกเลิกงาน')  return { ...prev, status: "ตกคิว,ซ่อม,อบรมที่บริษัท,ยกเลิก"};
+                    return { ...prev, status: e.target.value };
+                  })
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
               >
                 <option value="">เลือกสถานะ</option>
-                <optgroup className="text-gray-600" label="สถานะงาน">
-                  <option value="พร้อมรับงาน">พร้อมรับงาน</option>
+                <optgroup className="text-yellow-800" label="สถานะงานหลัก">
+                  <option className="text-yellow-600" value="พร้อมรับงาน">พร้อมรับงาน</option>
+                  <option className="text-blue-600" value="กำลังขนส่ง">กำลังขนส่ง</option>
+                  <option className="text-green-800" value="จัดส่งแล้ว (POD)">เสร็จสิ้น</option>
+                  <option className="text-red-800" value="ยกเลิกงาน">ยกเลิก</option>
+                </optgroup>
+                <optgroup className="text-gray-600" label="สถานะงานย่อย">
                   <option value="รับงาน">รับงาน</option>
                   <option value="ถึงต้นทาง">ถึงต้นทาง</option>
                   <option value="เริ่มขึ้นสินค้า">เริ่มขึ้นสินค้า</option>
@@ -452,9 +599,6 @@ export const Admintool = () => {
                   <option value="ถึงปลายทาง">ถึงปลายทาง</option>
                   <option value="เริ่มลงสินค้า">เริ่มลงสินค้า</option>
                   <option value="ลงสินค้าเสร็จ">ลงสินค้าเสร็จ</option>
-                  <option value="จัดส่งแล้ว (POD)">จัดส่งแล้ว (POD)</option>
-                </optgroup>
-                <optgroup className="text-red-600" label="สถานะอื่นๆ">
                   <option value="ตกคิว">ตกคิว</option>
                   <option value="ซ่อม">ซ่อม</option>
                   <option value="อบรมที่บริษัท">อบรมที่บริษัท</option>
@@ -484,7 +628,7 @@ export const Admintool = () => {
             <button
               onClick={() => {
                 setFilters({
-                  date_plan: { date_plan_start: "", date_plan_end: "" },
+                  date_plan: { date_plan_start: sevenDaysAgo, date_plan_end: tomorrow },
                   load_id: "",
                   driver_name: "",
                   h_plate: "",
@@ -602,7 +746,8 @@ export const Admintool = () => {
         </div>
 
         {/* Data Table */}
-        <div className="bg-white backdrop-blur-md rounded-2xl shadow-xl border border-white/30 overflow-hidden">
+        <div className="bg-white backdrop-blur-md rounded-2xl shadow-xl border border-white/30 overflow-hidden relative">
+          
           <div className="p-4 bg-gray-500 border-b border-gray-200">
             <h2 className="text-xl text-white font-semibold text-gray-800">
               ข้อมูลงานขนส่ง
@@ -631,78 +776,132 @@ export const Admintool = () => {
             </div>
           </div>
 
-          {/* Mobile View */}
-          <div className="block lg:hidden">
-            {currentData.map((item: any) => (
-              <div key={item.id} className="border-b border-gray-200 p-4">
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <h3 className="font-semibold text-gray-800">
-                      {item.load_id}
-                    </h3>
-                    <p className="text-sm text-gray-600">{item.driver_name}</p>
-                  </div>
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                      item.status
-                    )}`}
-                  >
-                    {item.status}
-                  </span>
+          {/* Loading Overlay */}
+          {loading && (
+            <div className="absolute top-1/3 inset-0 bg-white bg-opacity-75 backdrop-blur-sm flex items-center justify-center z-10">
+              <div className="flex flex-col items-center gap-4">
+                <div className="relative">
+                  <div className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin"></div>
                 </div>
-
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Truck size={16} />
-                    <span>
-                      {item.h_plate} - {item.t_plate}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <MapPin size={16} />
-                    <span>
-                      {item.locat_recive} - {item.locat_deliver}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Clock size={16} />
-                    <span>
-                      {item.date_recive} - {item.date_deliver}
-                    </span>
-                  </div>
-                  <div className="flex text-wrap items-center gap-2 text-sm text-gray-600">
-                    <NotebookPen size={16} />
-                    <span>{item.remark}</span>
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleView(item.load_id)}
-                    className="flex-1 cursor-pointer bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors"
-                  >
-                    <Eye size={16} />
-                    ดู
-                  </button>
-                  {/* <button
-                    onClick={() => handleEdit(item.load_id)}
-                    className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors"
-                  >
-                    <Edit size={16} />
-                    แก้ไข
-                  </button> */}
-                  <button
-                    onClick={() =>
-                      setDeleteAlert({ show: true, load_id: item.load_id })
-                    }
-                    className="flex-1 bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors"
-                  >
-                    <Trash2 size={16} />
-                    ยกเลิก
-                  </button>
+                <div className="text-center">
+                  <p className="text-lg font-medium text-gray-700">กำลังค้นหาข้อมูล...</p>
+                  <p className="text-sm text-gray-500 mt-1">กรุณารอสักครู่</p>
                 </div>
               </div>
-            ))}
+            </div>
+          )}
+
+          {/* Mobile View */}
+          <div className="block lg:hidden">
+            {loading ? (
+              // Loading skeleton for mobile
+              Array.from({ length: 3 }).map((_, index) => (
+                <div key={`mobile-loading-${index}`} className="border-b border-gray-200 p-4 animate-pulse">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <div className="h-5 bg-gray-200 rounded w-32 mb-2"></div>
+                      <div className="h-4 bg-gray-200 rounded w-24"></div>
+                    </div>
+                    <div className="h-6 bg-gray-200 rounded-full w-16"></div>
+                  </div>
+
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="h-4 w-4 bg-gray-200 rounded"></div>
+                      <div className="h-4 bg-gray-200 rounded w-40"></div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-4 w-4 bg-gray-200 rounded"></div>
+                      <div className="h-4 bg-gray-200 rounded w-48"></div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-4 w-4 bg-gray-200 rounded"></div>
+                      <div className="h-4 bg-gray-200 rounded w-36"></div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-4 w-4 bg-gray-200 rounded"></div>
+                      <div className="h-4 bg-gray-200 rounded w-52"></div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <div className="flex-1 h-10 bg-gray-200 rounded-lg"></div>
+                    <div className="flex-1 h-10 bg-gray-200 rounded-lg"></div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              currentData.map((item: any) => (
+                <div key={item.id} className="border-b border-gray-200 p-4">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h3 className="font-semibold text-gray-800">
+                        {item.load_id}
+                      </h3>
+                      <p className="text-sm text-gray-600">{item.driver_name}</p>
+                    </div>
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                        item.status
+                      )}`}
+                    >
+                      {item.status}
+                    </span>
+                  </div>
+
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Truck size={16} />
+                      <span>
+                        {item.h_plate} - {item.t_plate}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <MapPin size={16} />
+                      <span>
+                        {item.locat_recive} - {item.locat_deliver}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Clock size={16} />
+                      <span>
+                        {item.date_recive} - {item.date_deliver}
+                      </span>
+                    </div>
+                    <div className="flex text-wrap items-center gap-2 text-sm text-gray-600">
+                      <NotebookPen size={16} />
+                      <span>{item.remark}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleView(item.load_id)}
+                      className="flex-1 cursor-pointer bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                    >
+                      <Eye size={16} />
+                      ดู
+                    </button>
+                    {/* <button
+                      onClick={() => handleEdit(item.load_id)}
+                      className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                    >
+                      <Edit size={16} />
+                      แก้ไข
+                    </button> */}
+                    <button
+                      onClick={() =>
+                        setDeleteAlert({ show: true, load_id: item.load_id })
+                      }
+                      className="flex-1 bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                    >
+                      <Trash2 size={16} />
+                      ยกเลิก
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
 
           {/* Desktop View */}
@@ -746,72 +945,113 @@ export const Admintool = () => {
               {/* Rows Data */}
 
               <tbody className="divide-y divide-white">
-                {currentData.map((item) => (
-                  <tr
-                    key={item.load_id}
-                    className="hover:bg-gray-100 transition-colors"
-                  >
-                    <td className="px-6 py-4 text-xs font-medium text-gray-800">
-                      {item.load_id}
-                    </td>
-                    <td className="px-6 py-4 text-xs text-gray-600">
-                      {item.driver_name}
-                    </td>
-                    <td className="px-6 py-4 text-xs text-gray-600">
-                      {item.h_plate} / {item.t_plate}
-                    </td>
-                    <td className="px-6 py-4 text-xs text-gray-600">
-                      {item.locat_recive}
-                    </td>
-                    <td className="px-6 py-4 text-xs text-gray-600">
-                      {item.locat_deliver}
-                    </td>
-                    <td className="px-6 py-4 text-xs text-gray-600">
-                      {item.date_recive}
-                    </td>
-                    <td className="px-6 py-4 text-xs text-gray-600">
-                      {item.date_deliver}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`px-6 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                          item.status
-                        )}`}
-                      >
-                        {item.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {item.remark}
-                    </td>
-                    <td className="px-6 py-4 bg-gray-50">
-                      <div className="flex justify-center gap-2">
-                        <button
-                          className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-lg"
-                          onClick={() => handleView(item.load_id)}
+                {loading ? (
+                  // Loading skeleton rows
+                  Array.from({ length: 5 }).map((_, index) => (
+                    <tr key={`loading-${index}`} className="animate-pulse">
+                      <td className="px-6 py-4">
+                        <div className="h-4 bg-gray-200 rounded w-24"></div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="h-4 bg-gray-200 rounded w-32"></div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="h-4 bg-gray-200 rounded w-28"></div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="h-4 bg-gray-200 rounded w-36"></div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="h-4 bg-gray-200 rounded w-36"></div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="h-4 bg-gray-200 rounded w-24"></div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="h-4 bg-gray-200 rounded w-24"></div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="h-6 bg-gray-200 rounded-full w-20"></div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="h-4 bg-gray-200 rounded w-40"></div>
+                      </td>
+                      <td className="px-6 py-4 bg-gray-50">
+                        <div className="flex justify-center gap-2">
+                          <div className="h-8 w-8 bg-gray-200 rounded-lg"></div>
+                          <div className="h-8 w-8 bg-gray-200 rounded-lg"></div>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  currentData.map((item) => (
+                    <tr
+                      key={item.load_id}
+                      className="hover:bg-gray-100 transition-colors"
+                    >
+                      <td className="px-6 py-4 text-xs font-medium text-gray-800">
+                        {item.load_id}
+                      </td>
+                      <td className="px-6 py-4 text-xs text-gray-600">
+                        {item.driver_name}
+                      </td>
+                      <td className="px-6 py-4 text-xs text-gray-600">
+                        {item.h_plate} / {item.t_plate}
+                      </td>
+                      <td className="px-6 py-4 text-xs text-gray-600">
+                        {item.locat_recive}
+                      </td>
+                      <td className="px-6 py-4 text-xs text-gray-600">
+                        {item.locat_deliver}
+                      </td>
+                      <td className="px-6 py-4 text-xs text-gray-600">
+                        {item.date_recive}
+                      </td>
+                      <td className="px-6 py-4 text-xs text-gray-600">
+                        {item.date_deliver}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`px-6 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                            item.status
+                          )}`}
                         >
-                          <Eye size={16} />
-                        </button>
-                        {/* <button className="bg-yellow-500 hover:bg-yellow-600 text-white p-2 rounded-lg">
-                      <Edit size={16} 
-                      onClick={() => handleEdit(item.load_id)}
-                      />
-                    </button> */}
-                        <button className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg">
-                          <Trash2
-                            size={16}
-                            onClick={() =>
-                              setDeleteAlert({
-                                show: true,
-                                load_id: item.load_id,
-                              })
-                            }
-                          />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          {item.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        {item.remark}
+                      </td>
+                      <td className="px-6 py-4 bg-gray-50">
+                        <div className="flex justify-center gap-2">
+                          <button
+                            className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-lg"
+                            onClick={() => handleView(item.load_id)}
+                          >
+                            <Eye size={16} />
+                          </button>
+                          {/* <button className="bg-yellow-500 hover:bg-yellow-600 text-white p-2 rounded-lg">
+                        <Edit size={16} 
+                        onClick={() => handleEdit(item.load_id)}
+                        />
+                      </button> */}
+                          <button className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg">
+                            <Trash2
+                              size={16}
+                              onClick={() =>
+                                setDeleteAlert({
+                                  show: true,
+                                  load_id: item.load_id,
+                                })
+                              }
+                            />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -862,7 +1102,8 @@ export const Admintool = () => {
             </div>
 
             <p className="text-gray-600 mb-6">
-              คุณแน่ใจหรือไม่ที่จะยกเลิกงานนี้? การดำเนินการนี้ไม่สามารถย้อนกลับได้
+              คุณแน่ใจหรือไม่ที่จะยกเลิกงานนี้?
+              การดำเนินการนี้ไม่สามารถย้อนกลับได้
             </p>
             <div className="flex justify-start mb-4">
               <select
@@ -901,11 +1142,15 @@ export const Admintool = () => {
         <AdminView
           jobView={modalView.job}
           closeModal={(close: boolean) => handleClose(close)}
+          refreshTable={ () => handleSearch()}
         />
       )}
 
       {modalCreate.show && (
-        <AdminCreate closeModal={(close: boolean) => handleClose(close)} />
+        <AdminCreate 
+          closeModal={(close: boolean) => handleClose(close)}
+          refreshTable={() => handleSearch()}
+        />
       )}
     </div>
   );

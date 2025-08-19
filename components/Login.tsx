@@ -10,13 +10,13 @@ import {
   ArrowRight,
   Check,
 } from "lucide-react";
-import { useUserStore } from "@/lib/userStore";
+import { useUserStore , useListName } from "@/lib/userStore";
 
 
 export const Logincomponent = () => {
   // Zustand store
   const { setLoginData, setCredentials, username: storedUsername, password: storedPassword, isRemembered } = useUserStore()
-
+  const { setListname: storeListname } = useListName();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -25,6 +25,7 @@ export const Logincomponent = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  
   const [listname, setListname] = useState<string[]>([]);
 
 
@@ -62,6 +63,7 @@ useEffect(() => {
       const usernames = data.users.map((user: { username: string }) => user.username);
       console.log("Fetched usernames:", usernames);
       setListname(usernames)
+      storeListname(usernames)
     } catch (error) {
       console.error("Login failed", error);
     }
@@ -262,7 +264,7 @@ return (
             
               {/* Suggestions Dropdown */}
               {showSuggestions && (
-                <div className="absolute m-4 top-33 left-0 right-0 mt-2 bg-white border-2 border-gray-200 rounded-xl shadow-xl z-10 max-h-40 overflow-y-auto">
+                <div className="absolute m-4 top-28 left-0 right-0 mt-2 bg-white border-2 border-gray-200 rounded-xl shadow-xl z-10 max-h-40 overflow-y-auto">
                   {filteredNames.length > 0 ? (
                     <>
                       <div className="px-4 py-2 text-sm text-gray-500 border-b border-gray-100 bg-gray-50 rounded-t-xl">

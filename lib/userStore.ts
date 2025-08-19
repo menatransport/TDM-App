@@ -105,3 +105,15 @@ export const usePassword = () => useUserStore((state) => state.password)
 export const useIsLoggedIn = () => useUserStore((state) => state.isLoggedIn)
 export const useUserRole = () => useUserStore((state) => state.role)
 export const useIsRemembered = () => useUserStore((state) => state.isRemembered)
+
+interface ListNameStore {
+  listname: string[]
+  setListname: (name: string[]) => void
+}
+
+export const useListName = create<ListNameStore>()((set) => ({
+  listname: [],
+  setListname: (name: string[]) => set({ listname: name })
+}))
+
+export const usegetListName = () => useListName((state) => state.listname)

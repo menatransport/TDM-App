@@ -61,8 +61,10 @@ interface AIGeneratorState {
 
 export function AdminCreate({
   closeModal,
+  refreshTable
 }: {
   closeModal: (close: boolean) => void;
+  refreshTable?: () => void;
 }) {
   const [forms, setForms] = useState<FormItem[]>([]);
   const [navjob, setNavjob] = useState(false);
@@ -169,6 +171,7 @@ export function AdminCreate({
           confirmButtonText: "ตกลง",
           allowOutsideClick: false,
         });
+        refreshTable?.();
         setSavedAlert(false);
         closeModal(false);
       } else {
@@ -287,13 +290,6 @@ pallet_type
         setForms((prev) => [...prev, ...newForms]);
         setNavjob(true);
         setAigenerator({ show: false, input: "", loading: false });
-
-        await Swal.fire({
-          title: "สำเร็จ!",
-          text: `สร้างเที่ยวใหม่ ${newForms.length} รายการ`,
-          icon: "success",
-          confirmButtonText: "ตกลง",
-        });
       } else {
         throw new Error("ข้อมูลที่ได้รับไม่ใช่ Array");
       }
