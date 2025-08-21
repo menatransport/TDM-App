@@ -33,7 +33,7 @@ const IMAGE_CATEGORIES = [
   { value: 'destination', label: 'ปลายทาง' },
   { value: 'damage', label: 'เสียหาย' },
   { value: 'pallet', label: 'พาเลท' },
-  { value: 'bill', label: 'บิล' },
+  { value: 'bill', label: 'บิลทางด่วน' },
   { value: 'other', label: 'อื่นๆ' }
 ];
 

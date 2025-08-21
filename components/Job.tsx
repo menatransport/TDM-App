@@ -349,7 +349,7 @@ export const Jobcomponent = ({ onLoadingChange }: TicketProps) => {
           <div
             className={`transition-all duration-300 ease-in-out ${
               isExpanded_1
-                ? "max-h-screen opacity-100"
+                ? "opacity-100"
                 : "max-h-0 opacity-0 overflow-hidden"
             }`}
           >
@@ -410,7 +410,7 @@ export const Jobcomponent = ({ onLoadingChange }: TicketProps) => {
           <div
             className={`transition-all duration-300 ease-in-out ${
               isExpanded_2
-                ? "max-h-screen opacity-100"
+                ? "opacity-100"
                 : "max-h-0 opacity-0 overflow-hidden"
             }`}
           >
@@ -470,7 +470,7 @@ export const Jobcomponent = ({ onLoadingChange }: TicketProps) => {
           <div
             className={`transition-all duration-300 ease-in-out ${
               isExpanded_3
-                ? "max-h-screen opacity-100"
+                ? "opacity-100"
                 : "max-h-0 opacity-0 overflow-hidden"
             }`}
           >
@@ -521,7 +521,7 @@ export const Jobcomponent = ({ onLoadingChange }: TicketProps) => {
           <div
             className={`transition-all duration-300 ease-in-out ${
               isExpanded_finished
-                ? "max-h-screen opacity-100"
+                ? "opacity-100"
                 : "max-h-0 opacity-0 overflow-hidden"
             }`}
           >
