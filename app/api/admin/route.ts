@@ -19,3 +19,24 @@ try {
     return NextResponse.json({ error: 'Failed to fetch table list' }, { status: 500 });
   }
 }
+
+export async function POST(req: Request) {
+  try {
+    const Access_token = req.headers.get('Authorization')?.replace('Bearer ', '');
+    const body = await req.json();
+
+    const externalRes = await fetch('https://backend-tdm.onrender.com/users/reset-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${Access_token}`,
+      },
+      body: JSON.stringify(body),
+    });
+    const data = await externalRes.json();
+    return NextResponse.json(data);
+  } catch (err: any) {
+    console.error('❌ DB Error:', err.message);
+    return NextResponse.json({ error: 'Failed to create job' }, { status: 500 });
+  }
+}

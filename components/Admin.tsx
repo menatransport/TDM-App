@@ -239,27 +239,27 @@ export const Admintool = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "พร้อมรับงาน":
-        return "bg-green-100 text-green-800";
+        return "bg-gradient-to-r from-green-50 to-green-100 text-green-800 border-green-200";
       case "รับงาน":
       case "ถึงต้นทาง":
       case "เริ่มขึ้นสินค้า":
       case "ขึ้นสินค้าเสร็จ":
-        return "bg-blue-100 text-blue-800";
+        return "bg-gradient-to-r from-blue-50 to-blue-100 text-blue-800 border-blue-200";
       case "เริ่มขนส่ง":
-        return "bg-yellow-100 text-yellow-800";
+        return "bg-gradient-to-r from-yellow-50 to-yellow-100 text-yellow-800 border-yellow-300";
       case "ถึงปลายทาง":
       case "เริ่มลงสินค้า":
       case "ลงสินค้าเสร็จ":
-        return "bg-purple-100 text-purple-800";
+        return "bg-gradient-to-r from-purple-50 to-purple-100 text-purple-800 border-purple-200";
       case "จัดส่งแล้ว (POD)":
-        return "bg-green-300 text-green-900";
+        return "bg-gradient-to-r from-green-100 to-green-200 text-green-900 border-green-300";
       case "อบรมที่บริษัท":
       case "ซ่อม":
       case "ยกเลิก":
       case "ตกคิว":
-        return "bg-red-100 text-red-900";
+        return "bg-gradient-to-r from-red-50 to-red-100 text-red-900 border-red-200";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-gradient-to-r from-gray-50 to-gray-100 text-gray-800 border-gray-200";
     }
   };
 
@@ -664,7 +664,7 @@ export const Admintool = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">ยกเลิก</p>
-                <p className="text-2xl font-bold text-yellow-600">
+                <p className="text-2xl font-bold text-red-800">
                   {
                     transportData.filter(
                       (item) =>
@@ -840,13 +840,26 @@ export const Admintool = () => {
                       </h3>
                       <p className="text-sm text-gray-600">{item.driver_name}</p>
                     </div>
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                        item.status
-                      )}`}
-                    >
-                      {item.status}
-                    </span>
+                    <div className="flex flex-col gap-2 items-end">
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-medium shadow-sm border ${getStatusColor(
+                          item.status
+                        )}`}
+                      >
+                        {item.status}
+                      </span>
+                      {item.job_type && (item.job_type === 'ดรอป' || item.job_type === 'ทอย') && (
+                        <span
+                          className={`px-2 py-1 rounded-md text-xs font-medium shadow-sm border ${
+                            item.job_type === 'ดรอป' 
+                              ? 'bg-gradient-to-r from-purple-50 to-purple-100 text-purple-800 border-purple-200' 
+                              : 'bg-gradient-to-r from-indigo-50 to-indigo-100 text-indigo-800 border-indigo-200'
+                          }`}
+                        >
+                          🚛 {item.job_type}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <div className="space-y-2 mb-4">
@@ -930,8 +943,8 @@ export const Admintool = () => {
                   <th className="px-4 py-4 text-left text-sm font-medium text-gray-600">
                     วันที่ลงสินค้า <br /> {renderSortIcons("date_deliver")}
                   </th>
-                  <th className="px-4 py-4 text-left text-sm font-medium text-gray-600 w-50">
-                    สถานะ <br /> {renderSortIcons("status")}
+                  <th className="px-2 py-4 text-center text-sm font-medium text-gray-600 min-w-[160px]">
+                    สถานะ & ประเภท <br /> {renderSortIcons("status")}
                   </th>
                   <th className="px-4 py-4 text-left text-sm font-medium text-gray-600">
                     หมายเหตุ
@@ -1011,14 +1024,34 @@ export const Admintool = () => {
                       <td className="px-6 py-4 text-xs text-gray-600">
                         {item.date_deliver}
                       </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`px-6 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                            item.status
-                          )}`}
-                        >
-                          {item.status}
-                        </span>
+                      <td className="px-2 py-4 min-w-[160px]">
+                        <div className="flex flex-col gap-2">
+                          {/* สถานะหลัก */}
+                          <div className="flex justify-center">
+                            <span
+                              className={`px-3 py-1 rounded-full text-xs font-medium text-center min-w-[120px] shadow-sm border ${getStatusColor(
+                                item.status
+                              )}`}
+                            >
+                              {item.status}
+                            </span>
+                          </div>
+                          
+                          {/* ประเภทงาน */}
+                          {item.job_type && (item.job_type === 'ดรอป' || item.job_type === 'ทอย') && (
+                            <div className="flex justify-center">
+                              <span
+                                className={`px-2 py-1 rounded-md text-xs font-medium text-center min-w-[80px] shadow-sm border ${
+                                  item.job_type === 'ดรอป' 
+                                    ? 'bg-gradient-to-r from-purple-50 to-purple-100 text-purple-800 border-purple-200' 
+                                    : 'bg-gradient-to-r from-orange-50 to-orange-100 text-orange-800 border-orange-200'
+                                }`}
+                              >
+                                🚛 {item.job_type}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600">
                         {item.remark}

@@ -17,7 +17,7 @@ const Ticketpage = () => {
     
   <div
         className={`
-          transition-all duration-700 delay-300 ease-in-out
+          transition-all duration-400 delay-100 ease-in-out
           ${isLoading ? "hidden" : "block"}
         `}
       >

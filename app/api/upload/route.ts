@@ -19,8 +19,6 @@ const BASE_PATH = 'sb-001/tdm-app';
 export async function POST(req: NextRequest) {
   const formData = await req.formData();
   const files = formData.getAll('file') as File[];
-    console.log('file : ',files)
-
   if (!files || files.length === 0) {
     return NextResponse.json({ error: 'ไม่มีไฟล์' }, { status: 400 });
   }
@@ -99,7 +97,6 @@ console.log('GET FILE : ',files)
       })
     );
 
-    // console.log('signedImages : ',signedImages)
     return NextResponse.json({ images: signedImages });
   } catch (err) {
     console.error("❌ S3 List Error:", err);

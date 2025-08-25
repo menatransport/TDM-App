@@ -359,7 +359,9 @@ function removeFileExtension(filename: string): string {
               <h2 className="text-xl font-semibold text-gray-800">
                 อัปโหลดรูปภาพใหม่
               </h2>
+              
             </div>
+            <p className="text-xs text-gray-500">⚠️ สามารถอัปโหลดภาพได้หลายภาพในครั้งเดียว</p>
 
             {/* Zone การอัปโหลด */}
             <div

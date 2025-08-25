@@ -4,14 +4,16 @@ import { useEffect, useState } from 'react'
 import { Menu, X, Bell, User, Edit, Save, Eye, EyeOff } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useUserStore } from '@/lib/userStore'
+import Swal from 'sweetalert2';
 
 export const Navbars = () => {
   // Zustand store
-  const { username, password, logout, updateProfile } = useUserStore()
+  const { username, password , role, logout, updateProfile } = useUserStore()
   
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [editForm, setEditForm] = useState({
     username: '',
     currentPassword: '',
@@ -51,6 +53,10 @@ export const Navbars = () => {
 
 
   const handleSaveProfile = async () => {
+    if (editForm.newPassword.length < 4) {
+      alert('รหัสผ่านใหม่ต้องมีอย่างน้อย 4 ตัวอักษร')
+      return
+    } 
     // Validate form
     if (editForm.newPassword && editForm.newPassword !== editForm.confirmPassword) {
       alert('รหัสผ่านใหม่ไม่ตรงกัน')
@@ -68,26 +74,44 @@ export const Navbars = () => {
       return
     }
 
-    
+    setIsLoading(true)
 
     try {
-      // อัพเดทข้อมูลใน Zustand store
-      updateProfile(
-        editForm.username.trim() !== '' ? editForm.username : undefined,
-        editForm.newPassword || undefined
-      )
-
-    
-      setEditForm(prev => ({
-        ...prev,
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
-      }))
-      setIsProfileModalOpen(false)
-      alert('บันทึกข้อมูลสำเร็จ')
+      const access_token = localStorage.getItem("access_token");
+     const res = await fetch('/api/admin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${access_token}`,
+        },
+        body: JSON.stringify({
+          user: editForm.username,
+          old_password: editForm.currentPassword,
+          new_password: editForm.newPassword,
+        }),
+      })
+      if (!res.ok) {
+        const errorData = await res.json();
+        alert(`Error: ${errorData.error || 'Failed to update profile'}`);
+        return;
+      }
+      localStorage.clear();
+     Swal.fire({
+       icon: 'success',
+       title: 'แก้ไขข้อมูลสำเร็จ',
+       showConfirmButton: false,
+       timer: 1500
+     })
+      router.push('/login')
     } catch (error) {
-      alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล')
+      Swal.fire({
+        icon: 'error',
+        title: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล',
+        showConfirmButton: false,
+        timer: 1500
+      })
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -227,7 +251,7 @@ export const Navbars = () => {
                 </div>
 
                 <div className="space-y-4 pt-1">
-                  <h4 className="text-md font-medium text-gray-800">เปลี่ยนรหัสผ่าน</h4>
+                  <h4 className={` ${role === 'admin' ? '' : 'hidden'} text-md font-medium text-gray-800`}>เปลี่ยนรหัสผ่าน</h4>
 
                       {/* Current Password */}
                       <div>
@@ -250,14 +274,14 @@ export const Navbars = () => {
                       </div>
 
                       {/* New Password */}
-                      <div>
+                      <div className={`${role === 'admin' ? '' : 'hidden'}`}>
                         <label className="block text-sm font-medium text-gray-700 mb-2">รหัสผ่านใหม่</label>
                         <div className="relative">
                           <input
                             type={showPassword ? "text" : "password"}
                             value={editForm.newPassword}
                             onChange={(e) => handleInputChange('newPassword', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                            className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent`}
                         />
                         <button
                             type="button"
@@ -270,7 +294,7 @@ export const Navbars = () => {
                       </div>
 
                       {/* Confirm Password */}
-                      <div>
+                      <div className={`${role === 'admin' ? '' : 'hidden'}`}>
                         <label className="block text-sm font-medium text-gray-700 mb-2">ยืนยันรหัสผ่านใหม่</label>
                         <div className="relative">
                         <input
@@ -303,10 +327,20 @@ export const Navbars = () => {
                   </button>
                   <button
                     onClick={handleSaveProfile}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                    disabled={isLoading}
+                    className={`${role == 'admin' ? 'px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2' : 'hidden'}`}
                   >
-                    <Save className="w-4 h-4" />
-                    บันทึกการเปลี่ยนแปลง
+                    {isLoading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        กำลังแก้ไข...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        แก้ไขข้อมูล
+                      </>
+                    )}
                   </button>
                 </div>
               </div>

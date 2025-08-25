@@ -59,7 +59,7 @@ export const useUserStore = create<UserStore>()(
       setLoginData: (data) => set((state) => ({
         ...state,
         username: data.username,
-        password: data.remember ? data.password : '',
+        password: data.password,
         jwtToken: data.jwtToken,
         accessToken: data.accessToken,
         role: data.role,

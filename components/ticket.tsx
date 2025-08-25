@@ -455,7 +455,7 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
                   <div className="bg-white rounded-lg p-2 shadow-sm">
                     <div className="flex items-center space-x-1 mb-0.5">
                       <p className="text-xs text-gray-500 uppercase tracking-wide">
-                        จำนวนเที่ยวทอย
+                        จำนวนเที่ยวทอย (ถ้ามี)
                       </p>
                     </div>
                     <input
@@ -518,7 +518,7 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
                         onChange={(e) =>
                           handleOnchange_pallet("change_pallet", e.target.value)
                         }
-                        placeholder="กรอกจำนวนพาเลทที่แลกเปลี่ยน"
+                        
                         className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm"
                       />
                     </div>
@@ -536,7 +536,7 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
                             e.target.value
                           )
                         }
-                        placeholder="กรอกจำนวนพาเลทที่โอน"
+                       
                         className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm"
                       />
                     </div>
@@ -551,7 +551,7 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
                         onChange={(e) =>
                           handleOnchange_pallet("drop_pallet", e.target.value)
                         }
-                        placeholder="กรอกจำนวนพาเลทที่นำฝากไว้"
+                        
                         className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm"
                       />
                     </div>
@@ -566,7 +566,7 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
                         onChange={(e) =>
                           handleOnchange_pallet("return_pallet", e.target.value)
                         }
-                        placeholder="กรอกจำนวนพาเลทที่รับคืนกลับ"
+                        
                         className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm"
                       />
                     </div>
@@ -584,7 +584,7 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
                             e.target.value
                           )
                         }
-                        placeholder="กรอกจำนวนพาเลทที่ยืม (แจ้งเจ้าหน้าที่)"
+                        
                         className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm"
                       />
                     </div>
@@ -602,7 +602,7 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
                             e.target.value
                           )
                         }
-                        placeholder="กรอกจำนวนพาเลทที่คืน"
+                       
                         className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm"
                       />
                     </div>
@@ -634,7 +634,7 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
                         rows={4}
                         value={damage}
                         onChange={(e) => setDamage(e.target.value)}
-                        placeholder="กรุณาระบุรายละเอียดของสินค้าที่ชำรุด เช่น ประเภทความเสียหาย สาเหตุ จำนวน เป็นต้น"
+                        placeholder="กรุณาระบุรายละเอียดของสินค้าที่ชำรุด เช่น วันที่เวลา ประเภทความเสียหาย สาเหตุ จำนวน เป็นต้น"
                         className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm resize-none"
                       />
                     </div>
