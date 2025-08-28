@@ -64,6 +64,18 @@
       "type": "image/jpeg",
       "sizes": "512x512",
       "purpose": "any"
+    },
+    {
+      "src": "/mena.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/wwd.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
     }
   ],
   "shortcuts": [
