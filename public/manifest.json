@@ -3,8 +3,6 @@
   "short_name": "🚚Smart Fast Ship Tracking", 
   "start_url": "/login",
   "display": "standalone",
-  "orientation": "portrait-primary",
-  "theme_color": "#10b981",
   "background_color": "#ffffff",
   "description": "ระบบติดตามสถานะขนส่ง",
   "scope": "/",

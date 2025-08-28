@@ -152,7 +152,7 @@ export default function AndroidInstallPrompt() {
 
   // Show install button - works for all scenarios
   return (
-    <div className="mx-4 mb-4">
+   <div className={` ${isChrome && !deferredPrompt ? 'hidden' : '' } mx-4 mb-4`}>
       <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
         <div className="mb-3">
           <span className="text-3xl">📱</span>
@@ -181,14 +181,14 @@ export default function AndroidInstallPrompt() {
         </Button>
         
         {/* Debug info in development */}
-        {process.env.NODE_ENV === 'development' && (
+        {/* {process.env.NODE_ENV === 'development' && (
           <div className="mt-2 text-xs text-gray-500">
             <p>Android: {isAndroid ? 'Yes' : 'No'}</p>
             <p>Chrome: {isChrome ? 'Yes' : 'No'}</p>
             <p>Install Prompt: {deferredPrompt ? 'Ready' : 'Not Ready'}</p>
             <p>UA: {navigator.userAgent.substring(0, 50)}...</p>
           </div>
-        )}
+        )} */}
       </div>
     </div>
   )
