@@ -25,10 +25,17 @@ export default function AndroidInstallPrompt() {
   const [isChrome, setIsChrome] = useState(false)
 
   useEffect(() => {
-    // Detect Android and Chrome
-    const userAgent = navigator.userAgent || navigator.vendor
-    setIsAndroid(/android/i.test(userAgent))
-    setIsChrome(/chrome/i.test(userAgent) && !/edg/i.test(userAgent))
+    // Detect Android and Chrome with more accurate detection
+    const userAgent = navigator.userAgent.toLowerCase()
+    const isAndroidDevice = /android/.test(userAgent)
+    const isChromeApp = /chrome/.test(userAgent) && !/edg|opr|samsung|mi browser/.test(userAgent)
+    
+    setIsAndroid(isAndroidDevice)
+    setIsChrome(isChromeApp)
+    
+    console.log('User Agent:', userAgent)
+    console.log('Is Android:', isAndroidDevice)
+    console.log('Is Chrome:', isChromeApp)
 
     // Check if already installed (standalone mode)
     const isStandaloneMode = 
@@ -67,41 +74,73 @@ export default function AndroidInstallPrompt() {
 
   const openInChrome = () => {
     const currentUrl = window.location.href
-    const chromeIntent = `intent://${window.location.host}${window.location.pathname}${window.location.search}#Intent;scheme=https;package=com.android.chrome;end`
+    console.log('Attempting to open in Chrome:', currentUrl)
     
-    // Try to open in Chrome
-    window.location.href = chromeIntent
+    // Method 1: Try Android intent
+    const intentUrl = `intent://${window.location.hostname}${window.location.pathname}${window.location.search}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(currentUrl)};end`
     
-    // Fallback to Play Store if Chrome is not installed
-    setTimeout(() => {
-      window.location.href = 'https://play.google.com/store/apps/details?id=com.android.chrome'
-    }, 2000)
+    try {
+      // Create a hidden link and click it
+      const link = document.createElement('a')
+      link.href = intentUrl
+      link.style.display = 'none'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      
+      console.log('Intent URL launched:', intentUrl)
+    } catch (error) {
+      console.error('Intent failed:', error)
+      
+      // Method 2: Try direct Chrome URL scheme
+      try {
+        window.location.href = `googlechrome://${window.location.hostname}${window.location.pathname}`
+      } catch (error2) {
+        console.error('Chrome scheme failed:', error2)
+        
+        // Method 3: Fallback to Play Store
+        setTimeout(() => {
+          window.open('https://play.google.com/store/apps/details?id=com.android.chrome', '_blank')
+        }, 1000)
+      }
+    }
   }
 
   const handleInstallClick = async () => {
+    console.log('Install button clicked')
+    console.log('Is Android:', isAndroid, 'Is Chrome:', isChrome)
+    
     // If not Chrome on Android, redirect to Chrome
     if (isAndroid && !isChrome) {
+      console.log('Not Chrome, redirecting to Chrome...')
       openInChrome()
       return
     }
 
-    // If Chrome but no install prompt available yet, show install hint
+    // If Chrome but no install prompt available yet
     if (isChrome && !deferredPrompt) {
-      // Force trigger install check
-      setIsInstallable(true)
+      console.log('Chrome detected but no install prompt yet')
+      // Show manual instructions for Chrome
+      alert('เปิดเมนู Chrome (⋮) แล้วเลือก "เพิ่มไปยังหน้าจอหลัก" เพื่อติดตั้งแอป')
       return
     }
 
     // Install with prompt
     if (deferredPrompt) {
+      console.log('Installing with prompt...')
       try {
         await deferredPrompt.prompt()
         const { outcome } = await deferredPrompt.userChoice
         console.log(`Install prompt outcome: ${outcome}`)
         setDeferredPrompt(null)
         setIsInstallable(false)
+        
+        if (outcome === 'accepted') {
+          alert('แอปติดตั้งสำเร็จ! ตรวจสอบที่หน้าจอหลักของคุณ')
+        }
       } catch (error) {
         console.error('Error during installation:', error)
+        alert('ติดตั้งไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')
       }
     }
   }
@@ -128,16 +167,33 @@ export default function AndroidInstallPrompt() {
         </h3>
         <p className="text-sm text-green-700 mb-4">
           {!isChrome 
-            ? "กดเพื่อเปิดใน Chrome และติดตั้งแอป" 
-            : "กดเพื่อติดตั้งแอปบนหน้าจอหลัก"
+            ? `ตรวจพบ: ${navigator.userAgent.includes('Samsung') ? 'Samsung Browser' : navigator.userAgent.includes('Mi Browser') ? 'Mi Browser' : 'Browser อื่น'} - กดเพื่อเปิดใน Chrome` 
+            : deferredPrompt 
+              ? "พร้อมติดตั้งแล้ว! กดเพื่อติดตั้งบนหน้าจอหลัก"
+              : "เปิดเมนู Chrome (⋮) และเลือก 'เพิ่มไปยังหน้าจอหลัก'"
           }
         </p>
         <Button 
           onClick={handleInstallClick}
           className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-semibold shadow-lg"
         >
-          {!isChrome ? "เปิดใน Chrome" : "ติดตั้งตอนนี้"}
+          {!isChrome 
+            ? "🌐 เปิดใน Chrome" 
+            : deferredPrompt 
+              ? "📱 ติดตั้งตอนนี้" 
+              : "📋 วิธีติดตั้ง"
+          }
         </Button>
+        
+        {/* Debug info in development */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mt-2 text-xs text-gray-500">
+            <p>Android: {isAndroid ? 'Yes' : 'No'}</p>
+            <p>Chrome: {isChrome ? 'Yes' : 'No'}</p>
+            <p>Install Prompt: {deferredPrompt ? 'Ready' : 'Not Ready'}</p>
+            <p>UA: {navigator.userAgent.substring(0, 50)}...</p>
+          </div>
+        )}
       </div>
     </div>
   )
