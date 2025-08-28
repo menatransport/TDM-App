@@ -13,70 +13,86 @@
   "prefer_related_applications": false,
   "icons": [
     {
-      "src": "/Rimberio.png",
+      "src": "/size/android-launchericon-48-48.png",
       "type": "image/png",
       "sizes": "48x48",
       "purpose": "any"
     },
     {
-      "src": "/Rimberio.png",
+      "src": "/size/android-launchericon-72-72.png",
       "type": "image/png",
       "sizes": "72x72", 
       "purpose": "any"
     },
     {
-      "src": "/Rimberio.png",
+      "src": "/size/android-launchericon-96-96.png",
       "type": "image/png",
       "sizes": "96x96",
       "purpose": "any"
     },
     {
-      "src": "/Rimberio.png",
+      "src": "/size/android-launchericon-128-128.png",
       "type": "image/png",
       "sizes": "128x128",
       "purpose": "any"
     },
     {
-      "src": "/Rimberio.png",
+      "src": "/size/android-launchericon-144-144.png",
       "type": "image/png",
       "sizes": "144x144",
       "purpose": "any"
     },
     {
-      "src": "/Rimberio.png",
-      "type": "image/png",
-      "sizes": "152x152",
-      "purpose": "any"
-    },
-    {
-      "src": "/Rimberio.png",
+      "src": "/size/android-launchericon-192-192.png",
       "type": "image/png",
       "sizes": "192x192",
       "purpose": "any"
     },
     {
-      "src": "/Rimberio.png",
-      "type": "image/png",
-      "sizes": "384x384",
-      "purpose": "any"
-    },
-    {
-      "src": "/Rimberio.png",
+      "src": "/size/android-launchericon-512-512.png",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "any"
     },
     {
-      "src": "/Rimberio.png",
+      "src": "/size/android-launchericon-192-192.png",
       "type": "image/png",
       "sizes": "192x192",
       "purpose": "maskable"
     },
     {
-      "src": "/Rimberio.png",
+      "src": "/size/android-launchericon-512-512.png",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "งานของฉัน",
+      "short_name": "งาน",
+      "description": "ดูงานที่ได้รับมอบหมาย",
+      "url": "/job",
+      "icons": [
+        {
+          "src": "/size/android-launchericon-96-96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "จัดการระบบ",
+      "short_name": "Admin",
+      "description": "หน้าจัดการระบบสำหรับผู้ดูแล",
+      "url": "/admin",
+      "icons": [
+        {
+          "src": "/size/android-launchericon-96-96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 }
