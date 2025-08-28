@@ -1,123 +1,81 @@
 {
   "name": "Smart Fast Ship Tracking",
-  "short_name": "Ship Tracking",
-  "start_url": "https://mena-smartfastshiptracking.vercel.app/login",
+  "short_name": "Smart Fast Ship Tracking", 
+  "start_url": "/login",
   "display": "standalone",
   "orientation": "portrait-primary",
   "theme_color": "#10b981",
   "background_color": "#ffffff",
-  "description": "ระบบติดตามสถานะขนส่ง - Smart Fast Ship Tracking",
-  "scope": "https://mena-smartfastshiptracking.vercel.app/",
+  "description": "ระบบติดตามสถานะขนส่ง",
+  "scope": "/",
   "lang": "th",
   "categories": ["business", "productivity", "utilities"],
-  "id": "smart-fast-ship-tracking",
-  "prefer_related_applications": false,
   "icons": [
     {
-      "src": "https://mena-smartfastshiptracking.vercel.app/Rimberio.jpg",
+      "src": "/Rimberio.jpg",
       "type": "image/jpeg",
       "sizes": "48x48",
       "purpose": "any"
     },
     {
-      "src": "https://mena-smartfastshiptracking.vercel.app/Rimberio.jpg",
+      "src": "/Rimberio.jpg",
       "type": "image/jpeg",
-      "sizes": "72x72",
+      "sizes": "72x72", 
       "purpose": "any"
     },
     {
-      "src": "https://mena-smartfastshiptracking.vercel.app/Rimberio.jpg",
+      "src": "/Rimberio.jpg",
       "type": "image/jpeg",
       "sizes": "96x96",
       "purpose": "any"
     },
     {
-      "src": "https://mena-smartfastshiptracking.vercel.app/Rimberio.jpg",
+      "src": "/Rimberio.jpg",
       "type": "image/jpeg",
       "sizes": "128x128",
       "purpose": "any"
     },
     {
-      "src": "https://mena-smartfastshiptracking.vercel.app/Rimberio.jpg",
+      "src": "/Rimberio.jpg",
       "type": "image/jpeg",
       "sizes": "144x144",
       "purpose": "any"
     },
     {
-      "src": "https://mena-smartfastshiptracking.vercel.app/Rimberio.jpg",
+      "src": "/Rimberio.jpg",
       "type": "image/jpeg",
       "sizes": "152x152",
       "purpose": "any"
     },
     {
-      "src": "https://mena-smartfastshiptracking.vercel.app/Rimberio.jpg",
+      "src": "/Rimberio.jpg",
       "type": "image/jpeg",
       "sizes": "192x192",
       "purpose": "any"
     },
     {
-      "src": "https://mena-smartfastshiptracking.vercel.app/Rimberio.jpg",
+      "src": "/Rimberio.jpg",
       "type": "image/jpeg",
       "sizes": "384x384",
       "purpose": "any"
     },
     {
-      "src": "https://mena-smartfastshiptracking.vercel.app/Rimberio.jpg",
+      "src": "/Rimberio.jpg",
       "type": "image/jpeg",
       "sizes": "512x512",
       "purpose": "any"
     },
     {
-      "src": "https://mena-smartfastshiptracking.vercel.app/Rimberio.jpg",
+      "src": "/Rimberio.jpg",
       "type": "image/jpeg",
       "sizes": "192x192",
-      "purpose": "any"
-    },
-    {
-      "src": "https://mena-smartfastshiptracking.vercel.app/Rimberio.jpg",
-      "type": "image/jpeg",
-      "sizes": "512x512",
-      "purpose": "any"
-    },
-    {
-      "src": "https://mena-smartfastshiptracking.vercel.app/Rimberio.jpg",
-      "type": "image/jpeg",
-      "sizes": "192x192", 
       "purpose": "maskable"
     },
     {
-      "src": "https://mena-smartfastshiptracking.vercel.app/Rimberio.jpg",
+      "src": "/Rimberio.jpg",
       "type": "image/jpeg",
       "sizes": "512x512",
       "purpose": "maskable"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "งานของฉัน",
-      "short_name": "งาน",
-      "description": "ดูงานที่ได้รับมอบหมาย",
-      "url": "/job",
-      "icons": [
-        {
-          "src": "https://mena-smartfastshiptracking.vercel.app/Rimberio.jpg",
-          "sizes": "96x96",
-          "type": "image/jpeg"
-        }
-      ]
-    },
-    {
-      "name": "จัดการระบบ",
-      "short_name": "Admin",
-      "description": "หน้าจัดการระบบสำหรับผู้ดูแล",
-      "url": "/admin",
-      "icons": [
-        {
-          "src": "https://mena-smartfastshiptracking.vercel.app/Rimberio.jpg",
-          "sizes": "96x96",
-          "type": "image/jpeg"
-        }
-      ]
     }
   ]
 }
