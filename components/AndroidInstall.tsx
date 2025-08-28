@@ -152,7 +152,7 @@ export default function AndroidInstallPrompt() {
 
   // Show install button - works for all scenarios
   return (
-   <div className={` ${isChrome && !deferredPrompt ? 'hidden' : '' } mx-4 mb-4`}>
+   <div className={`mx-4 mb-4`}>
       <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
         <div className="mb-3">
           <span className="text-3xl">📱</span>
