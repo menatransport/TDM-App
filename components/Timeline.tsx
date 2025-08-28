@@ -187,16 +187,16 @@ export const TimelineStep = ({
     return formatted;
   };
 
- const fetchImages = async (id: string) => {
-      const res = await fetch("/api/upload", {
-        method: "GET",
-        headers: {
-          id: id ?? "",
-        },
-      });
-      const getimages = await res.json();
-      console.log("getimages : ", getimages.images);
-      return getimages.images;
+  const fetchImages = async (id: string) => {
+    const res = await fetch("/api/upload", {
+      method: "GET",
+      headers: {
+        id: id ?? "",
+      },
+    });
+    const getimages = await res.json();
+    // console.log("getimages : ", getimages.images);
+    return getimages.images;
   };
 
   const formchange = (id: string, key: string, date: string) => {
@@ -205,35 +205,39 @@ export const TimelineStep = ({
     //     [key]:date
     //   }
 
-   
-  fetchImages(id).then((fetchImages) => {
-  console.log('รูปภาพ : ', fetchImages.length);
-  if (fetchImages.length < 2) {
-    if (
-      fetchImages.length == 0 &&
-      statusConfig.find((status) => status.key === key)?.title ==
+    fetchImages(id).then((fetchImages) => {
+      console.log("รูปภาพ : ", fetchImages);
+      
+      if (
+        statusConfig.find((status) => status.key === key)?.title ==
         "ขึ้นสินค้าเสร็จ"
-    ) {
-      alert("โปรดแนบรูปภาพต้นทาง อย่างน้อย 1 รูปภาพ");
-      router.push(`/picture?id=${id}`);
-    }
-    if (
-      fetchImages.length < 2 &&
-      statusConfig.find((status) => status.key === key)?.title ==
+      ) {
+        const hasOriginImages = fetchImages.some((img: any) => img.category === "origin");
+        if (!hasOriginImages) {
+          alert("โปรดแนบรูปภาพต้นทาง อย่างน้อย 1 รูปภาพ");
+          router.push(`/picture?id=${id}&status=${statusConfig.find((status) => status.key === key)?.title}`);
+        }
+      } else if (
+        statusConfig.find((status) => status.key === key)?.title ==
         "ลงสินค้าเสร็จ"
-    ) {
-      alert("โปรดแนบรูปภาพปลายทาง อย่างน้อย 1 รูปภาพ");
-      router.push(`/picture?id=${id}`);
-    }
-  }
-  onTimeChange({
-    load_id: id,
-    [key]: date,
-  });
+      ) {
+        console.log('des');
+        const hasDestinationImages = fetchImages.some((img: any) => img.category === "destination");
+        if (!hasDestinationImages) {
+          alert("โปรดแนบรูปภาพปลายทาง อย่างน้อย 1 รูปภาพ");
+          router.push(`/picture?id=${id}&status=${statusConfig.find((status) => status.key === key)?.title}`);
+        }
+      }
 
-  // console.log('value_sending : ',value)
-  });
-};
+      // ถ้าผ่านการตรวจสอบแล้วจึงส่งข้อมูล
+      onTimeChange({
+        load_id: id,
+        [key]: date,
+      });
+
+      // console.log('value_sending : ',value)
+    });
+  };
 
   const getNextStatus = () => {
     for (let i = 0; i < statusConfig.length; i++) {

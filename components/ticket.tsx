@@ -16,6 +16,7 @@ import {
   Save,
   ChevronDown,
   ChevronUp,
+  Copy,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -45,43 +46,44 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
     const jobId = params.get("id");
     const access_token = localStorage.getItem("access_token");
     setAccesstoken(access_token);
-    const fetchData = async () => {
-      try {
-        const res_data = await fetch("/api/tickets", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${access_token}`,
-            id: jobId ?? "",
-          },
-        });
-
-        const data = await res_data.json();
-        console.log("data ticket : ", data);
-        setDatajobs(data);
-        setTickets(data.ticket);
-        setPallet({ ...data.palletdata, load_id: data.load_id });
-        setDamage(data.damage_detail || "");
-        setLdt(data.ldt || "");
-        setRolltrip(data.roll_trip || "0");
-        onLoadingChange(false);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        onLoadingChange(false);
-      }
-    };
 
     fetchData();
   }, []);
 
+  const fetchData = async () => {
+    const params = new URLSearchParams(window.location.search);
+    const jobId = params.get("id");
+    const access_token = localStorage.getItem("access_token");
+
+    try {
+      const res_data = await fetch("/api/tickets", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${access_token}`,
+          id: jobId ?? "",
+        },
+      });
+
+      const data = await res_data.json();
+      // console.log("data ticket : ", data);
+      setDatajobs(data);
+      setTickets(data.ticket);
+      // console.log("data pallet : ", data.palletdata);
+
+      setPallet({ ...data.palletdata, load_id: data.load_id });
+
+      setDamage(data.damage_detail || "");
+      setLdt(data.ldt || "");
+      setRolltrip(data.roll_trip || "0");
+      onLoadingChange(false);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      onLoadingChange(false);
+    }
+  };
+
   const handleSaved = async () => {
-    // console.log("timeline : ", timeline);
-
-    console.log("pallet : ", pallet);
-    console.log("damage : ", damage);
-    console.log("ldt : ", ldt);
-    console.log("trip_roll : ", roll_trip);
-
     const result = await Swal.fire({
       title: "คุณต้องการยืนยันบันทึกข้อมูลหรือไม่?",
       text: "กรุณาตรวจสอบความถูกต้องของข้อมูลก่อนกดปุ่ม 'ตกลง'",
@@ -94,81 +96,91 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
       allowOutsideClick: false,
     });
 
-    if (!result.isConfirmed) return setIsLoading(false);
+    if (!result.isConfirmed) return;
+    console.log("timeline:", timeline);
+    if (
+      Object.keys(timeline).length === 0 &&
+      job.status !== "จัดส่งแล้ว (POD)"
+    ) {
+      return Swal.fire({
+        title: "โปรดบันทึกเวลาก่อน กดปุ่มบันทึกข้อมูล!",
+        icon: "error",
+        draggable: true,
+      });
+    }
 
-    // if (Object.keys(timeline).length === 0 && job.status !== "จัดส่งแล้ว (POD)")
-    //   return Swal.fire({
-    //     title: "โปรบันทึกเวลาก่อน กดปุ่มบันทึกข้อมูล!",
-    //     icon: "error",
-    //     draggable: true,
-    //   });
-    setIsLoading(false);
     try {
       setIsLoading(true);
 
-      const res_ticket = await fetch("/api/tickets", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${access_token}`,
-        },
-        body: JSON.stringify(timeline),
-      });
-
-      const res_data = await fetch("/api/jobs", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${access_token}`,
-          id: job.load_id ?? "",
-        },
-        body: JSON.stringify({
-          damage_detail: damage,
-          roll_trip: roll_trip,
-          ldt: ldt,
+      // ส่ง API แบบ Promise.all เพื่อความเร็ว
+      const [res_ticket, res_data, res_pallet] = await Promise.all([
+        fetch("/api/tickets", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${access_token}`,
+          },
+          body: JSON.stringify(timeline),
         }),
-      });
+        fetch("/api/jobs", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${access_token}`,
+            id: job.load_id ?? "",
+          },
+          body: JSON.stringify({
+            damage_detail: damage,
+            roll_trip: roll_trip,
+            ldt: ldt,
+          }),
+        }),
+        fetch("/api/pallet", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${access_token}`,
+          },
+          body: JSON.stringify(pallet),
+        }),
+      ]);
 
-      const res_pallet = await fetch("/api/pallet", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${access_token}`,
-        },
-        body: JSON.stringify(pallet),
-      });
-
+      // ตรวจสอบ response
       if (!res_ticket.ok || !res_data.ok || !res_pallet.ok) {
         const errorData = {
-          ticket: await res_ticket.json(),
-          data: await res_data.json(),
-          pallet: await res_pallet.json(),
+          ticket: !res_ticket.ok ? await res_ticket.json() : null,
+          data: !res_data.ok ? await res_data.json() : null,
+          pallet: !res_pallet.ok ? await res_pallet.json() : null,
         };
         console.error("เกิดข้อผิดพลาด:", errorData);
-        alert(
-          `ไม่สามารถบันทึกข้อมูลได้ โปรดแจ้งเจ้าหน้าที่หรือลองใหม่อีกครั้ง : ${JSON.stringify(
-            errorData
-          )}`
-        );
-        setIsLoading(false);
+
+        Swal.fire({
+          title: "เกิดข้อผิดพลาด",
+          text: `ไม่สามารถบันทึกข้อมูลได้ โปรดแจ้งเจ้าหน้าที่หรือลองใหม่อีกครั้ง`,
+          icon: "error",
+          confirmButtonText: "ตกลง",
+        });
         return;
       }
-      location.reload();
-      setIsLoading(false);
+
+      await fetchData();
+      setTimeline({});
       Swal.fire({
         title: "บันทึกข้อมูลสำเร็จ",
-        text: "ข้อมูลของคุณถูกบันทึกเรียบร้อยแล้ว",
+        text: "ข้อมูลถูกบันทึกเรียบร้อยแล้ว",
         icon: "success",
         confirmButtonText: "ตกลง",
-        allowOutsideClick: false,
       });
     } catch (error) {
       console.error("เกิดข้อผิดพลาดในการเชื่อมต่อ:", error);
-      alert(
-        "เกิดข้อผิดพลาดในการเชื่อมต่อ โปรดแจ้งเจ้าหน้าที่หรือลองใหม่อีกครั้ง"
-      );
+      Swal.fire({
+        title: "เกิดข้อผิดพลาด",
+        text: "เกิดข้อผิดพลาดในการเชื่อมต่อ โปรดแจ้งเจ้าหน้าที่หรือลองใหม่อีกครั้ง",
+        icon: "error",
+        confirmButtonText: "ตกลง",
+      });
+    } finally {
       setIsLoading(false);
-      location.reload();
     }
   };
 
@@ -210,6 +222,184 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
     }));
   };
 
+  const formatDateThai = (dateStr?: string) => {
+    if (!dateStr) return "";
+
+    let d: Date;
+
+    const parts = dateStr.split(", ");
+    if (parts.length === 2) {
+      const [datePart, timePart] = parts;
+      const [day, month, year] = datePart.split("/").map(Number);
+      const [hour, minute, second] = timePart.split(":").map(Number);
+      d = new Date(year, month - 1, day, hour, minute, second);
+    } else {
+      d = new Date(dateStr);
+    }
+
+    if (isNaN(d.getTime())) return "";
+
+    return new Intl.DateTimeFormat("th-TH", {
+      day: "2-digit",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(d);
+  };
+
+  const formatTimeSimple = (dateStr?: string) => {
+    if (!dateStr || typeof dateStr !== "string") return "-";
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return "-";
+    return d.toLocaleTimeString("th-TH", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+  };
+
+  const generateSummaryText = () => {
+    // console.log("timeline : ", tickets);
+    const receiveDate =
+      formatDate(job.date_recive) + " " + formatTime(job.date_recive);
+    const deliverDate =
+      formatDate(job.date_deliver) + " " + formatTime(job.date_deliver);
+    const driverName = job.driver_name || "-";
+    const vehiclePlate = `${job.h_plate || "-"}/${job.t_plate || "-"}`;
+    const vehicleType = job.vehicle_type || " ล้อ";
+    const phoneNumber = "☎️" + job.phone || "☎️";
+    const supplier = "🔰TDM";
+    const origin = `🔰 ${job.locat_recive || "🔰"}`;
+    const destination = `🔰 ${job.locat_deliver || "🔰"}`;
+    const arriveOriginTime = formatDateThai(tickets.origin_datetime);
+    const startLoadTime = formatDateThai(tickets.start_recive_datetime);
+    const finishLoadTime = formatDateThai(tickets.end_recive_datetime);
+    const leaveOriginTime = formatDateThai(tickets.intransit_datetime);
+    const arriveDestTime = formatDateThai(tickets.desination_datetime);
+    const startUnloadTime = formatDateThai(tickets.start_unload_datetime);
+    const finishUnloadTime = formatDateThai(tickets.end_unload_datetime);
+    const leaveDestTime = formatDateThai(tickets.complete_datetime);
+
+    // ข้อมูลพาเลท
+    let palletInfo = "";
+    if (pallet.change_pallet && pallet.change_pallet !== "0") {
+      palletInfo += `${pallet.change_pallet} (แลกเปลี่ยน) `;
+    }
+    if (pallet.tranfer_pallet && pallet.tranfer_pallet !== "0") {
+      palletInfo += `${pallet.tranfer_pallet} (โอน) `;
+    }
+    if (pallet.drop_pallet && pallet.drop_pallet !== "0") {
+      palletInfo += `${pallet.drop_pallet} (นำฝาก) `;
+    }
+    if (pallet.return_pallet && pallet.return_pallet !== "0") {
+      palletInfo += `${pallet.return_pallet} (รับคืน) `;
+    }
+    if (
+      pallet.borrow_customer_pallet &&
+      pallet.borrow_customer_pallet !== "0"
+    ) {
+      palletInfo += `${pallet.borrow_customer_pallet} (ยืมลูกค้า) `;
+    }
+    if (
+      pallet.return_customer_pallet &&
+      pallet.return_customer_pallet !== "0"
+    ) {
+      palletInfo += `${pallet.return_customer_pallet} (คืนลูกค้า) `;
+    }
+
+    const summaryText = `🚨สรุปการทำงาน🚨
+
+ 🆔: ${job.load_id}
+ วันที่รับสินค้า : ${receiveDate}
+ วันที่รับส่งสินค้า : ${deliverDate}
+ ชื่อ : ${driverName}
+ ทะเบียนรถ : ${vehiclePlate}
+ ประเภทรถ : ${vehicleType}
+ เบอร์โทร : ${phoneNumber}
+ ซัพพลายเออร์ : ${supplier}
+ ต้นทาง : ${origin}
+ ปลายทาง : ${destination}
+ 🕘เวลาถึงต้นทาง = ${arriveOriginTime}
+ 🕘เวลาเริ่มขึ้นงาน = ${startLoadTime}
+ 🕘เวลาขึ้นงานเสร็จ = ${finishLoadTime}
+ 🕘เวลาออกจากโรงงาน = ${leaveOriginTime}
+ 🕘เวลาถึงปลายทาง = ${arriveDestTime}
+ 🕘เวลาเริ่มลงงาน = ${startUnloadTime}
+ 🕘เวลาลงงานเสร็จ = ${finishUnloadTime}
+ 🕘เวลาออกจากปลายทาง = ${leaveDestTime}
+ หมายเหตุ : ${damage || " "}
+ 1.ค่าลงสินค้า = ${job.unload_cost || " "}
+ 2.ติดเวลาจราจร =
+ 3.จำนวนพาเลท = ${palletInfo || " "}
+ 4.เลขที่เอกสารLDT : ${ldt || " "}`;
+
+    return summaryText;
+  };
+
+  const handleCopySummary = async () => {
+    try {
+      const summaryText = generateSummaryText();
+
+      // ตรวจสอบว่า browser รองรับ Clipboard API หรือไม่
+      if (navigator.clipboard && window.isSecureContext) {
+        // วิธีที่ 1: ใช้ Clipboard API
+        await navigator.clipboard.writeText(summaryText);
+
+        Swal.fire({
+          title: "คัดลอกสำเร็จ!",
+          text: "ข้อความสรุปการทำงานถูกคัดลอกแล้ว กรุณาตรวจสอบและนำไปแจ้งทางเจ้าหน้าที่ท่าน",
+          icon: "success",
+          showConfirmButton: true,
+        });
+      } else {
+        // วิธีที่ 2: Fallback สำหรับ browser เก่าหรือ HTTP
+        const textArea = document.createElement("textarea");
+        textArea.value = summaryText;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        const successful = document.execCommand("copy");
+        document.body.removeChild(textArea);
+
+        if (successful) {
+          Swal.fire({
+            title: "คัดลอกสำเร็จ!",
+            text: "ข้อความสรุปการทำงานถูกคัดลอกแล้ว กรุณาตรวจสอบและนำไปแจ้งทางเจ้าหน้าที่ท่าน",
+            icon: "success",
+            showConfirmButton: true,
+          });
+        } else {
+          throw new Error("การคัดลอกด้วย execCommand ล้มเหลว");
+        }
+      }
+    } catch (error) {
+      console.error("Error copying to clipboard:", error);
+
+      // วิธีที่ 3: แสดงข้อความในกรณีที่คัดลอกไม่ได้
+      const summaryText = generateSummaryText();
+
+      Swal.fire({
+        title: "ไม่สามารถคัดลอกอัตโนมัติได้",
+        html: `
+          <div style="text-align: left; max-height: 300px; overflow-y: auto; padding: 10px; border: 1px solid #ddd; border-radius: 5px; background-color: #f9f9f9; font-family: monospace; font-size: 12px; white-space: pre-wrap;">${summaryText}</div>
+          <br>
+          <p style="color: #666; font-size: 14px;">กรุณาคัดลอกข้อความด้านบนด้วยตนเอง</p>
+        `,
+        icon: "info",
+        confirmButtonText: "ตกลง",
+        width: "90%",
+        customClass: {
+          popup: "swal-wide",
+        },
+      });
+    }
+  };
+
   const getStatusConfig = (status: string) => {
     switch (status) {
       case "พร้อมรับงาน":
@@ -220,7 +410,7 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
           iconColor: "text-green-600",
           btn: "bg-green-200 ",
         };
-      case "รับงานแล้ว":
+      case "รับงาน":
       case "ถึงต้นทาง":
       case "เริ่มขึ้นสินค้า":
       case "ขึ้นสินค้าเสร็จ":
@@ -287,7 +477,10 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
               src="/cameralord.gif"
               onClick={() => {
                 if (!isLoading) {
-                  router.push(`/picture?id=${job.load_id}`);
+                  console.log("image");
+                  router.push(
+                    `/picture?id=${job.load_id}&status=${job.status}`
+                  );
                 }
               }}
               className={`cursor-pointer transition-opacity duration-300 ${
@@ -312,73 +505,71 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
             <CardHeader>
               <div className="relative flex justify-between items-start">
                 <div>
-                <CardTitle className="text-lg font-bold">
-                  📦{job.load_id}
-                </CardTitle>
-                <p className="ml-5 text-dark/90 text-xs font-medium">
-                        {job.h_plate} • {job.t_plate}
-                      </p>
+                  <CardTitle className="text-lg font-bold">
+                    📦{job.load_id}
+                  </CardTitle>
+                  <p className="ml-5 text-dark/90 text-xs font-medium">
+                    {job.h_plate} • {job.t_plate}
+                  </p>
                 </div>
                 <div className="flex flex-col items-end  space-x-2 space-y-2">
-                <Badge
-                  className={`${
-                    getStatusConfig(job.status).color
-                  } border-white/30 text-xs px-2 py-0.5 rounded-full backdrop-blur-sm`}
-                >
-                  {job.status}
-                </Badge>
-                <Badge
-                  className={` ${job.job_type ? "" : "hidden"} ${
-                    job.job_type == "ดรอป"
-                      ? "bg-purple-200 text-purple-900"
-                      : "bg-orange-200 text-orange-900"
-                  } border-white/30 text-xs px-2 py-0.5 rounded-full backdrop-blur-sm`}
-                >
-                  ประเภทงาน: {job.job_type}
-                </Badge>
+                  <Badge
+                    className={`${
+                      getStatusConfig(job.status).color
+                    } border-white/30 text-xs px-2 py-0.5 rounded-full backdrop-blur-sm`}
+                  >
+                    {job.status}
+                  </Badge>
+                  <Badge
+                    className={` ${job.job_type ? "" : "hidden"} ${
+                      job.job_type == "ดรอป"
+                        ? "bg-purple-200 text-purple-900"
+                        : "bg-orange-200 text-orange-900"
+                    } border-white/30 text-xs px-2 py-0.5 rounded-full backdrop-blur-sm`}
+                  >
+                    ประเภทงาน: {job.job_type}
+                  </Badge>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               <div className="p-1 space-y-1">
                 <div className="flex justify-between">
-                 <p className="text-sm font-semibold">ต้นทาง</p>
-                 <p className="text-sm font-semibold">ปลายทาง</p>
-                 </div>
+                  <p className="text-sm font-semibold">ต้นทาง</p>
+                  <p className="text-sm font-semibold">ปลายทาง</p>
+                </div>
                 <div className="flex items-center justify-between text-xs">
-                <div
-                  className={`flex items-center space-x-1 flex-1 min-w-0 ${
-                    getStatusConfig(job.status).btn
-                  } rounded-lg p-2 shadow-sm`}
-                >
-                 
-                  <MapPin
+                  <div
+                    className={`flex items-center space-x-1 flex-1 min-w-0 ${
+                      getStatusConfig(job.status).btn
+                    } rounded-lg p-2 shadow-sm`}
+                  >
+                    <MapPin
+                      className={`h-3 w-3 ${
+                        getStatusConfig(job.status).iconColor
+                      } flex-shrink-0`}
+                    />
+                    <span className="font-medium text-white-900 whitespace-normal break-words flex-1">
+                      {job.locat_recive}
+                    </span>
+                  </div>
+
+                  <ArrowRight
                     className={`h-3 w-3 ${
                       getStatusConfig(job.status).iconColor
-                    } flex-shrink-0`}
+                    } mx-2 flex-shrink-0`}
                   />
-                  <span className="font-medium text-white-900 whitespace-normal break-words flex-1">
-                    {job.locat_recive}
-                  </span>
+
+                  <div
+                    className={`flex items-center space-x-1 flex-1 min-w-0 ${
+                      getStatusConfig(job.status).btn
+                    } rounded-lg p-2 shadow-sm`}
+                  >
+                    <span className="font-medium text-gray-900 whitespace-normal break-words flex-1">
+                      {job.locat_deliver}
+                    </span>
+                  </div>
                 </div>
-
-                <ArrowRight
-                  className={`h-3 w-3 ${
-                    getStatusConfig(job.status).iconColor
-                  } mx-2 flex-shrink-0`}
-                />
-
-                <div
-                  className={`flex items-center space-x-1 flex-1 min-w-0 ${
-                    getStatusConfig(job.status).btn
-                  } rounded-lg p-2 shadow-sm`}
-                >
-                  <span className="font-medium text-gray-900 whitespace-normal break-words flex-1">
-                    {job.locat_deliver}
-                  </span>
-                </div>
-              </div>
-
 
                 {/* Dates in compact grid */}
                 <div className="grid grid-cols-2 gap-2 ">
@@ -451,7 +642,11 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols gap-2">
+                <div
+                  className={` ${
+                    job.job_type == "ทอย" ? "grid grid-cols gap-2" : "hidden"
+                  }`}
+                >
                   <div className="bg-white rounded-lg p-2 shadow-sm">
                     <div className="flex items-center space-x-1 mb-0.5">
                       <p className="text-xs text-gray-500 uppercase tracking-wide">
@@ -513,12 +708,11 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
                         แลกเปลี่ยนพาเลท
                       </label>
                       <input
-                        type="text"
+                        type="number"
                         value={pallet.change_pallet}
                         onChange={(e) =>
                           handleOnchange_pallet("change_pallet", e.target.value)
                         }
-                        
                         className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm"
                       />
                     </div>
@@ -528,7 +722,7 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
                         โอนพาเลท
                       </label>
                       <input
-                        type="text"
+                        type="number"
                         value={pallet.tranfer_pallet}
                         onChange={(e) =>
                           handleOnchange_pallet(
@@ -536,7 +730,6 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
                             e.target.value
                           )
                         }
-                       
                         className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm"
                       />
                     </div>
@@ -546,12 +739,11 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
                         นำฝากพาเลท
                       </label>
                       <input
-                        type="text"
+                        type="number"
                         value={pallet.drop_pallet}
                         onChange={(e) =>
                           handleOnchange_pallet("drop_pallet", e.target.value)
                         }
-                        
                         className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm"
                       />
                     </div>
@@ -561,12 +753,11 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
                         รับคืนพาเลท
                       </label>
                       <input
-                        type="text"
+                        type="number"
                         value={pallet.return_pallet}
                         onChange={(e) =>
                           handleOnchange_pallet("return_pallet", e.target.value)
                         }
-                        
                         className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm"
                       />
                     </div>
@@ -576,7 +767,7 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
                         ยืมพาเลทลูกค้า
                       </label>
                       <input
-                        type="text"
+                        type="number"
                         value={pallet.borrow_customer_pallet}
                         onChange={(e) =>
                           handleOnchange_pallet(
@@ -584,7 +775,6 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
                             e.target.value
                           )
                         }
-                        
                         className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm"
                       />
                     </div>
@@ -594,7 +784,7 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
                         คืนพาเลทลูกค้า
                       </label>
                       <input
-                        type="text"
+                        type="number"
                         value={pallet.return_customer_pallet}
                         onChange={(e) =>
                           handleOnchange_pallet(
@@ -602,7 +792,6 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
                             e.target.value
                           )
                         }
-                       
                         className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm"
                       />
                     </div>
@@ -634,12 +823,14 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
                         rows={4}
                         value={damage}
                         onChange={(e) => setDamage(e.target.value)}
-                        placeholder="กรุณาระบุรายละเอียดของสินค้าที่ชำรุด เช่น วันที่เวลา ประเภทความเสียหาย สาเหตุ จำนวน เป็นต้น"
+                        placeholder="กรุณาระบุรายละเอียดของสินค้าที่ชำรุด เช่น วันที่เวลา ประเภทความเสียหาย สาเหตุ เป็นต้น"
                         className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm resize-none"
                       />
                     </div>
                     <p className="text-xs text-gray-500 mt-1">
                       💡 กรุณาระบุรายละเอียดให้ชัดเจนพร้อมแนบรูปภาพ
+                      หากระบุจำนวนสินค้าที่เสียหาย
+                      ให้ติดต่อสอบถามกับเจ้าหน้าที่ทุกครั้ง❗
                     </p>
                   </div>
                 )}
@@ -649,7 +840,7 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
                   className="flex items-center justify-between text-sm font-medium p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg cursor-pointer hover:from-blue-100 hover:to-blue-150 transition-all duration-200 shadow-sm"
                   onClick={() => setIsOpen3(!isOpen3)}
                 >
-                  <span className="text-blue-800">3. เลข LDT</span>
+                  <span className="text-blue-800">3. เลขที่เอกสาร LDT</span>
                   {isOpen3 ? (
                     <ChevronUp size={20} className="text-blue-600" />
                   ) : (
@@ -674,48 +865,63 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
           </Card>
 
           {/* Button saved */}
+          <div className="flex gap-3 w-full">
+            <Button
+              onClick={handleSaved}
+              disabled={isLoading}
+              className={`flex flex-1 justify-center items-center z-50 h-15 transition-all duration-200 space-x-2 px-4 py-5 shadow-lg 
+        ${
+          isLoading
+            ? "bg-gray-400 cursor-not-allowed"
+            : "bg-blue-500 hover:bg-blue-700 text-white"
+        }`}
+            >
+              {isLoading ? (
+                <div className="flex items-center space-x-2">
+                  <svg
+                    className="animate-spin h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v8z"
+                    ></path>
+                  </svg>
+                  <span>กำลังบันทึก...</span>
+                </div>
+              ) : (
+                <>
+                  <Save size={18} />
+                  <span>บันทึกข้อมูล</span>
+                </>
+              )}
+            </Button>
 
-          <Button
-            onClick={handleSaved}
-            disabled={isLoading}
-            className={`flex w-full justify-center items-center z-50 h-15 transition-all duration-200 space-x-2 px-4 py-5 shadow-lg 
-    ${
-      isLoading
-        ? "bg-gray-400 cursor-not-allowed"
-        : "bg-blue-500 hover:bg-blue-700 text-white"
-    }`}
-          >
-            {isLoading ? (
-              <div className="flex items-center space-x-2">
-                <svg
-                  className="animate-spin h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8v8z"
-                  ></path>
-                </svg>
-                <span>กำลังบันทึก...</span>
-              </div>
-            ) : (
-              <>
-                <Save size={18} />
-                <span>บันทึกข้อมูล</span>
-              </>
-            )}
-          </Button>
+            <Button
+              onClick={handleCopySummary}
+              disabled={isLoading}
+              className={`flex justify-center items-center z-50 h-15 transition-all duration-200 space-x-2 px-4 py-5 shadow-lg 
+        ${
+          isLoading
+            ? "bg-gray-400 cursor-not-allowed"
+            : "bg-gray-100 text-green-700 hover:scale-105 font-semibold border-dashed border-green-700 border-3"
+        }`}
+            >
+              <Copy size={18} />
+              <span className="inline">คัดลอกสถานะ</span>
+            </Button>
+          </div>
         </div>
       </div>
     </div>

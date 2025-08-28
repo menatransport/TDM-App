@@ -61,7 +61,6 @@ useEffect(() => {
 
       const data = await res.json();
       const usernames = data.users.map((user: { username: string }) => user.username);
-      console.log("Fetched usernames:", usernames);
       setListname(usernames)
       storeListname(usernames)
     } catch (error) {

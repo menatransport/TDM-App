@@ -84,7 +84,7 @@ export const Admintool = () => {
   });
 
   useEffect(() => {
-    console.log("📋 Listname จากหน้า Login:", listname);
+    // console.log("📋 Listname จากหน้า Login:", listname);
   }, []);
 
   const handleSearch = async () => {

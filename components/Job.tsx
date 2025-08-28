@@ -57,7 +57,7 @@ export const Jobcomponent = ({ onLoadingChange }: TicketProps) => {
           },
         });
         const data = await res_data.json();
-        console.log("Fetched jobs data:", data.jobs);
+        // console.log("Fetched jobs data:", data.jobs);
         const filterStatus = data.jobs.filter(
           (job: any) =>
             job.status !== "ตกคิว" &&
@@ -69,10 +69,11 @@ export const Jobcomponent = ({ onLoadingChange }: TicketProps) => {
         const finished_status = data.jobs.filter(
           (job: any) => job.status === "จัดส่งแล้ว (POD)"
         );
-        const pending_status = data.jobs.filter(
+        const pending_status = filterStatus.filter(
           (job: any) => job.status !== "จัดส่งแล้ว (POD)"
         );
         setDatajobs(filterStatus);
+        console.log("pending_status:", pending_status);
         setPending(pending_status);
         setFinished_status(finished_status);
         onLoadingChange(false);
@@ -197,10 +198,10 @@ export const Jobcomponent = ({ onLoadingChange }: TicketProps) => {
                 <div className="grid grid-cols-1 gap-4 p-4 ">
                   <div className="flex flex-row items-center gap-2">
                     <Badge className="text-center bg-green-200 p-1.5">
-                      วันที่ลงพาเลท
+                      วันที่บันทึกพาเลท
                     </Badge>
                     <input
-                      type="date"
+                      type="datetime-local"
                       defaultValue={new Date().toISOString().split("T")[0]}
                       required
                       className="w-50 border text-[13px] p-1 text-center border-gray-300 rounded-md bg-white"
@@ -229,9 +230,10 @@ export const Jobcomponent = ({ onLoadingChange }: TicketProps) => {
                       required
                     >
                       <option value=""></option>
-                      <option value="เบิกเข้า">เบิกเข้า</option>
-                      <option value="เบิกออก">เบิกออก</option>
-                      <option value="ส่งคืนลูกค้า">ส่งคืนลูกค้า</option>
+                      <option value="นำฝาก">นำฝาก</option>
+                      <option value="รับคืน">รับคืน</option>
+                      <option value="ยืมลูกค้า">ยืมลูกค้า</option>
+                      <option value="คืนลูกค้า">ส่งคืนลูกค้า</option>
                     </select>
                   </div>
 
@@ -245,7 +247,7 @@ export const Jobcomponent = ({ onLoadingChange }: TicketProps) => {
                       required
                     />
                   </div>
-                  <div className="flex flex-row items-center gap-2">
+                  <div className="hidden flex-row items-center gap-2">
                     <Badge className="text-center bg-green-200 p-1.5">
                       แนบหลักฐาน
                     </Badge>
@@ -299,7 +301,7 @@ export const Jobcomponent = ({ onLoadingChange }: TicketProps) => {
 
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mb-6">
           <div
-            className="flex flex-row items-center gap-4 p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+            className="flex flex-row items-center gap-2 p-2 cursor-pointer hover:bg-gray-50 transition-colors"
             onClick={toggleExpanded_1}
           >
             <div className="p-2 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-2xl text-white shadow-lg">
@@ -321,11 +323,11 @@ export const Jobcomponent = ({ onLoadingChange }: TicketProps) => {
             <div className="flex items-center gap-2">
               <div
                 className={`w-2 h-2 rounded-full ${
-                  datajobs.length > 0 ? "bg-green-500" : "bg-gray-400"
+                  pending.length > 0 ? "bg-green-500" : "bg-gray-400"
                 }`}
               ></div>
               <span className="text-sm text-gray-600">
-                {datajobs.length > 0 ? "มีงาน" : "ว่าง"}
+                {pending.length > 0 ? "มีงาน" : "ไม่มีงาน"}
               </span>
             </div>
 

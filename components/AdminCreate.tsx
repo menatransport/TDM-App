@@ -76,7 +76,6 @@ export function AdminCreate({
     loading: false,
   });
 
-  // Memoized empty job data
   const getEmptyJobData = useCallback((): JobData => ({
     date_plan: "",
     h_plate: "",
@@ -223,14 +222,14 @@ driver_name,
 phone,
 status,
 remark,
-job_type,
+job_type จับคำที่ใกล้เคียง (ดรอป, ทอย หรือ null),
 locat_recive,
 date_recive (รูปแบบ TIMESTAMP(3) "yyyy-MM-dd HH:mm:ss" โซนเวลา Asia/Bangkok),
 locat_deliver,
 date_deliver (รูปแบบ TIMESTAMP(3) "yyyy-MM-dd HH:mm:ss" โซนเวลา Asia/Bangkok),
 unload_cost,
 pallet_plan (ตัวเลข),
-pallet_type
+pallet_type จับคำที่ใกล้เคียง (แลกเปลี่ยน, โอน, รถเปล่า หรือ null)
 
 ข้อมูล: ${aiGenerator.input}`;
 

@@ -60,13 +60,15 @@ export const Picture = ({ onLoadingChange }: TicketProps) => {
 
   const [isUploading, setIsUploading] = useState(false);
   const [JobId, setJobId] = useState<string | null>(null);
-
+  const [status, setStatus] = useState<string | null>(null);
   const router = useRouter();
 
 useEffect(() => {
   const params = new URLSearchParams(window.location.search);
   const jobId = params.get("id");
+  const status = params.get("status") || "";
   setJobId(jobId);
+  setStatus(status);
 
   const fetchImages = async () => {
     try {
@@ -148,6 +150,8 @@ const validateUploadData = () => {
     e.stopPropagation();
   };
 
+
+  //  หลังจาก Drop รูปไปตั้งค่าสถานะ
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -157,7 +161,6 @@ const validateUploadData = () => {
     files.forEach(file => {
       if (!file.type.startsWith('image/')) return;
       if (file.size > 5 * 1024 * 1024) return;
-      
       const newImage: ImageFile = {
         id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
         file,
@@ -169,6 +172,9 @@ const validateUploadData = () => {
       };
       
       setUploadImages(prev => [...prev, newImage]);
+
+     
+
     });
   };
 
@@ -240,15 +246,24 @@ location.reload();
       };
       
       setUploadImages(prev => [...prev, newImage]);
+
+
+      if( status == "ถึงต้นทาง" || status == "เริ่มขึ้นสินค้า" || status == "ขึ้นสินค้าเสร็จ"  ){
+        updateImageCategory(newImage.id, "origin");
+      } else if (status == "ถึงปลายทาง" || status == "เริ่มลงสินค้า" || status == "ลงสินค้าเสร็จ") {
+        updateImageCategory(newImage.id, "destination");
+      }
+
     });
     
-    // Reset input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+
+
+
   };
 
-   // อัปเดตประเภทรูปภาพ
   const getFileExtension = (filename: string) => {
   return filename.substring(filename.lastIndexOf('.'));
 };
@@ -258,10 +273,7 @@ const updateImageCategory = (imageId: string, category: string) => {
   setUploadImages(prev => {
     const currentImage = prev.find(img => img.id === imageId);
     const extension = getFileExtension(currentImage?.name || "");
-
     const baseName = `${JobId}_${category}`;
-
-    // รวมชื่อที่มีอยู่ทั้งหมด (จาก upload + database) ยกเว้น id เดิม
     const uploadNames = prev
       .filter(img => img.id !== imageId)
       .map(img => removeFileExtension(img.name));
@@ -489,14 +501,6 @@ function removeFileExtension(filename: string): string {
             )}
           </div>
 
-
-
-        {/* Container 2 */}
-
-
-
-        
-
   <div className="bg-white rounded-2xl shadow-xl p-6 space-y-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-blue-100 rounded-lg">
@@ -565,7 +569,6 @@ function removeFileExtension(filename: string): string {
             )}
     </div>
 
-                   {/* Modal ดูรูปเต็ม */}
       {viewingImage && (
         <div className="fixed inset-0 bg-opacity-40 backdrop-blur-sm flex items-center justify-center z-100 p-4">
           <div className="relative max-w-4xl max-h-full">
