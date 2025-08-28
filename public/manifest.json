@@ -66,33 +66,5 @@
       "sizes": "512x512",
       "purpose": "maskable"
     }
-  ],
-  "shortcuts": [
-    {
-      "name": "งานของฉัน",
-      "short_name": "งาน",
-      "description": "ดูงานที่ได้รับมอบหมาย",
-      "url": "/job",
-      "icons": [
-        {
-          "src": "/size/android-launchericon-96-96.png",
-          "sizes": "96x96",
-          "type": "image/png"
-        }
-      ]
-    },
-    {
-      "name": "จัดการระบบ",
-      "short_name": "Admin",
-      "description": "หน้าจัดการระบบสำหรับผู้ดูแล",
-      "url": "/admin",
-      "icons": [
-        {
-          "src": "/size/android-launchericon-96-96.png",
-          "sizes": "96x96",
-          "type": "image/png"
-        }
-      ]
-    }
   ]
 }
