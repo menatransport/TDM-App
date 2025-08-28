@@ -1,6 +1,6 @@
 {
   "name": "Smart Fast Ship Tracking",
-  "short_name": "Smart Fast Ship", 
+  "short_name": "🚚Smart Fast Ship Tracking", 
   "start_url": "/login",
   "display": "standalone",
   "orientation": "portrait-primary",
@@ -10,6 +10,7 @@
   "scope": "/",
   "lang": "th",
   "categories": ["business", "productivity", "utilities"],
+  "id": "smart-fast-ship-tracking",
   "prefer_related_applications": false,
   "icons": [
     {
