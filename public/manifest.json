@@ -1,93 +1,93 @@
 {
   "name": "Smart Fast Ship Tracking",
   "short_name": "Ship Tracking",
-  "start_url": "/login",
+  "start_url": "https://mena-smartfastshiptracking.vercel.app/login",
   "display": "standalone",
   "orientation": "portrait-primary",
   "theme_color": "#10b981",
   "background_color": "#ffffff",
   "description": "ระบบติดตามสถานะขนส่ง - Smart Fast Ship Tracking",
-  "scope": "/",
+  "scope": "https://mena-smartfastshiptracking.vercel.app/",
   "lang": "th",
   "categories": ["business", "productivity", "utilities"],
   "id": "smart-fast-ship-tracking",
   "prefer_related_applications": false,
   "icons": [
     {
-      "src": "/Rimberio.jpg",
+      "src": "https://mena-smartfastshiptracking.vercel.app/Rimberio.jpg",
       "type": "image/jpeg",
       "sizes": "48x48",
       "purpose": "any"
     },
     {
-      "src": "/Rimberio.jpg",
+      "src": "https://mena-smartfastshiptracking.vercel.app/Rimberio.jpg",
       "type": "image/jpeg",
       "sizes": "72x72",
       "purpose": "any"
     },
     {
-      "src": "/Rimberio.jpg",
+      "src": "https://mena-smartfastshiptracking.vercel.app/Rimberio.jpg",
       "type": "image/jpeg",
       "sizes": "96x96",
       "purpose": "any"
     },
     {
-      "src": "/Rimberio.jpg",
+      "src": "https://mena-smartfastshiptracking.vercel.app/Rimberio.jpg",
       "type": "image/jpeg",
       "sizes": "128x128",
       "purpose": "any"
     },
     {
-      "src": "/Rimberio.jpg",
+      "src": "https://mena-smartfastshiptracking.vercel.app/Rimberio.jpg",
       "type": "image/jpeg",
       "sizes": "144x144",
       "purpose": "any"
     },
     {
-      "src": "/Rimberio.jpg",
+      "src": "https://mena-smartfastshiptracking.vercel.app/Rimberio.jpg",
       "type": "image/jpeg",
       "sizes": "152x152",
       "purpose": "any"
     },
     {
-      "src": "/Rimberio.jpg",
+      "src": "https://mena-smartfastshiptracking.vercel.app/Rimberio.jpg",
       "type": "image/jpeg",
       "sizes": "192x192",
       "purpose": "any"
     },
     {
-      "src": "/Rimberio.jpg",
+      "src": "https://mena-smartfastshiptracking.vercel.app/Rimberio.jpg",
       "type": "image/jpeg",
       "sizes": "384x384",
       "purpose": "any"
     },
     {
-      "src": "/Rimberio.jpg",
+      "src": "https://mena-smartfastshiptracking.vercel.app/Rimberio.jpg",
       "type": "image/jpeg",
       "sizes": "512x512",
       "purpose": "any"
     },
     {
-      "src": "/mena.png",
-      "type": "image/png",
+      "src": "https://mena-smartfastshiptracking.vercel.app/Rimberio.jpg",
+      "type": "image/jpeg",
       "sizes": "192x192",
       "purpose": "any"
     },
     {
-      "src": "/mena.png",
-      "type": "image/png",
+      "src": "https://mena-smartfastshiptracking.vercel.app/Rimberio.jpg",
+      "type": "image/jpeg",
       "sizes": "512x512",
       "purpose": "any"
     },
     {
-      "src": "/wwd.png",
-      "type": "image/png",
+      "src": "https://mena-smartfastshiptracking.vercel.app/Rimberio.jpg",
+      "type": "image/jpeg",
       "sizes": "192x192", 
       "purpose": "maskable"
     },
     {
-      "src": "/wwd.png",
-      "type": "image/png",
+      "src": "https://mena-smartfastshiptracking.vercel.app/Rimberio.jpg",
+      "type": "image/jpeg",
       "sizes": "512x512",
       "purpose": "maskable"
     }
@@ -100,9 +100,9 @@
       "url": "/job",
       "icons": [
         {
-          "src": "/mena.png",
+          "src": "https://mena-smartfastshiptracking.vercel.app/Rimberio.jpg",
           "sizes": "96x96",
-          "type": "image/png"
+          "type": "image/jpeg"
         }
       ]
     },
@@ -113,9 +113,9 @@
       "url": "/admin",
       "icons": [
         {
-          "src": "/mena.png",
+          "src": "https://mena-smartfastshiptracking.vercel.app/Rimberio.jpg",
           "sizes": "96x96",
-          "type": "image/png"
+          "type": "image/jpeg"
         }
       ]
     }
