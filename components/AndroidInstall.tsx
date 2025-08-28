@@ -120,8 +120,7 @@ export default function AndroidInstallPrompt() {
     // If Chrome but no install prompt available yet
     if (isChrome && !deferredPrompt) {
       console.log('Chrome detected but no install prompt yet')
-      // Show manual instructions for Chrome
-      alert('เปิดเมนู Chrome (⋮) แล้วเลือก "เพิ่มไปยังหน้าจอหลัก" เพื่อติดตั้งแอป')
+      openInChrome();
       return
     }
 
@@ -134,10 +133,6 @@ export default function AndroidInstallPrompt() {
         console.log(`Install prompt outcome: ${outcome}`)
         setDeferredPrompt(null)
         setIsInstallable(false)
-        
-        if (outcome === 'accepted') {
-          alert('แอปติดตั้งสำเร็จ! ตรวจสอบที่หน้าจอหลักของคุณ')
-        }
       } catch (error) {
         console.error('Error during installation:', error)
         alert('ติดตั้งไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')
@@ -170,7 +165,7 @@ export default function AndroidInstallPrompt() {
             ? `ตรวจพบ: ${navigator.userAgent.includes('Samsung') ? 'Samsung Browser' : navigator.userAgent.includes('Mi Browser') ? 'Mi Browser' : 'Browser อื่น'} - กดเพื่อเปิดใน Chrome` 
             : deferredPrompt 
               ? "พร้อมติดตั้งแล้ว! กดเพื่อติดตั้งบนหน้าจอหลัก"
-              : "เปิดเมนู Chrome (⋮) และเลือก 'เพิ่มไปยังหน้าจอหลัก'"
+              : ""
           }
         </p>
         <Button 
@@ -180,8 +175,8 @@ export default function AndroidInstallPrompt() {
           {!isChrome 
             ? "🌐 เปิดใน Chrome" 
             : deferredPrompt 
-              ? "📱 ติดตั้งตอนนี้" 
-              : "📋 วิธีติดตั้ง"
+              ? "ติดตั้งตอนนี้" 
+              : "โปรดเปิด Google Chrome"
           }
         </Button>
         
