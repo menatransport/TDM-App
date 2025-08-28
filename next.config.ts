@@ -6,6 +6,7 @@ const isDev = process.env.NODE_ENV === 'development';
 const withPWA = nextPWA({
   dest: "public",
   disable: isDev,
+  name: "Smart Fast Ship Tracking",
   register: true,
   skipWaiting: true,
 });
