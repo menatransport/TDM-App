@@ -1,6 +1,6 @@
 {
   "name": "Smart Fast Ship Tracking",
-  "short_name": "Smart Fast Ship Tracking",
+  "short_name": "Ship Tracking",
   "start_url": "/login",
   "display": "standalone",
   "orientation": "portrait-primary",
@@ -10,6 +10,8 @@
   "scope": "/",
   "lang": "th",
   "categories": ["business", "productivity", "utilities"],
+  "id": "smart-fast-ship-tracking",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/Rimberio.jpg",
@@ -68,14 +70,26 @@
     {
       "src": "/mena.png",
       "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "/mena.png",
+      "type": "image/png",
       "sizes": "512x512",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/wwd.png",
+      "type": "image/png",
+      "sizes": "192x192", 
+      "purpose": "maskable"
     },
     {
       "src": "/wwd.png",
       "type": "image/png",
       "sizes": "512x512",
-      "purpose": "any"
+      "purpose": "maskable"
     }
   ],
   "shortcuts": [
@@ -86,9 +100,9 @@
       "url": "/job",
       "icons": [
         {
-          "src": "/Rimberio.jpg",
+          "src": "/mena.png",
           "sizes": "96x96",
-          "type": "image/jpeg"
+          "type": "image/png"
         }
       ]
     },
@@ -99,9 +113,9 @@
       "url": "/admin",
       "icons": [
         {
-          "src": "/Rimberio.jpg",
+          "src": "/mena.png",
           "sizes": "96x96",
-          "type": "image/jpeg"
+          "type": "image/png"
         }
       ]
     }
