@@ -1,19 +1,19 @@
 {
-  "name": "TDM Fastship Tracking",
-  "short_name": "App",
+  "name": "Smart Fast Ship Tracking",
+  "short_name": "Smart Fast Ship Tracking",
   "start_url": "/login",
   "display": "standalone",
   "background_color": "#ffffff",
-  "description": "This is Transport Application",
+  "description": "ระบบติดตามสถานะขนส่ง",
   "icons": [
     {
-      "src": "/Rimberio.png",
-      "type": "image/png",
+      "src": "/Rimberio.jpg",
+      "type": "image/jpeg",
       "sizes": "192x192"
     },
     {
-      "src": "/Rimberio.png",
-      "type": "image/png",
+      "src": "/Rimberio.jpg",
+      "type": "image/jpeg",
       "sizes": "512x512"
     }
   ]
