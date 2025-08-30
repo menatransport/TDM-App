@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Smart Fast Ship Tracking",
+  title: "Mena Fast Track",
   description: "developed by Process Improvement Team",
 };
 

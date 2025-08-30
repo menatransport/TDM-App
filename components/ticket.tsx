@@ -40,6 +40,14 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
   const [access_token, setAccesstoken] = useState<any>({});
   const [timeline, setTimeline] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
+  
+  // เก็บข้อมูลเดิมสำหรับเปรียบเทียบ
+  const [originalData, setOriginalData] = useState({
+    damage: "",
+    ldt: "",
+    roll_trip: "0",
+    pallet: {}
+  });
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -76,6 +84,15 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
       setDamage(data.damage_detail || "");
       setLdt(data.ldt || "");
       setRolltrip(data.roll_trip || "0");
+      
+      // เก็บข้อมูลเดิมสำหรับเปรียบเทียบ
+      setOriginalData({
+        damage: data.damage_detail || "",
+        ldt: data.ldt || "",
+        roll_trip: data.roll_trip || "0",
+        pallet: { ...data.palletdata, load_id: data.load_id }
+      });
+      
       onLoadingChange(false);
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -97,6 +114,7 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
     });
 
     if (!result.isConfirmed) return;
+    
     console.log("timeline:", timeline);
     if (
       Object.keys(timeline).length === 0 &&
@@ -112,65 +130,108 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
     try {
       setIsLoading(true);
 
-      // ส่ง API แบบ Promise.all เพื่อความเร็ว
-      const [res_ticket, res_data, res_pallet] = await Promise.all([
-        fetch("/api/tickets", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${access_token}`,
-          },
-          body: JSON.stringify(timeline),
-        }),
-        fetch("/api/jobs", {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${access_token}`,
-            id: job.load_id ?? "",
-          },
-          body: JSON.stringify({
-            damage_detail: damage,
-            roll_trip: roll_trip,
-            ldt: ldt,
-          }),
-        }),
-        fetch("/api/pallet", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${access_token}`,
-          },
-          body: JSON.stringify(pallet),
-        }),
-      ]);
+      // เช็คการเปลี่ยนแปลงและเตรียม API calls
+      const apiCalls = [];
+      
+      // 1. เช็ค Timeline - ถ้ามีการเปลี่ยนแปลง
+      if (Object.keys(timeline).length > 0) {
+        console.log("Timeline changed, sending timeline API");
+        apiCalls.push(
+          fetch("/api/tickets", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${access_token}`,
+            },
+            body: JSON.stringify(timeline),
+          })
+        );
+      }
+
+      // 2. เช็ค Job Data - ถ้ามีการเปลี่ยนแปลง
+      const jobDataChanged = 
+        damage !== originalData.damage ||
+        ldt !== originalData.ldt ||
+        roll_trip !== originalData.roll_trip;
+
+      if (jobDataChanged) {
+        console.log("Job data changed, sending job API");
+        apiCalls.push(
+          fetch("/api/jobs", {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${access_token}`,
+              id: job.load_id ?? "",
+            },
+            body: JSON.stringify({
+              damage_detail: damage,
+              roll_trip: roll_trip,
+              ldt: ldt,
+            }),
+          })
+        );
+      }
+
+      // 3. เช็ค Pallet Data - ถ้ามีการเปลี่ยนแปลง
+      const palletDataChanged = JSON.stringify(pallet) !== JSON.stringify(originalData.pallet);
+
+      if (palletDataChanged) {
+        console.log("Pallet data changed, sending pallet API");
+        apiCalls.push(
+          fetch("/api/pallet", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${access_token}`,
+            },
+            body: JSON.stringify(pallet),
+          })
+        );
+      }
+
+      // ถ้าไม่มีการเปลี่ยนแปลงใดๆ
+      if (apiCalls.length === 0) {
+        Swal.fire({
+          title: "ไม่มีการเปลี่ยนแปลง",
+          text: "ไม่พบการเปลี่ยนแปลงข้อมูลที่ต้องบันทึก",
+          icon: "info",
+          confirmButtonText: "ตกลง",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // ส่ง API เฉพาะที่มีการเปลี่ยนแปลง
+      console.log(`Sending ${apiCalls.length} API calls`);
+      const responses = await Promise.all(apiCalls);
 
       // ตรวจสอบ response
-      if (!res_ticket.ok || !res_data.ok || !res_pallet.ok) {
-        const errorData = {
-          ticket: !res_ticket.ok ? await res_ticket.json() : null,
-          data: !res_data.ok ? await res_data.json() : null,
-          pallet: !res_pallet.ok ? await res_pallet.json() : null,
-        };
-        console.error("เกิดข้อผิดพลาด:", errorData);
-
+      const failedResponses = responses.filter(res => !res.ok);
+      
+      if (failedResponses.length > 0) {
+        console.error("Some API calls failed:", failedResponses);
+        
         Swal.fire({
           title: "เกิดข้อผิดพลาด",
-          text: `ไม่สามารถบันทึกข้อมูลได้ โปรดแจ้งเจ้าหน้าที่หรือลองใหม่อีกครั้ง`,
+          text: `ไม่สามารถบันทึกข้อมูลได้ ${failedResponses.length} รายการ โปรดแจ้งเจ้าหน้าที่หรือลองใหม่อีกครั้ง`,
           icon: "error",
           confirmButtonText: "ตกลง",
         });
         return;
       }
 
+      // รีเฟรชข้อมูลและรีเซ็ต state
       await fetchData();
       setTimeline({});
+      
       Swal.fire({
         title: "บันทึกข้อมูลสำเร็จ",
-        text: "ข้อมูลถูกบันทึกเรียบร้อยแล้ว",
+        text: `ข้อมูลถูกบันทึกเรียบร้อยแล้ว`,
         icon: "success",
         confirmButtonText: "ตกลง",
       });
+      
     } catch (error) {
       console.error("เกิดข้อผิดพลาดในการเชื่อมต่อ:", error);
       Swal.fire({
@@ -880,7 +941,7 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
                 <div className="flex items-center space-x-2">
                   <svg
                     className="animate-spin h-5 w-5 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
+                    xmlns="https://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
                   >
