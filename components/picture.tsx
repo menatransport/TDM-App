@@ -97,7 +97,7 @@ useEffect(() => {
 
        
 
- const handleUpload = async () => {
+const handleUpload = async () => {
   if (uploadImages.length === 0) {
     alert('กรุณาเลือกรูปภาพที่จะอัปโหลด');
     return;
@@ -112,62 +112,125 @@ useEffect(() => {
 
   try {
     const formData = new FormData();
-    uploadImages.forEach((img) => {
+    
+    // เพิ่ม JobId และข้อมูลเพิ่มเติม
+    formData.append('jobId', JobId || '');
+    
+    uploadImages.forEach((img, index) => {
       if (img.file) {
         const renamedFile = new File([img.file], img.name, { type: img.file.type });
         formData.append('file', renamedFile);
+        // เพิ่มข้อมูล metadata สำหรับแต่ละไฟล์
+        formData.append(`category_${index}`, img.category || '');
+        formData.append(`fileName_${index}`, img.name);
       }
     });
+
+    // เพิ่ม timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 วินาที
 
     const res = await fetch('/api/upload', {
       method: 'POST',
+      headers: {
+        'X-Job-Id': JobId || '', // เพิ่ม header สำหรับ JobId
+      },
       body: formData,
+      signal: controller.signal
     });
 
+    clearTimeout(timeoutId);
+
     if (res.ok) {
-   
-      location.reload();
-
-    }  else {
-      let errorMessage = 'เกิดข้อผิดพลาดไม่ทราบสาเหตุ';
-      
+      // อ่าน response เพียงครั้งเดียว
+      let result;
       try {
-        const errorData = await res.json();
-        errorMessage = errorData.message || errorData.error || errorMessage;
+        result = await res.json();
       } catch {
-        errorMessage = await res.text() || errorMessage;
+        result = { message: 'Upload successful' };
       }
-
-      console.error('Upload failed:', {
-        status: res.status,
-        statusText: res.statusText,
-        errorMessage
-      });
-
-    if (res.status === 400) {
-        alert(`❌ ข้อมูลไม่ถูกต้อง: ${errorMessage}`);
-      } else if (res.status === 413) {
-        alert('❌ ขนาดไฟล์ใหญ่เกินไป! (เกิน 5MB)');
-      } else if (res.status === 415) {
-        alert('❌ ประเภทไฟล์ไม่รองรับ! กรุณาใช้ไฟล์รูปภาพเท่านั้น');
-      } else if (res.status === 500) {
-        alert(`❌ เกิดข้อผิดพลาดในเซิร์ฟเวอร์: ${errorMessage}`);
-      } else if (res.status === 401) {
-        alert('❌ ไม่มีสิทธิ์เข้าถึง กรุณาเข้าสู่ระบบใหม่');
-      } else {
-        alert(`❌ พบปัญหาการส่งข้อมูล (${res.status}): ${errorMessage}`);
-      }
+      
+      console.log('Upload success:', result);
+      
+      // รีเฟรชหน้าเพื่ือโหลดรูปใหม่
+      location.reload();
+      
+    } else {
+      // อ่าน error response เพียงครั้งเดียว
+      await handleUploadError(res);
     }
 
-  } catch (err) {
-    console.error('Upload error', err);
-    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-    alert('เกิดข้อผิดพลาดขณะอัปโหลด : ' + errorMessage);
+  } catch (err: any) {
+    console.error('Upload error:', err);
+    
+    if (err.name === 'AbortError') {
+      alert('❌ การอัปโหลดใช้เวลานานเกินไป กรุณาลองใหม่');
+    } else if (err.name === 'TypeError' && err.message.includes('fetch')) {
+      alert('❌ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต');
+    } else {
+      alert(`❌ เกิดข้อผิดพลาดขณะอัปโหลด: ${err.message || 'Unknown error'}`);
+    }
   } finally {
     setIsUploading(false);
   }
 };
 
+// แยกฟังก์ชันจัดการ error ออกมา
+const handleUploadError = async (res: Response) => {
+  let errorMessage = 'เกิดข้อผิดพลาดไม่ทราบสาเหตุ';
+  
+  try {
+    // ลองอ่านเป็น JSON ก่อน
+    const contentType = res.headers.get('content-type');
+    
+    if (contentType && contentType.includes('application/json')) {
+      const errorData = await res.json();
+      errorMessage = errorData.message || errorData.error || errorMessage;
+    } else {
+      // ถ้าไม่ใช่ JSON ให้อ่านเป็น text
+      const textError = await res.text();
+      errorMessage = textError || errorMessage;
+    }
+  } catch (parseError) {
+    console.warn('Could not parse error response:', parseError);
+    errorMessage = `HTTP ${res.status}: ${res.statusText}`;
+  }
+
+  console.error('Upload failed:', {
+    status: res.status,
+    statusText: res.statusText,
+    errorMessage
+  });
+
+  // แสดง error message ตาม status code
+  switch (res.status) {
+    case 400:
+      alert(`❌ ข้อมูลไม่ถูกต้อง: ${errorMessage}`);
+      break;
+    case 401:
+      alert('❌ ไม่มีสิทธิ์เข้าถึง กรุณาเข้าสู่ระบบใหม่');
+      break;
+    case 413:
+      alert('❌ ขนาดไฟล์ใหญ่เกินไป! (เกิน 5MB)');
+      break;
+    case 415:
+      alert('❌ ประเภทไฟล์ไม่รองรับ! กรุณาใช้ไฟล์รูปภาพเท่านั้น');
+      break;
+    case 422:
+      alert(`❌ ข้อมูลไม่ครบถ้วน: ${errorMessage}`);
+      break;
+    case 500:
+      alert(`❌ เกิดข้อผิดพลาดในเซิร์ฟเวอร์: ${errorMessage}`);
+      break;
+    case 502:
+    case 503:
+    case 504:
+      alert('❌ เซิร์ฟเวอร์ไม่พร้อมให้บริการ กรุณาลองใหม่ภายหลัง');
+      break;
+    default:
+      alert(`❌ พบปัญหาการส่งข้อมูล (${res.status}): ${errorMessage}`);
+  }
+};
 
 const validateUploadData = () => {
     const incompleteImages = uploadImages.filter(img => !img.category || img.category === '');
