@@ -126,20 +126,14 @@ const handleUpload = async () => {
       }
     });
 
-    // เพิ่ม timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 วินาที
 
     const res = await fetch('/api/upload', {
       method: 'POST',
       headers: {
         'X-Job-Id': JobId || '', // เพิ่ม header สำหรับ JobId
       },
-      body: formData,
-      signal: controller.signal
+      body: formData
     });
-
-    clearTimeout(timeoutId);
 
     if (res.ok) {
       // อ่าน response เพียงครั้งเดียว
