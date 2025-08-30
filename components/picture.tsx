@@ -110,30 +110,21 @@ const handleUpload = async () => {
 
   setIsUploading(true);
 
-  try {
+try {
     const formData = new FormData();
-    
-    // เพิ่ม JobId และข้อมูลเพิ่มเติม
-    formData.append('jobId', JobId || '');
-    
-    uploadImages.forEach((img, index) => {
+    uploadImages.forEach((img) => {
       if (img.file) {
         const renamedFile = new File([img.file], img.name, { type: img.file.type });
         formData.append('file', renamedFile);
-        // เพิ่มข้อมูล metadata สำหรับแต่ละไฟล์
-        formData.append(`category_${index}`, img.category || '');
-        formData.append(`fileName_${index}`, img.name);
       }
     });
 
 
     const res = await fetch('/api/upload', {
       method: 'POST',
-      headers: {
-        'X-Job-Id': JobId || '', // เพิ่ม header สำหรับ JobId
-      },
-      body: formData
+      body: formData,
     });
+
 
     if (res.ok) {
       // อ่าน response เพียงครั้งเดียว
