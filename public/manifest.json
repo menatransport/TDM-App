@@ -1,6 +1,6 @@
 {
   "name": "Mena FastTrack",
-  "short_name": "🚚Mena FastTrack", 
+  "short_name": "Mena FastTrack", 
   "start_url": "/login",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -10,16 +10,77 @@
   "categories": ["business", "productivity", "utilities"],
   "id": "mena-fast-track",
   "prefer_related_applications": false,
+  "orientation": "portrait",
   "icons": [
     {
-      "src": "/public/Rimberio.png",
+      "src": "/Rimberio.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "72x72",
+      "purpose": "any"
     },
     {
-      "src": "/public/Rimberio.png",
+      "src": "/Rimberio.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "96x96",
+      "purpose": "any"
+    },
+    {
+      "src": "/Rimberio.png",
+      "type": "image/png",
+      "sizes": "128x128",
+      "purpose": "any"
+    },
+    {
+      "src": "/Rimberio.png",
+      "type": "image/png",
+      "sizes": "144x144",
+      "purpose": "any"
+    },
+    {
+      "src": "/Rimberio.png",
+      "type": "image/png",
+      "sizes": "152x152",
+      "purpose": "any"
+    },
+    {
+      "src": "/Rimberio.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/Rimberio.png",
+      "type": "image/png",
+      "sizes": "384x384",
+      "purpose": "any"
+    },
+    {
+      "src": "/Rimberio.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Mena FastTrack",
+      "short_name": "Mena FastTrack",
+      "description": "ระบบติดตามสถานะขนส่ง",
+      "url": "/login",
+      "icons": [
+        {
+          "src": "/Rimberio.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/Rimberio.png",
+      "type": "image/png",
+      "sizes": "540x720",
+      "form_factor": "narrow"
     }
   ]
 }

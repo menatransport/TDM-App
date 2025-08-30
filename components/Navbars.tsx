@@ -144,7 +144,7 @@ export const Navbars = () => {
               <img src="/mena.png" alt="Logo" className="w-15 h-10" />
    
             <div>
-              <h1 className="hidden text-lg font-semibold text-gray-900">Smart - Fast Ship Tracking</h1>
+              <h1 className="hidden text-lg font-semibold text-gray-900">Mena FastTrack</h1>
               <p className="hidden text-xs text-gray-500 -mt-0.5">Menatransport</p>
             </div>
           </div>

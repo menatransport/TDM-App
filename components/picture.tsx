@@ -161,7 +161,8 @@ useEffect(() => {
 
   } catch (err) {
     console.error('Upload error', err);
-    alert('เกิดข้อผิดพลาดขณะอัปโหลด');
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    alert('เกิดข้อผิดพลาดขณะอัปโหลด : ' + errorMessage);
   } finally {
     setIsUploading(false);
   }
