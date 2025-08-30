@@ -219,7 +219,7 @@ return (
                 : "translate-y-4 opacity-0"
             }`}
           >
-            Mena Fast Track
+            Mena FastTrack
           </p>
         </div>
 

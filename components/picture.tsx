@@ -128,9 +128,37 @@ useEffect(() => {
    
       location.reload();
 
-    } else {
-      alert('พบปัญหาการส่งข้อมูล!');
+    }  else {
+      let errorMessage = 'เกิดข้อผิดพลาดไม่ทราบสาเหตุ';
+      
+      try {
+        const errorData = await res.json();
+        errorMessage = errorData.message || errorData.error || errorMessage;
+      } catch {
+        errorMessage = await res.text() || errorMessage;
+      }
+
+      console.error('Upload failed:', {
+        status: res.status,
+        statusText: res.statusText,
+        errorMessage
+      });
+
+    if (res.status === 400) {
+        alert(`❌ ข้อมูลไม่ถูกต้อง: ${errorMessage}`);
+      } else if (res.status === 413) {
+        alert('❌ ขนาดไฟล์ใหญ่เกินไป! (เกิน 5MB)');
+      } else if (res.status === 415) {
+        alert('❌ ประเภทไฟล์ไม่รองรับ! กรุณาใช้ไฟล์รูปภาพเท่านั้น');
+      } else if (res.status === 500) {
+        alert(`❌ เกิดข้อผิดพลาดในเซิร์ฟเวอร์: ${errorMessage}`);
+      } else if (res.status === 401) {
+        alert('❌ ไม่มีสิทธิ์เข้าถึง กรุณาเข้าสู่ระบบใหม่');
+      } else {
+        alert(`❌ พบปัญหาการส่งข้อมูล (${res.status}): ${errorMessage}`);
+      }
     }
+
   } catch (err) {
     console.error('Upload error', err);
     alert('เกิดข้อผิดพลาดขณะอัปโหลด');
