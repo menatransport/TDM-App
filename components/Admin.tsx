@@ -27,9 +27,10 @@ import {
 } from "lucide-react";
 import Swal from "sweetalert2";
 import { AdminView } from "@/components/AdminView";
-import { AdminCreate } from "@/components/AdminCreate";
+import { AdminCreateNew } from "@/components/AdminCreateNew";
 import { TransportItem } from "@/lib/type";
 import { usegetListName } from "@/lib/userStore";
+import * as XLSX from 'xlsx';
 
 const itemsPerPage = 10;
 const today = new Date().toISOString().split("T")[0];
@@ -53,6 +54,8 @@ export const Admintool = () => {
   });
   const [showDriverSuggestions, setShowDriverSuggestions] = useState(false);
   const [filteredDriverNames, setFilteredDriverNames] = useState<string[]>([]);
+  const [showLoadIdSuggestions, setShowLoadIdSuggestions] = useState(false);
+  const [filteredLoadIds, setFilteredLoadIds] = useState<string[]>([]);
   const [transportData, setTransportData] = useState<TransportItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -212,6 +215,76 @@ export const Admintool = () => {
     }, 200);
   };
 
+  // ฟังก์ชันจัดการ Load ID Search
+  const handleLoadIdChange = (value: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      load_id: value,
+    }));
+
+    // แยก load_id ตามจุลภาค (comma) และเอา ID สุดท้ายมาค้นหา
+    const loadIds = value.split(",").map((id) => id.trim());
+    const lastInputId = loadIds[loadIds.length - 1];
+
+    // ดึง load_id ที่ไม่ซ้ำกันจาก transportData
+    const uniqueLoadIds = [...new Set(transportData.map(item => item.load_id))];
+
+    // กรอง load_id ที่ตรงกับ ID สุดท้ายที่พิมพ์
+    if (lastInputId.length > 0) {
+      const filtered = uniqueLoadIds.filter((loadId) => {
+        // ไม่แสดง ID ที่เลือกไปแล้ว
+        const isAlreadySelected = loadIds
+          .slice(0, -1)
+          .some(
+            (selectedId) => selectedId.toLowerCase() === loadId.toLowerCase()
+          );
+
+        return (
+          !isAlreadySelected &&
+          loadId.toLowerCase().includes(lastInputId.toLowerCase())
+        );
+      });
+      setFilteredLoadIds(filtered);
+      setShowLoadIdSuggestions(filtered.length > 0);
+    } else {
+      // ถ้าไม่มีการพิมพ์หลัง comma แสดงรายการ ID ที่ยังไม่ถูกเลือก
+      const selectedIds = loadIds.slice(0, -1);
+      const availableIds = uniqueLoadIds.filter(
+        (loadId) =>
+          !selectedIds.some(
+            (selectedId) => selectedId.toLowerCase() === loadId.toLowerCase()
+          )
+      );
+      setFilteredLoadIds(availableIds.slice(0, 10)); // จำกัดแค่ 10 รายการ
+      setShowLoadIdSuggestions(availableIds.length > 0);
+    }
+  };
+
+  // ฟังก์ชันเลือก Load ID จาก dropdown
+  const handleSelectLoadId = (loadId: string) => {
+    const currentValue = filters.load_id;
+    const loadIds = currentValue.split(",").map((id) => id.trim());
+
+    // แทนที่ ID สุดท้ายด้วย ID ที่เลือก
+    loadIds[loadIds.length - 1] = loadId;
+
+    // รวม ID กลับเป็นสตริง
+    const newValue = loadIds.join(", ");
+    setFilters((prev) => ({
+      ...prev,
+      load_id: newValue,
+    }));
+    setShowLoadIdSuggestions(false);
+  };
+
+  // ฟังก์ชันซ่อน load_id suggestions เมื่อคลิกข้างนอก
+  const handleLoadIdBlur = () => {
+    // ใช้ setTimeout เพื่อให้การคลิกใน dropdown ทำงานก่อน
+    setTimeout(() => {
+      setShowLoadIdSuggestions(false);
+    }, 200);
+  };
+
   // ✅ รีเซ็ตข้อมูล filter
   const resetFilters = () => {
     setFilters({
@@ -222,6 +295,96 @@ export const Admintool = () => {
       status: "",
     });
     setTransportData([]);
+    setShowDriverSuggestions(false);
+    setShowLoadIdSuggestions(false);
+    setFilteredDriverNames([]);
+    setFilteredLoadIds([]);
+  };
+
+  // ✅ Excel Export Function
+  const handleExcelExport = () => {
+    try {
+      // สร้าง timestamp สำหรับชื่อไฟล์
+      const now = new Date();
+      const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, -5); // Format: YYYY-MM-DDTHH-MM-SS
+      const filename = `${timestamp}_menafasttrack.xlsx`;
+
+      // เตรียมข้อมูลสำหรับ Excel
+      const excelData = transportData.map((item, index) => ({
+        'ลำดับ': index + 1,
+        'รหัสขนส่ง': item.load_id || '',
+        'ชื่อพจส.': item.driver_name || '',
+        'ทะเบียนหัว': item.h_plate || '',
+        'ทะเบียนหาง': item.t_plate || '',
+        'ต้นทาง': item.locat_recive || '',
+        'ปลายทาง': item.locat_deliver || '',
+        'วันที่ขึ้นสินค้า': item.date_recive || '',
+        'วันที่ลงสินค้า': item.date_deliver || '',
+        'สถานะ': item.status || '',
+        'ประเภทงาน': item.job_type || '',
+        'น้ำหนักสินค้า': item.weight || '',
+        'ประเภทเชื้อเพลิง': item.fuel_type || '',
+        'หมายเหตุ': item.remark || '',
+        'วันที่เวลารับงาน': '',
+        'วันที่เวลาถึงต้นทาง': '',
+        'วันที่เวลาเริ่มขึ้นสินค้า': '',
+        'วันที่เวลาขึ้นสินค้าเสร็จ': '',
+        'วันที่เวลาเริ่มขนส่ง': '',
+        'วันที่ถึงปลายทาง': '',
+        'วันที่เวลาเริ่มลงสินค้า': '',
+        'วันที่เวลาลงสินค้าเสร็จ': '',
+        'วันที่สร้าง': item.create_at || '',
+        'อัพเดทล่าสุด': item.update_at || ''
+      }));
+
+      // สร้าง workbook และ worksheet
+      const workbook = XLSX.utils.book_new();
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+      // ปรับความกว้างของ columns
+      const colWidths = [
+        { wch: 8 },   // ลำดับ
+        { wch: 15 },  // รหัสขนส่ง
+        { wch: 20 },  // ชื่อพจส.
+        { wch: 12 },  // ทะเบียนหัว
+        { wch: 12 },  // ทะเบียนหาง
+        { wch: 25 },  // ต้นทาง
+        { wch: 25 },  // ปลายทาง
+        { wch: 15 },  // วันที่ขึ้นสินค้า
+        { wch: 15 },  // วันที่ลงสินค้า
+        { wch: 18 },  // สถานะ
+        { wch: 12 },  // ประเภทงาน
+        { wch: 12 },  // น้ำหนักสินค้า
+        { wch: 15 },  // ประเภทเชื้อเพลิง
+        { wch: 30 },  // หมายเหตุ
+        { wch: 20 },  // วันที่สร้าง
+        { wch: 20 }   // อัพเดทล่าสุด
+      ];
+      worksheet['!cols'] = colWidths;
+
+      // เพิ่ม worksheet เข้า workbook
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Data');
+
+      XLSX.writeFile(workbook, filename);
+
+      // แสดงข้อความสำเร็จ
+      Swal.fire({
+        title: 'ส่งออกข้อมูลสำเร็จ!',
+        text: `ไฟล์ ${filename} ถูกดาวน์โหลดแล้ว`,
+        icon: 'success',
+        showConfirmButton: false,
+        draggable: true
+      });
+
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      Swal.fire({
+        title: 'เกิดข้อผิดพลาด!',
+        text: 'ไม่สามารถส่งออกข้อมูลได้ กรุณาลองใหม่อีกครั้ง',
+        icon: 'error',
+        draggable: true
+      });
+    }
   };
 
   // ✅ ดู / แก้ไข / ลบ
@@ -342,7 +505,6 @@ export const Admintool = () => {
         icon: "success",
         draggable: true,
       });
-      
     } catch (error) {
       console.log("error : ", error);
       Swal.fire({
@@ -454,7 +616,7 @@ export const Admintool = () => {
             </div>
 
             {/* Load ID */}
-            <div className="space-y-2">
+            <div className="space-y-2 relative">
               <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
                 <Package size={16} />
                 รหัสขนส่ง (Shipment ID)
@@ -462,11 +624,81 @@ export const Admintool = () => {
               <input
                 type="text"
                 value={filters.load_id}
-                onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, load_id: e.target.value }))
-                }
+                onChange={(e) => handleLoadIdChange(e.target.value)}
+                onBlur={handleLoadIdBlur}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const currentValue = filters.load_id;
+                    const loadIds = currentValue.split(",").map((id) => id.trim());
+                    const lastInputId = loadIds[loadIds.length - 1];
+
+                    // หา load_id ที่ตรงแบบแม่นยำ หรือ ID แรกที่ตรงใน suggestions
+                    const uniqueLoadIds = [...new Set(transportData.map(item => item.load_id))];
+                    const exactMatch = uniqueLoadIds.find(
+                      (loadId) =>
+                        loadId.toLowerCase() === lastInputId.toLowerCase()
+                    );
+
+                    const firstSuggestion =
+                      filteredLoadIds.length > 0
+                        ? filteredLoadIds[0]
+                        : null;
+
+                    if (exactMatch) {
+                      // ถ้าตรงแบบแม่นยำ ใช้ ID นั้น
+                      loadIds[loadIds.length - 1] = exactMatch;
+                      const newValue = loadIds.join(", ") + ", ";
+                      setFilters((prev) => ({
+                        ...prev,
+                        load_id: newValue,
+                      }));
+                    } else if (firstSuggestion) {
+                      // ถ้าไม่ตรงแม่นยำ ใช้ ID แรกใน suggestions
+                      loadIds[loadIds.length - 1] = firstSuggestion;
+                      const newValue = loadIds.join(", ") + ", ";
+                      setFilters((prev) => ({
+                        ...prev,
+                        load_id: newValue,
+                      }));
+                    } else if (lastInputId.trim().length > 0) {
+                      // ถ้าไม่มีใน suggestions แต่มีการพิมพ์ ให้เพิ่ม comma
+                      const newValue = currentValue + ", ";
+                      setFilters((prev) => ({
+                        ...prev,
+                        load_id: newValue,
+                      }));
+                    }
+                    setShowLoadIdSuggestions(false);
+                  }
+                }}
+                placeholder="ค้นหารหัสขนส่ง..."
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
               />
+
+              {/* Autocomplete dropdown for Load ID */}
+              {showLoadIdSuggestions && filteredLoadIds.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                  {filteredLoadIds.map((loadId, index) => {
+                    // หาข้อมูลเพิ่มเติมจาก transportData
+                    const jobData = transportData.find(item => item.load_id === loadId);
+                    return (
+                      <div
+                        key={index}
+                        className="px-3 py-2 hover:bg-emerald-50 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
+                        onClick={() => handleSelectLoadId(loadId)}
+                      >
+                        <div className="font-medium text-gray-800">{loadId}</div>
+                        {jobData && (
+                          <div className="text-xs text-gray-500">
+                            {jobData.driver_name} • {jobData.h_plate} • {jobData.locat_deliver} 
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Driver Name */}
@@ -568,7 +800,8 @@ export const Admintool = () => {
               </label>
               <select
                 value={
-                  filters.status === "รับงาน,ถึงต้นทาง,เริ่มขึ้นสินค้า,ขึ้นสินค้าเสร็จ,เริ่มขนส่ง,ถึงปลายทาง,เริ่มลงสินค้า,ลงสินค้าเสร็จ"
+                  filters.status ===
+                  "รับงาน,ถึงต้นทาง,เริ่มขึ้นสินค้า,ขึ้นสินค้าเสร็จ,เริ่มขนส่ง,ถึงปลายทาง,เริ่มลงสินค้า,ลงสินค้าเสร็จ"
                     ? "กำลังขนส่ง"
                     : filters.status === "ตกคิว,ซ่อม,อบรมที่บริษัท,ยกเลิก"
                     ? "ยกเลิกงาน"
@@ -576,8 +809,17 @@ export const Admintool = () => {
                 }
                 onChange={(e) =>
                   setFilters((prev) => {
-                    if (e.target.value == 'กำลังขนส่ง')  return { ...prev, status: "รับงาน,ถึงต้นทาง,เริ่มขึ้นสินค้า,ขึ้นสินค้าเสร็จ,เริ่มขนส่ง,ถึงปลายทาง,เริ่มลงสินค้า,ลงสินค้าเสร็จ"};
-                    if (e.target.value == 'ยกเลิกงาน')  return { ...prev, status: "ตกคิว,ซ่อม,อบรมที่บริษัท,ยกเลิก"};
+                    if (e.target.value == "กำลังขนส่ง")
+                      return {
+                        ...prev,
+                        status:
+                          "รับงาน,ถึงต้นทาง,เริ่มขึ้นสินค้า,ขึ้นสินค้าเสร็จ,เริ่มขนส่ง,ถึงปลายทาง,เริ่มลงสินค้า,ลงสินค้าเสร็จ",
+                      };
+                    if (e.target.value == "ยกเลิกงาน")
+                      return {
+                        ...prev,
+                        status: "ตกคิว,ซ่อม,อบรมที่บริษัท,ยกเลิก",
+                      };
                     return { ...prev, status: e.target.value };
                   })
                 }
@@ -585,10 +827,18 @@ export const Admintool = () => {
               >
                 <option value="">เลือกสถานะ</option>
                 <optgroup className="text-yellow-800" label="สถานะงานหลัก">
-                  <option className="text-yellow-600" value="พร้อมรับงาน">พร้อมรับงาน</option>
-                  <option className="text-blue-600" value="กำลังขนส่ง">กำลังขนส่ง</option>
-                  <option className="text-green-800" value="จัดส่งแล้ว (POD)">เสร็จสิ้น</option>
-                  <option className="text-red-800" value="ยกเลิกงาน">ยกเลิก</option>
+                  <option className="text-yellow-600" value="พร้อมรับงาน">
+                    พร้อมรับงาน
+                  </option>
+                  <option className="text-blue-600" value="กำลังขนส่ง">
+                    กำลังขนส่ง
+                  </option>
+                  <option className="text-green-800" value="จัดส่งแล้ว (POD)">
+                    เสร็จสิ้น
+                  </option>
+                  <option className="text-red-800" value="ยกเลิกงาน">
+                    ยกเลิก
+                  </option>
                 </optgroup>
                 <optgroup className="text-gray-600" label="สถานะงานย่อย">
                   <option value="รับงาน">รับงาน</option>
@@ -626,16 +876,7 @@ export const Admintool = () => {
               {loading ? "กำลังค้นหา..." : "ค้นหาข้อมูล"}
             </button>
             <button
-              onClick={() => {
-                setFilters({
-                  date_plan: { date_plan_start: sevenDaysAgo, date_plan_end: tomorrow },
-                  load_id: "",
-                  driver_name: "",
-                  h_plate: "",
-                  status: "",
-                });
-                setTransportData([]);
-              }}
+              onClick={resetFilters}
               className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl"
             >
               <RefreshCw size={20} />
@@ -747,7 +988,6 @@ export const Admintool = () => {
 
         {/* Data Table */}
         <div className="bg-white backdrop-blur-md rounded-2xl shadow-xl border border-white/30 overflow-hidden relative">
-          
           <div className="p-4 bg-gray-500 border-b border-gray-200">
             <h2 className="text-xl text-white font-semibold text-gray-800">
               ข้อมูลงานขนส่ง
@@ -784,7 +1024,9 @@ export const Admintool = () => {
                   <div className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin"></div>
                 </div>
                 <div className="text-center">
-                  <p className="text-lg font-medium text-gray-700">กำลังค้นหาข้อมูล...</p>
+                  <p className="text-lg font-medium text-gray-700">
+                    กำลังค้นหาข้อมูล...
+                  </p>
                   <p className="text-sm text-gray-500 mt-1">กรุณารอสักครู่</p>
                 </div>
               </div>
@@ -793,128 +1035,133 @@ export const Admintool = () => {
 
           {/* Mobile View */}
           <div className="block lg:hidden">
-            {loading ? (
-              // Loading skeleton for mobile
-              Array.from({ length: 3 }).map((_, index) => (
-                <div key={`mobile-loading-${index}`} className="border-b border-gray-200 p-4 animate-pulse">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <div className="h-5 bg-gray-200 rounded w-32 mb-2"></div>
-                      <div className="h-4 bg-gray-200 rounded w-24"></div>
+            {loading
+              ? // Loading skeleton for mobile
+                Array.from({ length: 3 }).map((_, index) => (
+                  <div
+                    key={`mobile-loading-${index}`}
+                    className="border-b border-gray-200 p-4 animate-pulse"
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <div className="h-5 bg-gray-200 rounded w-32 mb-2"></div>
+                        <div className="h-4 bg-gray-200 rounded w-24"></div>
+                      </div>
+                      <div className="h-6 bg-gray-200 rounded-full w-16"></div>
                     </div>
-                    <div className="h-6 bg-gray-200 rounded-full w-16"></div>
-                  </div>
 
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-center gap-2">
-                      <div className="h-4 w-4 bg-gray-200 rounded"></div>
-                      <div className="h-4 bg-gray-200 rounded w-40"></div>
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center gap-2">
+                        <div className="h-4 w-4 bg-gray-200 rounded"></div>
+                        <div className="h-4 bg-gray-200 rounded w-40"></div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="h-4 w-4 bg-gray-200 rounded"></div>
+                        <div className="h-4 bg-gray-200 rounded w-48"></div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="h-4 w-4 bg-gray-200 rounded"></div>
+                        <div className="h-4 bg-gray-200 rounded w-36"></div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="h-4 w-4 bg-gray-200 rounded"></div>
+                        <div className="h-4 bg-gray-200 rounded w-52"></div>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="h-4 w-4 bg-gray-200 rounded"></div>
-                      <div className="h-4 bg-gray-200 rounded w-48"></div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="h-4 w-4 bg-gray-200 rounded"></div>
-                      <div className="h-4 bg-gray-200 rounded w-36"></div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="h-4 w-4 bg-gray-200 rounded"></div>
-                      <div className="h-4 bg-gray-200 rounded w-52"></div>
-                    </div>
-                  </div>
 
-                  <div className="flex gap-2">
-                    <div className="flex-1 h-10 bg-gray-200 rounded-lg"></div>
-                    <div className="flex-1 h-10 bg-gray-200 rounded-lg"></div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              currentData.map((item: any) => (
-                <div key={item.id} className="border-b border-gray-200 p-4">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <h3 className="font-semibold text-gray-800">
-                        {item.load_id}
-                      </h3>
-                      <p className="text-sm text-gray-600">{item.driver_name}</p>
+                    <div className="flex gap-2">
+                      <div className="flex-1 h-10 bg-gray-200 rounded-lg"></div>
+                      <div className="flex-1 h-10 bg-gray-200 rounded-lg"></div>
                     </div>
-                    <div className="flex flex-col gap-2 items-end">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium shadow-sm border ${getStatusColor(
-                          item.status
-                        )}`}
-                      >
-                        {item.status}
-                      </span>
-                      {item.job_type && (item.job_type === 'ดรอป' || item.job_type === 'ทอย') && (
+                  </div>
+                ))
+              : currentData.map((item: any) => (
+                  <div key={item.id} className="border-b border-gray-200 p-4">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h3 className="font-semibold text-gray-800">
+                          {item.load_id}
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                          {item.driver_name}
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-2 items-end">
                         <span
-                          className={`px-2 py-1 rounded-md text-xs font-medium shadow-sm border ${
-                            item.job_type === 'ดรอป' 
-                              ? 'bg-gradient-to-r from-purple-50 to-purple-100 text-purple-800 border-purple-200' 
-                              : 'bg-gradient-to-r from-indigo-50 to-indigo-100 text-indigo-800 border-indigo-200'
-                          }`}
+                          className={`px-3 py-1 rounded-full text-xs font-medium shadow-sm border ${getStatusColor(
+                            item.status
+                          )}`}
                         >
-                          🚛 {item.job_type}
+                          {item.status}
                         </span>
-                      )}
+                        {item.job_type &&
+                          (item.job_type === "ดรอป" ||
+                            item.job_type === "ทอย") && (
+                            <span
+                              className={`px-2 py-1 rounded-md text-xs font-medium shadow-sm border ${
+                                item.job_type === "ดรอป"
+                                  ? "bg-gradient-to-r from-purple-50 to-purple-100 text-purple-800 border-purple-200"
+                                  : "bg-gradient-to-r from-indigo-50 to-indigo-100 text-indigo-800 border-indigo-200"
+                              }`}
+                            >
+                              🚛 {item.job_type}
+                            </span>
+                          )}
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Truck size={16} />
-                      <span>
-                        {item.h_plate} - {item.t_plate}
-                      </span>
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Truck size={16} />
+                        <span>
+                          {item.h_plate} - {item.t_plate}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <MapPin size={16} />
+                        <span>
+                          {item.locat_recive} - {item.locat_deliver}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Clock size={16} />
+                        <span>
+                          {item.date_recive} - {item.date_deliver}
+                        </span>
+                      </div>
+                      <div className="flex text-wrap items-center gap-2 text-sm text-gray-600">
+                        <NotebookPen size={16} />
+                        <span>{item.remark}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <MapPin size={16} />
-                      <span>
-                        {item.locat_recive} - {item.locat_deliver}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Clock size={16} />
-                      <span>
-                        {item.date_recive} - {item.date_deliver}
-                      </span>
-                    </div>
-                    <div className="flex text-wrap items-center gap-2 text-sm text-gray-600">
-                      <NotebookPen size={16} />
-                      <span>{item.remark}</span>
-                    </div>
-                  </div>
 
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleView(item.load_id)}
-                      className="flex-1 cursor-pointer bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors"
-                    >
-                      <Eye size={16} />
-                      ดู
-                    </button>
-                    {/* <button
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleView(item.load_id)}
+                        className="flex-1 cursor-pointer bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                      >
+                        <Eye size={16} />
+                        ดู
+                      </button>
+                      {/* <button
                       onClick={() => handleEdit(item.load_id)}
                       className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors"
                     >
                       <Edit size={16} />
                       แก้ไข
                     </button> */}
-                    <button
-                      onClick={() =>
-                        setDeleteAlert({ show: true, load_id: item.load_id })
-                      }
-                      className="flex-1 bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors"
-                    >
-                      <Trash2 size={16} />
-                      ยกเลิก
-                    </button>
+                      <button
+                        onClick={() =>
+                          setDeleteAlert({ show: true, load_id: item.load_id })
+                        }
+                        className="flex-1 bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                      >
+                        <Trash2 size={16} />
+                        ยกเลิก
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))
-            )}
+                ))}
           </div>
 
           {/* Desktop View */}
@@ -958,133 +1205,133 @@ export const Admintool = () => {
               {/* Rows Data */}
 
               <tbody className="divide-y divide-white">
-                {loading ? (
-                  // Loading skeleton rows
-                  Array.from({ length: 5 }).map((_, index) => (
-                    <tr key={`loading-${index}`} className="animate-pulse">
-                      <td className="px-6 py-4">
-                        <div className="h-4 bg-gray-200 rounded w-24"></div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="h-4 bg-gray-200 rounded w-32"></div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="h-4 bg-gray-200 rounded w-28"></div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="h-4 bg-gray-200 rounded w-36"></div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="h-4 bg-gray-200 rounded w-36"></div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="h-4 bg-gray-200 rounded w-24"></div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="h-4 bg-gray-200 rounded w-24"></div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="h-6 bg-gray-200 rounded-full w-20"></div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="h-4 bg-gray-200 rounded w-40"></div>
-                      </td>
-                      <td className="px-6 py-4 bg-gray-50">
-                        <div className="flex justify-center gap-2">
-                          <div className="h-8 w-8 bg-gray-200 rounded-lg"></div>
-                          <div className="h-8 w-8 bg-gray-200 rounded-lg"></div>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  currentData.map((item) => (
-                    <tr
-                      key={item.load_id}
-                      className="hover:bg-gray-100 transition-colors"
-                    >
-                      <td className="px-6 py-4 text-xs font-medium text-gray-800">
-                        {item.load_id}
-                      </td>
-                      <td className="px-6 py-4 text-xs text-gray-600">
-                        {item.driver_name}
-                      </td>
-                      <td className="px-6 py-4 text-xs text-gray-600">
-                        {item.h_plate} / {item.t_plate}
-                      </td>
-                      <td className="px-6 py-4 text-xs text-gray-600">
-                        {item.locat_recive}
-                      </td>
-                      <td className="px-6 py-4 text-xs text-gray-600">
-                        {item.locat_deliver}
-                      </td>
-                      <td className="px-6 py-4 text-xs text-gray-600">
-                        {item.date_recive}
-                      </td>
-                      <td className="px-6 py-4 text-xs text-gray-600">
-                        {item.date_deliver}
-                      </td>
-                      <td className="px-2 py-4 min-w-[160px]">
-                        <div className="flex flex-col gap-2">
-                          {/* สถานะหลัก */}
-                          <div className="flex justify-center">
-                            <span
-                              className={`px-3 py-1 rounded-full text-xs font-medium text-center min-w-[120px] shadow-sm border ${getStatusColor(
-                                item.status
-                              )}`}
-                            >
-                              {item.status}
-                            </span>
+                {loading
+                  ? // Loading skeleton rows
+                    Array.from({ length: 5 }).map((_, index) => (
+                      <tr key={`loading-${index}`} className="animate-pulse">
+                        <td className="px-6 py-4">
+                          <div className="h-4 bg-gray-200 rounded w-24"></div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="h-4 bg-gray-200 rounded w-32"></div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="h-4 bg-gray-200 rounded w-28"></div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="h-4 bg-gray-200 rounded w-36"></div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="h-4 bg-gray-200 rounded w-36"></div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="h-4 bg-gray-200 rounded w-24"></div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="h-4 bg-gray-200 rounded w-24"></div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="h-6 bg-gray-200 rounded-full w-20"></div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="h-4 bg-gray-200 rounded w-40"></div>
+                        </td>
+                        <td className="px-6 py-4 bg-gray-50">
+                          <div className="flex justify-center gap-2">
+                            <div className="h-8 w-8 bg-gray-200 rounded-lg"></div>
+                            <div className="h-8 w-8 bg-gray-200 rounded-lg"></div>
                           </div>
-                          
-                          {/* ประเภทงาน */}
-                          {item.job_type && (item.job_type === 'ดรอป' || item.job_type === 'ทอย') && (
+                        </td>
+                      </tr>
+                    ))
+                  : currentData.map((item) => (
+                      <tr
+                        key={item.load_id}
+                        className="hover:bg-gray-100 transition-colors"
+                      >
+                        <td className="px-6 py-4 text-xs font-medium text-gray-800">
+                          {item.load_id}
+                        </td>
+                        <td className="px-6 py-4 text-xs text-gray-600">
+                          {item.driver_name}
+                        </td>
+                        <td className="px-6 py-4 text-xs text-gray-600">
+                          {item.h_plate} / {item.t_plate}
+                        </td>
+                        <td className="px-6 py-4 text-xs text-gray-600">
+                          {item.locat_recive}
+                        </td>
+                        <td className="px-6 py-4 text-xs text-gray-600">
+                          {item.locat_deliver}
+                        </td>
+                        <td className="px-6 py-4 text-xs text-gray-600">
+                          {item.date_recive}
+                        </td>
+                        <td className="px-6 py-4 text-xs text-gray-600">
+                          {item.date_deliver}
+                        </td>
+                        <td className="px-2 py-4 min-w-[160px]">
+                          <div className="flex flex-col gap-2">
+                            {/* สถานะหลัก */}
                             <div className="flex justify-center">
                               <span
-                                className={`px-2 py-1 rounded-md text-xs font-medium text-center min-w-[80px] shadow-sm border ${
-                                  item.job_type === 'ดรอป' 
-                                    ? 'bg-gradient-to-r from-purple-50 to-purple-100 text-purple-800 border-purple-200' 
-                                    : 'bg-gradient-to-r from-orange-50 to-orange-100 text-orange-800 border-orange-200'
-                                }`}
+                                className={`px-3 py-1 rounded-full text-xs font-medium text-center min-w-[120px] shadow-sm border ${getStatusColor(
+                                  item.status
+                                )}`}
                               >
-                                🚛 {item.job_type}
+                                {item.status}
                               </span>
                             </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {item.remark}
-                      </td>
-                      <td className="px-6 py-4 bg-gray-50">
-                        <div className="flex justify-center gap-2">
-                          <button
-                            className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-lg"
-                            onClick={() => handleView(item.load_id)}
-                          >
-                            <Eye size={16} />
-                          </button>
-                          {/* <button className="bg-yellow-500 hover:bg-yellow-600 text-white p-2 rounded-lg">
+
+                            {/* ประเภทงาน */}
+                            {item.job_type &&
+                              (item.job_type === "ดรอป" ||
+                                item.job_type === "ทอย") && (
+                                <div className="flex justify-center">
+                                  <span
+                                    className={`px-2 py-1 rounded-md text-xs font-medium text-center min-w-[80px] shadow-sm border ${
+                                      item.job_type === "ดรอป"
+                                        ? "bg-gradient-to-r from-purple-50 to-purple-100 text-purple-800 border-purple-200"
+                                        : "bg-gradient-to-r from-orange-50 to-orange-100 text-orange-800 border-orange-200"
+                                    }`}
+                                  >
+                                    🚛 {item.job_type}
+                                  </span>
+                                </div>
+                              )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">
+                          {item.remark}
+                        </td>
+                        <td className="px-6 py-4 bg-gray-50">
+                          <div className="flex justify-center gap-2">
+                            <button
+                              className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-lg"
+                              onClick={() => handleView(item.load_id)}
+                            >
+                              <Eye size={16} />
+                            </button>
+                            {/* <button className="bg-yellow-500 hover:bg-yellow-600 text-white p-2 rounded-lg">
                         <Edit size={16} 
                         onClick={() => handleEdit(item.load_id)}
                         />
                       </button> */}
-                          <button className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg">
-                            <Trash2
-                              size={16}
-                              onClick={() =>
-                                setDeleteAlert({
-                                  show: true,
-                                  load_id: item.load_id,
-                                })
-                              }
-                            />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
+                            <button className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg">
+                              <Trash2
+                                size={16}
+                                onClick={() =>
+                                  setDeleteAlert({
+                                    show: true,
+                                    load_id: item.load_id,
+                                  })
+                                }
+                              />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
               </tbody>
             </table>
           </div>
@@ -1175,12 +1422,12 @@ export const Admintool = () => {
         <AdminView
           jobView={modalView.job}
           closeModal={(close: boolean) => handleClose(close)}
-          refreshTable={ () => handleSearch()}
+          refreshTable={() => handleSearch()}
         />
       )}
 
       {modalCreate.show && (
-        <AdminCreate 
+        <AdminCreateNew
           closeModal={(close: boolean) => handleClose(close)}
           refreshTable={() => handleSearch()}
         />

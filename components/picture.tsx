@@ -80,8 +80,16 @@ useEffect(() => {
       });
 
       const getimages = await res.json();
-      // console.log("getimages : ",getimages)
-      setDatabaseImages(getimages.images);
+      // console.log("Fetched images from API:", getimages);
+      
+      // เพิ่ม id ที่ unique ให้กับแต่ละรูป
+      const imagesWithId = (getimages.images || []).map((image: any, index: number) => ({
+        ...image,
+        id: image.key || `db-image-${index}-${Date.now()}`, // ใช้ key เป็น id หรือสร้าง id ใหม่
+      }));
+      
+      // console.log("Images with ID:", imagesWithId);
+      setDatabaseImages(imagesWithId);
       onLoadingChange(false)
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -95,7 +103,44 @@ useEffect(() => {
 }, []);
 
 
-       
+const compressImage = (file: File, quality: number = 0.7): Promise<File> => {
+  return new Promise((resolve) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d')!;
+    const img = new Image();
+    
+    img.onload = () => {
+      const maxWidth = 1920;
+      const maxHeight = 1080;
+      let { width, height } = img;
+      
+      if (width > maxWidth || height > maxHeight) {
+        const ratio = Math.min(maxWidth / width, maxHeight / height);
+        width *= ratio;
+        height *= ratio;
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const compressedFile = new File([blob], file.name, {
+            type: 'image/jpeg',
+            lastModified: Date.now(),
+          });
+          resolve(compressedFile);
+        } else {
+          resolve(file);
+        }
+      }, 'image/jpeg', quality);
+    };
+    
+    img.src = URL.createObjectURL(file);
+  });
+};
 
 const handleUpload = async () => {
   if (uploadImages.length === 0) {
@@ -110,110 +155,145 @@ const handleUpload = async () => {
 
   setIsUploading(true);
 
-try {
-    const formData = new FormData();
-    uploadImages.forEach((img) => {
-      if (img.file) {
-        const renamedFile = new File([img.file], img.name, { type: img.file.type });
-        formData.append('file', renamedFile);
+  try {
+   
+
+    const prepareFiles = await Promise.all(
+      uploadImages.map(async (img, index) => {
+        if (!img.file) return null;
+        
+        const fileSizeMB = img.file.size / (1024 * 1024);
+        let processedFile = img.file;
+        
+        if (fileSizeMB > 1) {
+          console.time(`Compressing ${img.name}`);
+          processedFile = await compressImage(img.file, 0.8);
+          const newSizeMB = processedFile.size / (1024 * 1024);
+          console.log(`✅ ลดขนาดเหลือ ${newSizeMB.toFixed(2)}MB`);
+          console.timeEnd(`Compressing ${img.name}`);
+        }
+        
+        return {
+          file: new File([processedFile], img.name, { type: processedFile.type }),
+          originalName: img.name
+        };
+      })
+    );
+
+    const validFiles = prepareFiles.filter(f => f !== null);
+    if (validFiles.length === 0) {
+      alert('ไม่มีไฟล์ที่จะอัปโหลด');
+      return;
+    }
+
+
+    const OPTIMIZED_BATCH_SIZE = 1.5 * 1024 * 1024;
+    const createOptimizedBatches = (files: any[]) => {
+      const batches: any[][] = [];
+      let currentBatch: any[] = [];
+      let currentSize = 0;
+
+      for (const fileData of files) {
+        
+        if (currentSize + fileData.file.size > OPTIMIZED_BATCH_SIZE && currentBatch.length > 0) {
+          batches.push(currentBatch);
+          currentBatch = [];
+          currentSize = 0;
+        }
+        currentBatch.push(fileData);
+        currentSize += fileData.file.size;
       }
-    });
 
+      if (currentBatch.length > 0) {
+        batches.push(currentBatch);
+      }
 
-    const res = await fetch('/api/upload', {
-      method: 'POST',
-      body: formData,
-    });
+      return batches;
+    };
 
+    const batches = createOptimizedBatches(validFiles);
 
-    if (res.ok) {
-      // อ่าน response เพียงครั้งเดียว
-      let result;
+    let successCount = 0;
+    let failCount = 0;
+
+    const uploadBatch = async (batch: any[], batchIndex: number) => {
+      console.time(`Fetch`);
+      const formData = new FormData();
+      
+      batch.forEach((fileData) => {
+        formData.append('file', fileData.file);
+      });
+
       try {
-        result = await res.json();
-      } catch {
-        result = { message: 'Upload successful' };
+
+        
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+         console.timeEnd(`Fetch`);
+        if (res.ok) {
+          return { success: batch.length, fail: 0 };
+        } else {
+          return { success: 0, fail: batch.length };
+        }
+
+      } catch (error) {
+        return { success: 0, fail: batch.length };
       }
+     
+    };
+
+    const PARALLEL_LIMIT = 2;
+    for (let i = 0; i < batches.length; i += PARALLEL_LIMIT) {
+      console.time(`PARALLEL_LIMIT`);
+      const currentBatches = batches.slice(i, i + PARALLEL_LIMIT);
       
-      console.log('Upload success:', result);
       
-      // รีเฟรชหน้าเพื่ือโหลดรูปใหม่
+      const results = await Promise.all(
+        currentBatches.map((batch, idx) => uploadBatch(batch, i + idx))
+      );
+
+      results.forEach(result => {
+        successCount += result.success;
+        failCount += result.fail;
+      });
+
+      if (i + PARALLEL_LIMIT < batches.length) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      console.timeEnd(`PARALLEL_LIMIT`);
+    }
+
+    if (successCount > 0) {
+      if (failCount === 0) {
+        console.log('🎉 อัปโหลดสำเร็จทั้งหมด!');
+        alert(`✅ อัปโหลดสำเร็จทั้งหมด ${successCount} รูปภาพ!`);
+      } else {
+        console.log(`⚠️ อัปโหลดเสร็จสิ้น: สำเร็จ ${successCount}, ล้มเหลว ${failCount}`);
+        alert(`⚠️ อัปโหลดเสร็จสิ้น: สำเร็จ ${successCount} รูปภาพ, ล้มเหลว ${failCount} รูปภาพ`);
+      }
+
       location.reload();
+
       
     } else {
-      // อ่าน error response เพียงครั้งเดียว
-      await handleUploadError(res);
+      console.log('❌ การอัปโหลดล้มเหลวทั้งหมด');
+      alert('❌ การอัปโหลดล้มเหลวทั้งหมด กรุณาลองใหม่');
     }
 
   } catch (err: any) {
-    console.error('Upload error:', err);
+    console.error('💥 Upload error:', err);
     
     if (err.name === 'AbortError') {
       alert('❌ การอัปโหลดใช้เวลานานเกินไป กรุณาลองใหม่');
     } else if (err.name === 'TypeError' && err.message.includes('fetch')) {
-      alert('❌ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต');
+      alert('❌ ปัญหาการเชื่อมต่อ กรุณาลองใหม่อีกครั้ง');
     } else {
       alert(`❌ เกิดข้อผิดพลาดขณะอัปโหลด: ${err.message || 'Unknown error'}`);
     }
   } finally {
     setIsUploading(false);
-  }
-};
-
-// แยกฟังก์ชันจัดการ error ออกมา
-const handleUploadError = async (res: Response) => {
-  let errorMessage = 'เกิดข้อผิดพลาดไม่ทราบสาเหตุ';
-  
-  try {
-    // ลองอ่านเป็น JSON ก่อน
-    const contentType = res.headers.get('content-type');
-    
-    if (contentType && contentType.includes('application/json')) {
-      const errorData = await res.json();
-      errorMessage = errorData.message || errorData.error || errorMessage;
-    } else {
-      // ถ้าไม่ใช่ JSON ให้อ่านเป็น text
-      const textError = await res.text();
-      errorMessage = textError || errorMessage;
-    }
-  } catch (parseError) {
-    console.warn('Could not parse error response:', parseError);
-    errorMessage = `HTTP ${res.status}: ${res.statusText}`;
-  }
-
-  console.error('Upload failed:', {
-    status: res.status,
-    statusText: res.statusText,
-    errorMessage
-  });
-
-  // แสดง error message ตาม status code
-  switch (res.status) {
-    case 400:
-      alert(`❌ ข้อมูลไม่ถูกต้อง: ${errorMessage}`);
-      break;
-    case 401:
-      alert('❌ ไม่มีสิทธิ์เข้าถึง กรุณาเข้าสู่ระบบใหม่');
-      break;
-    case 413:
-      alert('❌ ขนาดไฟล์ใหญ่เกินไป! (เกิน 5MB)');
-      break;
-    case 415:
-      alert('❌ ประเภทไฟล์ไม่รองรับ! กรุณาใช้ไฟล์รูปภาพเท่านั้น');
-      break;
-    case 422:
-      alert(`❌ ข้อมูลไม่ครบถ้วน: ${errorMessage}`);
-      break;
-    case 500:
-      alert(`❌ เกิดข้อผิดพลาดในเซิร์ฟเวอร์: ${errorMessage}`);
-      break;
-    case 502:
-    case 503:
-    case 504:
-      alert('❌ เซิร์ฟเวอร์ไม่พร้อมให้บริการ กรุณาลองใหม่ภายหลัง');
-      break;
-    default:
-      alert(`❌ พบปัญหาการส่งข้อมูล (${res.status}): ${errorMessage}`);
   }
 };
 
@@ -258,6 +338,7 @@ const validateUploadData = () => {
 
   // จัดการการลบรูป
   const handleDeleteImage = (imageId: string, imageType: 'upload' | 'database') => {
+    
     setDeleteAlert({
       show: true,
       imageId,
@@ -266,34 +347,52 @@ const validateUploadData = () => {
   };
 
 // ยืนยันการลบ
- const confirmDelete = async () => {
+const confirmDelete = async () => {
   const { imageId, imageType } = deleteAlert;
 
   if (imageType === "upload") {
     setUploadImages((prev) => prev.filter((img) => img.id !== imageId));
   } else {
-    const image = databaseImages.find((img) => img.id == imageId);
+    const image = databaseImages.find((img) => img.id === imageId);
+    
     if (!image) {
       alert("ไม่พบรูปภาพในระบบ");
       return;
     }
 
+
+    // ตรวจสอบว่ามี key หรือไม่
+    if (!image.key) {
+      console.error("ไม่พบ key ของรูปภาพ:", image);
+      alert("ไม่สามารถลบรูปภาพได้ โปรดแจ้งเจ้าหน้าที่เพื่อให้ลบ");
+      return;
+    }
+
     try {
+      // เรียก API เพื่อลบรูปภาพ
       const res = await fetch("/api/upload", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key: image.key }),
       });
 
-      if (!res.ok) throw new Error("ลบไฟล์ไม่สำเร็จ");
-location.reload();
-      // router.push(`/picture?id=${JobId}`)
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("ลบไฟล์ไม่สำเร็จ - Response:", errorText);
+        throw new Error(`ลบไฟล์ไม่สำเร็จ: ${res.status} ${errorText}`);
+      }
+
+      
+      // อัปเดต state ก่อนรีเฟรช (เพื่อให้ UI ตอบสนองเร็วขึ้น)
+      setDatabaseImages(prev => prev.filter(img => img.id !== imageId));
+
     } catch (err) {
       console.error("❌ ลบไฟล์ล้มเหลว:", err);
-      alert("เกิดข้อผิดพลาดในการลบไฟล์");
+      alert(`เกิดข้อผิดพลาดในการลบไฟล์: ${err instanceof Error ? err.message : 'ไม่ทราบสาเหตุ'}`);
     }
   }
 
+  // ปิด dialog การลบ
   setDeleteAlert({ show: false, imageId: "", imageType: "upload" });
 };
 
@@ -495,7 +594,10 @@ function removeFileExtension(filename: string): string {
                     {isUploading ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        กำลังอัปโหลด...
+                        <div className="flex flex-col items-start">
+                          <span>กำลังอัปโหลด...</span>
+                        
+                        </div>
                       </>
                     ) : (
                       <>
@@ -505,6 +607,8 @@ function removeFileExtension(filename: string): string {
                     )}
                   </button>
                 </div>
+                
+                
                 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-h-auto overflow-y-auto">
                   {uploadImages.map((image) => (

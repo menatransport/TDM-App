@@ -404,7 +404,6 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
 
       // ตรวจสอบว่า browser รองรับ Clipboard API หรือไม่
       if (navigator.clipboard && window.isSecureContext) {
-        // วิธีที่ 1: ใช้ Clipboard API
         await navigator.clipboard.writeText(summaryText);
 
         Swal.fire({

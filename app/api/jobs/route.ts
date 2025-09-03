@@ -44,7 +44,7 @@ export async function PUT(req: Request) {
     const accessToken = req.headers.get('Authorization')?.replace('Bearer ', '');
     const jobID = req.headers.get('id');
     const value = await req.json();
-    console.log('PUT *****************:', [jobID, value]);
+    // console.log('PUT *****************:',JSON.stringify(value));
     const externalRes = await fetch(`https://backend-tdm.onrender.com/jobs?load_id=${jobID}`, {
       method: 'PUT',
       headers: {
@@ -67,7 +67,7 @@ export async function POST(req: Request) {
 try {
   const Access_token  = req.headers.get('Authorization')?.replace('Bearer ', '');
   const value = await req.json();
-  console.log('POST ******** CREATE JOBS BULK *****:', JSON.stringify(value));
+  // console.log('POST ******** CREATE JOBS BULK *****:', JSON.stringify(value));
     const externalRes = await fetch('https://backend-tdm.onrender.com/jobs/bulk', {
     method: 'POST',
     headers: {
