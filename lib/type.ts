@@ -16,6 +16,8 @@ export interface TransportItem {
   locat_deliver: string;
   date_recive: string;
   date_deliver: string;
+  latlng_deliver: string;
+  latlng_recive: string;
   pallet_type: string;
   pallet_plan: number;
   unload_cost: string;

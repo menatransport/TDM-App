@@ -9,12 +9,12 @@ import {
   Lock,
   ArrowRight,
   Check,
+  MapPin,
 } from "lucide-react";
 import { useUserStore , useListName } from "@/lib/userStore";
 
 
 export const Logincomponent = () => {
-  // Zustand store
   const { setLoginData, setCredentials, username: storedUsername, password: storedPassword, isRemembered } = useUserStore()
   const { setListname: storeListname } = useListName();
   const [username, setUsername] = useState("");
@@ -25,11 +25,103 @@ export const Logincomponent = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [gpsPermission, setGpsPermission] = useState<'pending' | 'granted' | 'denied'>('pending');
+  const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [gpsError, setGpsError] = useState(""); 
   
   const [listname, setListname] = useState<string[]>([]);
 
 
   const router = useRouter();
+  const requestGPSPermission = () => {
+    return new Promise<{lat: number, lng: number}>((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error('Geolocation ไม่รองรับในเบราว์เซอร์นี้'));
+        return;
+      }
+
+      const options = {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0 
+      };
+
+      setGpsError("");
+      setIsLoading(true);
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const coords = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          
+          console.log('📍 GPS Location obtained:', coords);
+          setCurrentLocation(coords);
+          setGpsPermission('granted');
+          setIsLoading(false);
+          resolve(coords);
+        },
+        (error) => {
+          console.error('❌ GPS Error:', error);
+          let errorMessage = '';
+          
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage = 'การอนุญาตใช้ตำแหน่งถูกปฏิเสธ กรุณาอนุญาตในการตั้งค่าเบราว์เซอร์';
+              setGpsPermission('denied');
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage = 'ไม่สามารถระบุตำแหน่งได้ กรุณาตรวจสอบการเชื่อมต่อ GPS';
+              break;
+            case error.TIMEOUT:
+              errorMessage = 'การขอตำแหน่งใช้เวลานานเกินไป กรุณาลองใหม่';
+              break;
+            default:
+              errorMessage = 'เกิดข้อผิดพลาดในการขอตำแหน่ง';
+              break;
+          }
+          
+          setGpsError(errorMessage);
+          setIsLoading(false);
+          reject(new Error(errorMessage));
+        },
+        options
+      );
+    });
+  };
+
+  useEffect(() => {
+    const checkGPSStatus = async () => {
+      try {
+        if (!navigator.geolocation) {
+          setGpsPermission('denied');
+          return;
+        }
+
+        if ('permissions' in navigator) {
+          const permission = await navigator.permissions.query({name: 'geolocation'});
+          
+          if (permission.state === 'granted') {
+            // ถ้ามี permission แล้ว ให้ขอ location เลย
+            try {
+              await requestGPSPermission();
+            } catch (error) {
+              console.log('GPS permission granted but failed to get location');
+            }
+          } else if (permission.state === 'denied') {
+            setGpsPermission('denied');
+            setGpsError('การใช้ตำแหน่งถูกปฏิเสธ กรุณาเปิดการอนุญาตในการตั้งค่าเบราว์เซอร์');
+          }
+        }
+      } catch (error) {
+        console.log('Permission API not supported, will request on login');
+      }
+    };
+
+    checkGPSStatus();
+  }, []);
+
   const local_remember = () => {
     if (typeof window !== "undefined") {
       if (isChecked) {
@@ -121,42 +213,74 @@ useEffect(() => {
   const handleLogin = async () => {
     setIsLoading(true);
     setError("");
+    setGpsError("");
 
     try {
+      // ตรวจสอบ input
       if (username === "" || password === "") {
         setError("กรุณากรอกชื่อผู้ใช้และรหัสผ่าน");
         setIsLoading(false);
         return;
-      } else {
-        const res = await fetch('/api/auth', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ username, password }),
-          });
-          const data = await res.json();
-        if (data.access_token) {
-          setLoginData({
-            username,
-            password,
-            jwtToken: data.jwtToken,
-            accessToken: data.access_token,
-            role: data.role,
-            remember: isChecked
-          })
-          
-          local_remember();
-          localStorage.setItem("isLoggedIn", "true");
-          localStorage.setItem("jwtToken", data.jwtToken);
-          localStorage.setItem("access_token", data.access_token);
-          if(data.role === 'user') return router.push("/job");
-          if(data.role === 'admin') return router.push("/admin");
-        } else {
-          setError(data.error || "เกิดข้อผิดพลาดในการเข้าสู่ระบบ");
+      }
+
+      // ขอ GPS permission ก่อน login
+      let location = currentLocation;
+      
+      if (!location || gpsPermission !== 'granted') {
+        try {
+          console.log('🔍 Requesting GPS permission...');
+          location = await requestGPSPermission();
+          console.log('✅ GPS permission granted:', location);
+        } catch (gpsError: any) {
+          setError(`❌ จำเป็นต้องเปิด GPS เพื่อใช้งานระบบ: ${gpsError.message}`);
           setIsLoading(false);
           return;
         }
+      }
+
+      // ถ้าได้ GPS แล้วค่อย login
+      console.log('🔐 Proceeding with login...');
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          username, 
+          password,
+          location: location // ส่ง location ไปกับ login request
+        }),
+      });
+      
+      const data = await res.json();
+      
+      if (data.access_token) {
+        // บันทึก location ใน localStorage สำหรับใช้ในระบบ
+        localStorage.setItem('userLocation', JSON.stringify(location));
+        localStorage.setItem('locationTimestamp', new Date().toISOString());
+        
+        setLoginData({
+          username,
+          password,
+          jwtToken: data.jwtToken,
+          accessToken: data.access_token,
+          role: data.role,
+          remember: isChecked
+        });
+        
+        local_remember();
+        localStorage.setItem("isLoggedIn", "true");
+        localStorage.setItem("jwtToken", data.jwtToken);
+        localStorage.setItem("access_token", data.access_token);
+        
+        console.log('✅ Login successful with location:', location);
+        
+        if(data.role === 'user') return router.push("/job");
+        if(data.role === 'admin') return router.push("/admin");
+      } else {
+        setError(data.error || "เกิดข้อผิดพลาดในการเข้าสู่ระบบ");
+        setIsLoading(false);
+        return;
       }
     } catch (err) {
       console.error("❌ Login error:", err);
@@ -236,13 +360,7 @@ return (
             {/* <p className="text-gray-500 text-sm">ยินดีต้อนรับกลับมา</p> */}
           </div>
 
-          {/* Error message */}
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border-l-4 border-red-400 rounded-r-lg transform animate-pulse">
-              <p className="text-red-700 text-sm">{error}</p>
-            </div>
-          )}
-
+         
           <div className="space-y-5">
             {/* Username field */}
             <div className="relative group">
@@ -352,14 +470,26 @@ return (
             {/* Login button */}
             <button
               onClick={handleLogin}
-              disabled={isLoading}
-              className="w-full mt-10 bg-gradient-to-r from-green-500 to-emerald-500 text-white py-3 rounded-xl font-medium shadow-lg hover:shadow-xl hover:from-green-600 hover:to-emerald-600 transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none group"
+              disabled={isLoading || gpsPermission === 'denied' || (!currentLocation && gpsPermission !== 'granted')}
+              className={`w-full mt-10 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none group ${
+                gpsPermission === 'granted' && currentLocation
+                  ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600'
+                  : 'bg-gradient-to-r from-gray-400 to-gray-500 text-white'
+              }`}
             >
               <div className="flex items-center justify-center">
                 {isLoading ? (
                   <>
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                    กำลังเข้าสู่ระบบ...
+                    {gpsPermission === 'pending' || !currentLocation ? 'กำลังขอ GPS...' : 'กำลังเข้าสู่ระบบ...'}
+                  </>
+                ) : gpsPermission === 'denied' ? (
+                  <>
+                    🌍 จำเป็นต้องเปิด GPS
+                  </>
+                ) : !currentLocation ? (
+                  <>
+                    🔍 กำลังรอ GPS...
                   </>
                 ) : (
                   <>
@@ -369,6 +499,61 @@ return (
                 )}
               </div>
             </button>
+
+            {/* GPS requirement note */}
+            <div className="mt-2">
+              {/* Error message */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border-l-4 border-red-400 rounded-r-lg transform animate-pulse">
+              <p className="text-red-700 text-sm">{error}</p>
+            </div>
+          )}
+
+          {/* GPS Error message */}
+          {gpsError && (
+            <div className="mb-4 p-3 bg-orange-50 border-l-4 border-orange-400 rounded-r-lg">
+              <p className="text-orange-700 text-sm font-medium">🌍 GPS Required</p>
+              <p className="text-orange-600 text-sm mt-1">{gpsError}</p>
+              {gpsPermission === 'denied' && (
+                <button
+                  onClick={requestGPSPermission}
+                  className="mt-2 text-xs bg-orange-500 text-white px-3 py-1 rounded-md hover:bg-orange-600 transition-colors"
+                >
+                  ลองขอ GPS อีกครั้ง
+                </button>
+              )}
+            </div>
+          )}
+
+{/* GPS Status Display */}
+{gpsPermission === 'granted' && (
+  <div className="mb-4 p-3 rounded-lg border border-gray-200 bg-green-50">
+    <div className="flex items-start space-x-2">
+      <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
+      <span className="text-sm font-medium text-green-700">
+        สถานะ GPS: เชื่อมต่อแล้ว 
+      </span>
+    </div>
+    {currentLocation && (
+      <div className="mt-2 text-xs text-gray-500">
+        📍 Lat: {currentLocation.lat.toFixed(6)}, Lng: {currentLocation.lng.toFixed(6)}
+      </div>
+    )}
+  </div>
+)}
+
+{gpsPermission === 'pending' && (
+  <div className="mb-4 p-3 rounded-lg border border-gray-200 bg-blue-50">
+    <button
+      onClick={requestGPSPermission}
+      disabled={isLoading}
+      className="w-full text-sm bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition-colors disabled:opacity-50"
+    >
+      🌍 เปิดใช้งาน GPS
+    </button>
+  </div>
+)}
+            </div>
 
             {/* Forgot password */}
             {/* <div className="text-center">

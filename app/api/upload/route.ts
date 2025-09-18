@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   }
 
   const uploadedPaths: string[] = [];
-
+  console.log('Uploading files... : ',files);
   for (const file of files) {
     const jobid = file.name.split("_")[0];
     const arrayBuffer = await file.arrayBuffer();

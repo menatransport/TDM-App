@@ -7,6 +7,8 @@ import {
   Home,
   Check,
   Clock,
+  FileInput,
+  FileOutput,
   ArrowRight,
   X,
 } from "lucide-react";
@@ -19,18 +21,22 @@ interface Typedata {
   start_unload_datetime: string;
   complete_datetime: string;
   end_recive_datetime: string;
+  docs_submitted_datetime: string;
   start_datetime: string;
   origin_datetime: string;
   desination_datetime: string;
+  docs_returned_datetime: string;
   end_unload_datetime: string;
 }
 
 export const TimelineStep = ({
   db,
   onTimeChange,
+  locatRecive,
 }: {
   db: Typedata;
   onTimeChange: any;
+  locatRecive?: string;
 }) => {
   const [selectedStatus, setSelectedStatus] = useState<StatusItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -87,6 +93,19 @@ export const TimelineStep = ({
       description: "ถึงสถานที่ลงสินค้า",
       color: "bg-red-500",
     },
+    // เพิ่มสำหรับ Neo Factory เท่านั้น
+    ...(locatRecive === "บริษัท นีโอ แฟคทอรี่ จำกัด" 
+      ? [
+          {
+            key: "docs_submitted_datetime" as keyof Typedata,
+            title: "ยื่นเอกสาร",
+            icon: FileInput,
+            description: "ยื่นเอกสารที่ปลายทาง",
+            color: "bg-indigo-500",
+          },
+        ] 
+      : []
+    ),
     {
       key: "start_unload_datetime",
       title: "เริ่มลงสินค้า",
@@ -101,6 +120,19 @@ export const TimelineStep = ({
       description: "ลงสินค้าจากปลายทางสำเร็จ",
       color: "bg-green-500",
     },
+    // เพิ่มสำหรับ Neo Factory เท่านั้น
+    ...(locatRecive === "บริษัท นีโอ แฟคทอรี่ จำกัด" 
+      ? [
+          {
+            key: "docs_returned_datetime" as keyof Typedata,
+            title: "ได้รับเอกสารคืน",
+            icon: FileOutput,
+            description: "ได้รับเอกสารคืนจากปลายทาง",
+            color: "bg-yellow-500",
+          },
+        ] 
+      : []
+    ),
     {
       key: "complete_datetime",
       title: "จัดส่งแล้ว (POD)",
@@ -200,13 +232,10 @@ export const TimelineStep = ({
   };
 
   const formchange = (id: string, key: string, date: string) => {
-    //  let value = {
-    //     'load_id':id,
-    //     [key]:date
-    //   }
+
 
     fetchImages(id).then((fetchImages) => {
-      console.log("รูปภาพ : ", fetchImages);
+  
       
       if (
         statusConfig.find((status) => status.key === key)?.title ==
@@ -229,13 +258,11 @@ export const TimelineStep = ({
         }
       }
 
-      // ถ้าผ่านการตรวจสอบแล้วจึงส่งข้อมูล
       onTimeChange({
         load_id: id,
         [key]: date,
       });
 
-      // console.log('value_sending : ',value)
     });
   };
 
@@ -373,15 +400,35 @@ export const TimelineStep = ({
                     <Clock className="h-5 w-5 text-orange-500" />
                     <span className="font-medium">บันทึกเวลา</span>
                   </div>
-                  <input
-                    type="datetime-local"
-                    id={status.key}
-                    onChange={(e) => {
-                      const formatted = formatOnsend(e.target.value);
-                      formchange(db.load_id, status.key, formatted);
-                    }}
-                    className="w-full appearance-none rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-all"
-                  />
+                  <div className="space-y-2">
+                    <input
+                      type="datetime-local"
+                      id={status.key}
+                      min={(() => {
+                        const now = new Date();
+                        return now.toISOString().slice(0, 16);
+                      })()}
+                      max={(() => {
+                        const now = new Date();
+                        return now.toISOString().slice(0, 16);
+                      })()}
+                      value={(() => {
+                        const now = new Date();
+                        return now.toISOString().slice(0, 16);
+                      })()}
+                      onChange={(e) => {
+                        const now = new Date();
+                        const currentTime = now.toISOString().slice(0, 16);
+                        const formatted = formatOnsend(e.target.value);
+                        formchange(db.load_id, status.key, formatted);
+                      }}
+                      onFocus={(e) => {
+                        const now = new Date();
+                        e.target.value = now.toISOString().slice(0, 16);
+                      }}
+                      className="w-full appearance-none rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-all"
+                    />
+                  </div>
                 </div>
               )}
             </div>

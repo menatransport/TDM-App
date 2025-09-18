@@ -40,13 +40,13 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
   const [access_token, setAccesstoken] = useState<any>({});
   const [timeline, setTimeline] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // เก็บข้อมูลเดิมสำหรับเปรียบเทียบ
   const [originalData, setOriginalData] = useState({
     damage: "",
     ldt: "",
     roll_trip: "0",
-    pallet: {}
+    pallet: {},
   });
 
   useEffect(() => {
@@ -84,15 +84,15 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
       setDamage(data.damage_detail || "");
       setLdt(data.ldt || "");
       setRolltrip(data.roll_trip || "0");
-      
+
       // เก็บข้อมูลเดิมสำหรับเปรียบเทียบ
       setOriginalData({
         damage: data.damage_detail || "",
         ldt: data.ldt || "",
         roll_trip: data.roll_trip || "0",
-        pallet: { ...data.palletdata, load_id: data.load_id }
+        pallet: { ...data.palletdata, load_id: data.load_id },
       });
-      
+
       onLoadingChange(false);
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -114,7 +114,7 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
     });
 
     if (!result.isConfirmed) return;
-    
+
     console.log("timeline:", timeline);
     if (
       Object.keys(timeline).length === 0 &&
@@ -132,10 +132,10 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
 
       // เช็คการเปลี่ยนแปลงและเตรียม API calls
       const apiCalls = [];
-      
+
       // 1. เช็ค Timeline - ถ้ามีการเปลี่ยนแปลง
       if (Object.keys(timeline).length > 0) {
-        console.log("Timeline changed, sending timeline API");
+        // console.log("Timeline changed, sending timeline API");
         apiCalls.push(
           fetch("/api/tickets", {
             method: "POST",
@@ -149,13 +149,13 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
       }
 
       // 2. เช็ค Job Data - ถ้ามีการเปลี่ยนแปลง
-      const jobDataChanged = 
+      const jobDataChanged =
         damage !== originalData.damage ||
         ldt !== originalData.ldt ||
         roll_trip !== originalData.roll_trip;
 
       if (jobDataChanged) {
-        console.log("Job data changed, sending job API");
+        // console.log("Job data changed, sending job API");
         apiCalls.push(
           fetch("/api/jobs", {
             method: "PUT",
@@ -174,10 +174,11 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
       }
 
       // 3. เช็ค Pallet Data - ถ้ามีการเปลี่ยนแปลง
-      const palletDataChanged = JSON.stringify(pallet) !== JSON.stringify(originalData.pallet);
+      const palletDataChanged =
+        JSON.stringify(pallet) !== JSON.stringify(originalData.pallet);
 
       if (palletDataChanged) {
-        console.log("Pallet data changed, sending pallet API");
+        // console.log("Pallet data changed, sending pallet API");
         apiCalls.push(
           fetch("/api/pallet", {
             method: "POST",
@@ -203,15 +204,15 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
       }
 
       // ส่ง API เฉพาะที่มีการเปลี่ยนแปลง
-      console.log(`Sending ${apiCalls.length} API calls`);
+      // console.log(`Sending ${apiCalls.length} API calls`);
       const responses = await Promise.all(apiCalls);
 
       // ตรวจสอบ response
-      const failedResponses = responses.filter(res => !res.ok);
-      
+      const failedResponses = responses.filter((res) => !res.ok);
+
       if (failedResponses.length > 0) {
         console.error("Some API calls failed:", failedResponses);
-        
+
         Swal.fire({
           title: "เกิดข้อผิดพลาด",
           text: `ไม่สามารถบันทึกข้อมูลได้ ${failedResponses.length} รายการ โปรดแจ้งเจ้าหน้าที่หรือลองใหม่อีกครั้ง`,
@@ -224,14 +225,13 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
       // รีเฟรชข้อมูลและรีเซ็ต state
       await fetchData();
       setTimeline({});
-      
+
       Swal.fire({
         title: "บันทึกข้อมูลสำเร็จ",
         text: `ข้อมูลถูกบันทึกเรียบร้อยแล้ว`,
         icon: "success",
         confirmButtonText: "ตกลง",
       });
-      
     } catch (error) {
       console.error("เกิดข้อผิดพลาดในการเชื่อมต่อ:", error);
       Swal.fire({
@@ -369,8 +369,36 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
       palletInfo += `${pallet.return_customer_pallet} (คืนลูกค้า) `;
     }
 
-    const summaryText = `🚨สรุปการทำงาน🚨
-
+    let summaryText = "";
+  if( job.locat_recive == "บริษัท นีโอ แฟคทอรี่ จำกัด" ) {
+summaryText = `🚨สรุปการทำงาน🚨
+ 🆔: ${job.load_id}
+ วันที่รับสินค้า : ${receiveDate}
+ วันที่รับส่งสินค้า : ${deliverDate}
+ ชื่อ : ${driverName}
+ ทะเบียนรถ : ${vehiclePlate}
+ ประเภทรถ : ${vehicleType}
+ เบอร์โทร : ${phoneNumber}
+ ซัพพลายเออร์ : ${supplier}
+ ต้นทาง : ${origin}
+ ปลายทาง : ${destination}
+ 🕘เวลาถึงต้นทาง = ${arriveOriginTime}
+ 🕘เวลาเริ่มขึ้นงาน = ${startLoadTime}
+ 🕘เวลาขึ้นงานเสร็จ = ${finishLoadTime}
+ 🕘เวลาออกจากโรงงาน = ${leaveOriginTime}
+ 🕘เวลาถึงปลายทาง = ${arriveDestTime}
+ 🕘เวลายื่นเอกสาร = ${formatDateThai(tickets.docs_submitted_datetime)}
+ 🕘เวลาเริ่มลงงาน = ${startUnloadTime}
+ 🕘เวลาลงงานเสร็จ = ${finishUnloadTime}
+ 🕘เวลาได้รับเอกสารคืน = ${formatDateThai(tickets.docs_returned_datetime)}
+ 🕘เวลาออกจากปลายทาง = ${leaveDestTime}
+ หมายเหตุ : ${damage || " "}
+ 1.ค่าลงสินค้า = ${job.unload_cost || " "}
+ 2.ติดเวลาจราจร =
+ 3.จำนวนพาเลท = ${palletInfo || " "}
+ 4.เลขที่เอกสารLDT : ${ldt || " "}`;
+  } else {
+summaryText = `🚨สรุปการทำงาน🚨
  🆔: ${job.load_id}
  วันที่รับสินค้า : ${receiveDate}
  วันที่รับส่งสินค้า : ${deliverDate}
@@ -394,7 +422,7 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
  2.ติดเวลาจราจร =
  3.จำนวนพาเลท = ${palletInfo || " "}
  4.เลขที่เอกสารLDT : ${ldt || " "}`;
-
+  }
     return summaryText;
   };
 

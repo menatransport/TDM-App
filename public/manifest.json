@@ -4,6 +4,7 @@
   "start_url": "/login",
   "display": "standalone",
   "background_color": "#ffffff",
+  "theme_color": "#10b981",
   "description": "ระบบติดตามสถานะขนส่ง",
   "scope": "/",
   "lang": "th",
@@ -11,6 +12,14 @@
   "id": "mena-fast-track",
   "prefer_related_applications": false,
   "orientation": "portrait",
+  "permissions": [
+    "geolocation"
+  ],
+  "features": [
+    "geolocation",
+    "camera",
+    "microphone"
+  ],
   "icons": [
     {
       "src": "/Rimberio.png",

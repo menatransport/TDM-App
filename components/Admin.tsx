@@ -24,10 +24,13 @@ import {
   BookOpenCheck,
   CircleX,
   Check,
+  FileSpreadsheet,
+  ChartPie,
 } from "lucide-react";
 import Swal from "sweetalert2";
 import { AdminView } from "@/components/AdminView";
 import { AdminCreateNew } from "@/components/AdminCreateNew";
+import { AdminMap } from "@/components/AdminMap";
 import { TransportItem } from "@/lib/type";
 import { usegetListName } from "@/lib/userStore";
 import * as XLSX from 'xlsx';
@@ -86,8 +89,26 @@ export const Admintool = () => {
     show: false,
   });
 
+  const [modalMap, setmodalMap] = useState<{
+    show: boolean;
+  }>({
+    show: false,
+  });
+
+  // State สำหรับการอัปเดตเวลา
+  const [currentTime, setCurrentTime] = useState(new Date());
+
   useEffect(() => {
     // console.log("📋 Listname จากหน้า Login:", listname);
+  }, []);
+
+  // อัปเดตเวลาทุก 30 วินาที สำหรับ real-time highlight
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 30000); // อัปเดตทุก 30 วินาที
+
+    return () => clearInterval(interval);
   }, []);
 
   const handleSearch = async () => {
@@ -357,6 +378,14 @@ export const Admintool = () => {
         { wch: 12 },  // น้ำหนักสินค้า
         { wch: 15 },  // ประเภทเชื้อเพลิง
         { wch: 30 },  // หมายเหตุ
+        { wch: 15 },  //วันที่เวลา
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 15 },
         { wch: 20 },  // วันที่สร้าง
         { wch: 20 }   // อัพเดทล่าสุด
       ];
@@ -394,9 +423,12 @@ export const Admintool = () => {
       setmodalView({ show: true, job: jobData });
     }
   };
+
+
   const handleClose = (close: boolean) => {
     setmodalView((prev) => ({ ...prev, show: close }));
     setmodalCreate((prev) => ({ ...prev, show: close }));
+    setmodalMap((prev) => ({ ...prev, show: close }));
   };
 
   const getStatusColor = (status: string) => {
@@ -426,19 +458,104 @@ export const Admintool = () => {
     }
   };
 
+  const getRowHighlight = (item: TransportItem) => {
+    const receiveTime = item.date_recive ? new Date(item.date_recive) : null;
+    const deliverTime = item.date_deliver ? new Date(item.date_deliver) : null;
+    
+    // ตรวจสอบเฉพาะสถานะ "รับงาน" หรือ "พร้อมรับงาน"
+    const isTargetStatus_origin = item.status === "รับงาน" || item.status === "พร้อมรับงาน";
+    const isTargetStatus_deliver = item.status === "ถึงต้นทาง" || item.status === "เริ่มขึ้นสินค้า" || item.status === "ขึ้นสินค้าเสร็จ" || item.status === "เริ่มขนส่ง";
+    if (!isTargetStatus_origin && !isTargetStatus_deliver) {
+      return ""; 
+    }
+
+    // ตรวจสอบเวลารับสินค้า (date_recive)
+    if (receiveTime && isTargetStatus_origin) {
+      const oneHourBeforeReceive = new Date(receiveTime.getTime() - (60 * 60 * 1000));
+      
+      // เกินเวลารับสินค้าแล้ว - สีแดง
+      if (currentTime >= receiveTime) {
+        return " border-l-4 border-red-500 border-b-0 ";
+      }
+      
+      // ใกล้เวลารับสินค้า (เหลือ 1 ชั่วโมง) - สีเหลือง
+      if (currentTime >= oneHourBeforeReceive && currentTime < receiveTime) {
+        return " border-l-4 border-yellow-400 border-b-0 ";
+      }
+    }
+
+    // ตรวจสอบเวลาส่งสินค้า (date_deliver)
+    if (deliverTime && isTargetStatus_deliver) {
+      const oneHourBeforeDeliver = new Date(deliverTime.getTime() - (60 * 60 * 1000));
+      
+      // เกินเวลาส่งสินค้าแล้ว - สีแดง
+      if (currentTime >= deliverTime) {
+        return "border-l-4 border-red-500 border-b-0 ";
+      }
+      
+      // ใกล้เวลาส่งสินค้า (เหลือ 1 ชั่วโมง) - สีเหลือง
+      if (currentTime >= oneHourBeforeDeliver && currentTime < deliverTime) {
+        return "border-l-4 border-yellow-400 border-b-0 ";
+      }
+    }
+
+    return ""; 
+  };
+
   // Sort data
   const sortedData = useMemo(() => {
-    if (!sortColumn) return transportData;
-
+    // เรียงลำดับตาม highlight ก่อน แล้วค่อยเรียงตาม column ที่เลือก
     return [...transportData].sort((a, b) => {
-      const aVal = a[sortColumn];
-      const bVal = b[sortColumn];
-
-      if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
-      if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
+      // ตรวจสอบ highlight priority
+      const aHighlight = getRowHighlight(a);
+      const bHighlight = getRowHighlight(b);
+      
+      // กำหนดลำดับความสำคัญของ highlight
+      const getHighlightPriority = (highlight: string) => {
+        if (highlight.includes('border-red-500')) return 1; // สีแดง = ลำดับที่ 1 (สำคัญที่สุด)
+        if (highlight.includes('border-yellow-400')) return 2; // สีเหลือง = ลำดับที่ 2
+        return 3; // ไม่มี highlight = ลำดับที่ 3 (สำคัญน้อยที่สุด)
+      };
+      
+      const aPriority = getHighlightPriority(aHighlight);
+      const bPriority = getHighlightPriority(bHighlight);
+      
+      // เรียงตามลำดับความสำคัญ (เลขน้อย = สำคัญมาก)
+      if (aPriority !== bPriority) {
+        return aPriority - bPriority;
+      }
+      
+      // ถ้าความสำคัญเท่ากัน ให้เรียงตาม column ที่เลือก
+      if (sortColumn) {
+        const aVal = a[sortColumn];
+        const bVal = b[sortColumn];
+        
+        if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
+        if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
+        return 0;
+      }
+      
+      // ถ้าไม่มีการเลือก column และทั้งคู่ไม่มี highlight (priority = 3)
+      // ให้เรียงตาม date_recive จากมากไปน้อย (ใหม่ไปเก่า)
+      if (aPriority === 3 && bPriority === 3) {
+        const aReceiveDate = a.date_recive ? new Date(a.date_recive) : new Date(0);
+        const bReceiveDate = b.date_recive ? new Date(b.date_recive) : new Date(0);
+        
+        // เรียงจากมากไปน้อย (ใหม่ไปเก่า)
+        if (aReceiveDate > bReceiveDate) return -1;
+        if (aReceiveDate < bReceiveDate) return 1;
+      }
+      
+      // สำหรับกรณีอื่นๆ ให้เรียงตาม load_id
+      const aLoadId = a.load_id;
+      const bLoadId = b.load_id;
+      if (aLoadId < bLoadId) return -1;
+      if (aLoadId > bLoadId) return 1;
       return 0;
     });
-  }, [transportData, sortColumn, sortDirection]);
+  }, [transportData, sortColumn, sortDirection, currentTime]);
+
+  // Paging data
 
   // Paging data
   const totalPages = Math.ceil(sortedData.length / itemsPerPage);
@@ -536,7 +653,7 @@ export const Admintool = () => {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <h1 className="text-3xl font-bold text-gray-800 mb-2">
-                🚛 ระบบจัดการงานขนส่ง
+                ระบบจัดการงานขนส่ง
               </h1>
               <p className="text-gray-600">จัดการและติดตามงานขนส่งทั้งหมด</p>
             </div>
@@ -547,6 +664,13 @@ export const Admintool = () => {
               >
                 <Plus size={20} />
                 <span className="hidden sm:inline">เพิ่มงานใหม่</span>
+              </button>
+              <button 
+                onClick={() => window.open('https://lookerstudio.google.com/s/vjSdVuS7MCg', '_blank')}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow hover:shadow-md border border-gray-200"
+              >
+                <ChartPie  size={20} />
+                <span className="hidden sm:inline">แดชบอร์ด</span>
               </button>
             </div>
           </div>
@@ -995,7 +1119,17 @@ export const Admintool = () => {
             <p className="text-white mt-1">
               พบข้อมูล {transportData.length} รายการ
             </p>
+            <div className="absolute top-4 right-4 flex flex-col sm:flex-row gap-2">
+             <button
+                onClick={() => handleExcelExport()}
+                className="bg-emerald-600 border border-white hover:bg-emerald-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
+                <FileSpreadsheet  size={20} />
+                <span className="hidden sm:inline">Excel</span>
+              </button>
+            </div>
             <div className="flex justify-end items-center gap-2 text-sm text-gray-600">
+              
               <button
                 disabled={currentPage === 1}
                 onClick={() => setCurrentPage((p) => p - 1)}
@@ -1076,7 +1210,7 @@ export const Admintool = () => {
                   </div>
                 ))
               : currentData.map((item: any) => (
-                  <div key={item.id} className="border-b border-gray-200 p-4">
+                  <div key={item.id} className={`border-b border-gray-200 p-4 ${getRowHighlight(item)}`}>
                     <div className="flex justify-between items-start mb-3">
                       <div>
                         <h3 className="font-semibold text-gray-800">
@@ -1143,13 +1277,7 @@ export const Admintool = () => {
                         <Eye size={16} />
                         ดู
                       </button>
-                      {/* <button
-                      onClick={() => handleEdit(item.load_id)}
-                      className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors"
-                    >
-                      <Edit size={16} />
-                      แก้ไข
-                    </button> */}
+                     
                       <button
                         onClick={() =>
                           setDeleteAlert({ show: true, load_id: item.load_id })
@@ -1158,6 +1286,17 @@ export const Admintool = () => {
                       >
                         <Trash2 size={16} />
                         ยกเลิก
+                      </button>
+
+                      
+                    </div>
+                    <div className="mt-2 flex gap-2">
+                     <button
+                      onClick={() => setmodalMap({ show: true})}
+                      className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                    >
+                      <MapPin  size={16} />
+                        แผนที่
                       </button>
                     </div>
                   </div>
@@ -1205,8 +1344,8 @@ export const Admintool = () => {
               {/* Rows Data */}
 
               <tbody className="divide-y divide-white">
-                {loading
-                  ? // Loading skeleton rows
+                {loading 
+                  ? 
                     Array.from({ length: 5 }).map((_, index) => (
                       <tr key={`loading-${index}`} className="animate-pulse">
                         <td className="px-6 py-4">
@@ -1247,7 +1386,7 @@ export const Admintool = () => {
                   : currentData.map((item) => (
                       <tr
                         key={item.load_id}
-                        className="hover:bg-gray-100 transition-colors"
+                        className={`hover:bg-gray-100 transition-colors ${getRowHighlight(item)}`}
                       >
                         <td className="px-6 py-4 text-xs font-medium text-gray-800">
                           {item.load_id}
@@ -1312,11 +1451,14 @@ export const Admintool = () => {
                             >
                               <Eye size={16} />
                             </button>
-                            {/* <button className="bg-yellow-500 hover:bg-yellow-600 text-white p-2 rounded-lg">
-                        <Edit size={16} 
-                        onClick={() => handleEdit(item.load_id)}
+                            
+                            <button className="bg-yellow-500 hover:bg-yellow-600 text-white p-2 rounded-lg">
+                        <MapPin size={16} 
+                       onClick={() => setmodalMap({ show: true})}
                         />
-                      </button> */}
+                      </button>
+
+
                             <button className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg">
                               <Trash2
                                 size={16}
@@ -1328,6 +1470,9 @@ export const Admintool = () => {
                                 }
                               />
                             </button>
+
+                            
+
                           </div>
                         </td>
                       </tr>
@@ -1432,6 +1577,15 @@ export const Admintool = () => {
           refreshTable={() => handleSearch()}
         />
       )}
+      
+      {modalMap.show && (
+        <AdminMap
+         jobView={modalView.job}
+          closeModal={(close: boolean) => handleClose(close)}
+          refreshTable={() => handleSearch()}
+        />
+      )}
+
     </div>
   );
 };
