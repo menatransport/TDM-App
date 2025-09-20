@@ -223,20 +223,19 @@ useEffect(() => {
         return;
       }
 
-      // ขอ GPS permission ก่อน login
-      let location = currentLocation;
+      // let location = currentLocation;
       
-      if (!location || gpsPermission !== 'granted') {
-        try {
-          console.log('🔍 Requesting GPS permission...');
-          location = await requestGPSPermission();
-          console.log('✅ GPS permission granted:', location);
-        } catch (gpsError: any) {
-          setError(`❌ จำเป็นต้องเปิด GPS เพื่อใช้งานระบบ: ${gpsError.message}`);
-          setIsLoading(false);
-          return;
-        }
-      }
+      // if (!location || gpsPermission !== 'granted') {
+      //   try {
+      //     console.log('🔍 Requesting GPS permission...');
+      //     location = await requestGPSPermission();
+      //     console.log('✅ GPS permission granted:', location);
+      //   } catch (gpsError: any) {
+      //     setError(`❌ จำเป็นต้องเปิด GPS เพื่อใช้งานระบบ: ${gpsError.message}`);
+      //     setIsLoading(false);
+      //     return;
+      //   }
+      // }
 
       // ถ้าได้ GPS แล้วค่อย login
       console.log('🔐 Proceeding with login...');
@@ -470,7 +469,7 @@ return (
             {/* Login button */}
             <button
               onClick={handleLogin}
-              disabled={isLoading || gpsPermission === 'denied' || (!currentLocation && gpsPermission !== 'granted')}
+              // disabled={isLoading || gpsPermission === 'denied' || (!currentLocation && gpsPermission !== 'granted')}
               className={`w-full mt-10 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none group ${
                 gpsPermission === 'granted' && currentLocation
                   ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600'

@@ -18,6 +18,7 @@ import {
   Grid3X3,
   Briefcase,
   Truck,
+  ChartPie,
 } from "lucide-react";
 import {
   Dialog,
@@ -45,10 +46,15 @@ export const Jobcomponent = ({ onLoadingChange }: TicketProps) => {
   const [isExpanded_2, setIsExpanded_2] = useState(false);
   const [isExpanded_3, setIsExpanded_3] = useState(false);
   const [isExpanded_finished, setIsExpanded_finished] = useState(false);
+  const [statsDialog, setStatsDialog] = useState(false);
+  const [username, setUsername] = useState("");
   useEffect(() => {
     const fetchData = async () => {
       try {
         const access_token = localStorage.getItem("access_token");
+        const username = localStorage.getItem("user");
+        setUsername(username  || "");
+
         const res_data = await fetch("/api/jobs", {
           method: "GET",
           headers: {
@@ -483,7 +489,39 @@ export const Jobcomponent = ({ onLoadingChange }: TicketProps) => {
 
 
         <hr className="my-4 border-gray-200" />
+        
+        {/* External Statistics Button */}
+        <div className="flex flex-row items-start gap-2 mx-2">
+          <button 
+            onClick={() => {
+              // ตรวจสอบว่ามี username หรือไม่
+              if (!username) {
+                alert("ไม่พบข้อมูลผู้ใช้งาน กรุณาเข้าสู่ระบบใหม่");
+                return;
+              }
+              const filterValue = `include%EE%80%800%EE%80%80EQ%EE%80%80${encodeURIComponent(username)}`;
+              
+              const paramObj = {
+                "df22": filterValue
+              };
 
+              const jsonString = JSON.stringify(paramObj);
+              
+              const encodedParams = encodeURIComponent(jsonString);
+              
+
+              const url = `https://lookerstudio.google.com/reporting/0c8e5234-e485-41cb-85a9-45506a773b30/page/p_nhftjp31vd?params=${encodedParams}`;
+              
+              console.log('Final URL:', url);
+              window.open(url, "_blank");
+            }}
+            className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-4 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
+          >
+            <ChartPie className="w-4 h-4" /> 
+            ดูสถิติขนส่ง
+          </button>
+
+        </div>
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mb-6">
           <div
             className="flex flex-row items-center gap-4 p-4 cursor-pointer hover:bg-gray-50 transition-colors"

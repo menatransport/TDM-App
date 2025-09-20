@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   MapPin,
   Truck,
@@ -41,6 +41,15 @@ export const TimelineStep = ({
   const [selectedStatus, setSelectedStatus] = useState<StatusItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [imageStatus, setImagesStatus] = useState<File[]>([]);
+  const [currentTime, setCurrentTime] = useState<string>(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  });
   type StatusItem = {
     key: keyof Typedata;
     title: string;
@@ -49,6 +58,22 @@ export const TimelineStep = ({
     color: string;
   };
   const router = useRouter();
+
+  // อัปเดตเวลาปัจจุบันทุกนาที
+  useEffect(() => {
+    const updateCurrentTime = () => {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      setCurrentTime(`${year}-${month}-${day}T${hours}:${minutes}`);
+    };
+
+    const interval = setInterval(updateCurrentTime, 30000); // อัปเดตทุก 30 วินาที
+    return () => clearInterval(interval);
+  }, []);
 
   const statusConfig: StatusItem[] = [
     {
@@ -401,31 +426,16 @@ export const TimelineStep = ({
                     <span className="font-medium">บันทึกเวลา</span>
                   </div>
                   <div className="space-y-2">
-                    <input
+                    <input 
                       type="datetime-local"
-                      id={status.key}
-                      min={(() => {
-                        const now = new Date();
-                        return now.toISOString().slice(0, 16);
-                      })()}
-                      max={(() => {
-                        const now = new Date();
-                        return now.toISOString().slice(0, 16);
-                      })()}
-                      value={(() => {
-                        const now = new Date();
-                        return now.toISOString().slice(0, 16);
-                      })()}
-                      onChange={(e) => {
-                        const now = new Date();
-                        const currentTime = now.toISOString().slice(0, 16);
-                        const formatted = formatOnsend(e.target.value);
-                        formchange(db.load_id, status.key, formatted);
+                      onFocus={() => {
+                        const shouldOpenLine = confirm("ระบบบันทึกเวลาปัจจุบันให้โดยอัตโนมัติไม่สามารถเปลี่ยนแปลงได้\nหากต้องการเปลี่ยนแปลงโปรดแจ้งกลุ่ม Line\n\nกด 'ตกลง' เพื่อแจ้งขอเปลี่ยนแปลง");
+                        if (shouldOpenLine) {
+                          window.open("https://line.me/ti/g/rmCAQxMY_U", "_blank");
+                        }
                       }}
-                      onFocus={(e) => {
-                        const now = new Date();
-                        e.target.value = now.toISOString().slice(0, 16);
-                      }}
+                      id={status.key} 
+                      value={currentTime}               
                       className="w-full appearance-none rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-all"
                     />
                   </div>

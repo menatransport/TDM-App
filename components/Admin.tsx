@@ -1452,11 +1452,11 @@ export const Admintool = () => {
                               <Eye size={16} />
                             </button>
                             
-                            <button className="bg-yellow-500 hover:bg-yellow-600 text-white p-2 rounded-lg">
+                            {/* <button className="bg-yellow-500 hover:bg-yellow-600 text-white p-2 rounded-lg">
                         <MapPin size={16} 
                        onClick={() => setmodalMap({ show: true})}
                         />
-                      </button>
+                      </button> */}
 
 
                             <button className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg">
