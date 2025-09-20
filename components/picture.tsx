@@ -80,7 +80,7 @@ useEffect(() => {
       });
 
       const getimages = await res.json();
-      console.log("Fetched images from API:", getimages);
+      // console.log("Fetched images from API:", getimages);
       
       // เพิ่ม id ที่ unique ให้กับแต่ละรูป
       const imagesWithId = (getimages.images || []).map((image: any, index: number) => ({
@@ -88,7 +88,7 @@ useEffect(() => {
         id: image.key || `db-image-${index}-${Date.now()}`, // ใช้ key เป็น id หรือสร้าง id ใหม่
       }));
       
-      console.log("Images with ID:", imagesWithId);
+      // console.log("Images with ID:", imagesWithId);
       setDatabaseImages(imagesWithId);
       onLoadingChange(false)
     } catch (error) {
@@ -103,12 +103,10 @@ useEffect(() => {
 
   // Cleanup function เมื่อ component unmount
   return () => {
-    console.log('🧹 Cleaning up image URLs...');
     // ล้าง object URLs เพื่อปล่อย memory
     uploadImages.forEach(image => {
       if (image.url && image.url.startsWith('blob:')) {
         URL.revokeObjectURL(image.url);
-        console.log(`🗑️ Revoked URL for: ${image.name}`);
       }
     });
   };
@@ -186,10 +184,10 @@ const handleUpload = async () => {
         
         // Compress ไฟล์ที่ใหญ่กว่า 1MB
         if (fileSizeMB > 1) {
-          console.log(`📦 กำลัง compress ${img.name} (${fileSizeMB.toFixed(2)}MB)`);
+          // console.log(`📦 กำลัง compress ${img.name} (${fileSizeMB.toFixed(2)}MB)`);
           processedFile = await compressImage(img.file, 0.8);
           const newSizeMB = processedFile.size / (1024 * 1024);
-          console.log(`✅ ลดขนาดเหลือ ${newSizeMB.toFixed(2)}MB`);
+          // console.log(`✅ ลดขนาดเหลือ ${newSizeMB.toFixed(2)}MB`);
         }
         
         return {
@@ -231,7 +229,7 @@ const handleUpload = async () => {
     };
 
     const batches = createOptimizedBatches(validFiles);
-    console.log(`📦 แบ่งเป็น ${batches.length} batches สำหรับ ${validFiles.length} ไฟล์`);
+    // console.log(`📦 แบ่งเป็น ${batches.length} batches สำหรับ ${validFiles.length} ไฟล์`);
 
     let successCount = 0;
     let failCount = 0;
@@ -253,7 +251,7 @@ const handleUpload = async () => {
         });
 
         if (res.ok) {
-          console.log(`✅ Batch ${batchIndex + 1} สำเร็จ`);
+          // console.log(`✅ Batch ${batchIndex + 1} สำเร็จ`);
           return { success: batch.length, fail: 0 };
         } else {
           console.error(`❌ Batch ${batchIndex + 1} ล้มเหลว:`, res.status);
@@ -292,16 +290,15 @@ const handleUpload = async () => {
     // แสดงผลรวม
     if (successCount > 0) {
       if (failCount === 0) {
-        console.log('🎉 อัปโหลดสำเร็จทั้งหมด!');
-        alert(`✅ อัปโหลดสำเร็จทั้งหมด ${successCount} ไฟล์!`);
+        // console.log('🎉 อัปโหลดสำเร็จทั้งหมด!');
+        alert(`✅ อัปโหลดสำเร็จทั้งหมด ${successCount} รูป!`);
       } else {
-        console.log(`⚠️ อัปโหลดเสร็จสิ้น: สำเร็จ ${successCount}, ล้มเหลว ${failCount}`);
-        alert(`⚠️ อัปโหลดเสร็จสิ้น: สำเร็จ ${successCount} ไฟล์, ล้มเหลว ${failCount} ไฟล์`);
+        // console.log(`⚠️ อัปโหลดเสร็จสิ้น: สำเร็จ ${successCount}, ล้มเหลว ${failCount}`);
+        alert(`⚠️ อัปโหลดเสร็จสิ้น: สำเร็จ ${successCount} รูป, ล้มเหลว ${failCount} รูป`);
       }
-      
 
-        location.reload();
-  
+      location.reload();
+
       
     } else {
       console.log('❌ การอัปโหลดล้มเหลวทั้งหมด');
@@ -421,13 +418,7 @@ const validateUploadData = () => {
 
   // จัดการการลบรูป
   const handleDeleteImage = (imageId: string, imageType: 'upload' | 'database') => {
-    console.log(`กำลังลบรูป - ID: ${imageId}, Type: ${imageType}`);
-    
-    if (imageType === 'database') {
-      const image = databaseImages.find(img => img.id === imageId);
-      console.log('รูปที่พบ:', image);
-      console.log('รูปทั้งหมดในฐานข้อมูล:', databaseImages.map(img => ({ id: img.id, name: img.name })));
-    }
+    // console.log(`กำลังลบรูป - ID: ${imageId}, Type: ${imageType}`);
     
     setDeleteAlert({
       show: true,
@@ -445,24 +436,24 @@ const confirmDelete = async () => {
     const imageToDelete = uploadImages.find(img => img.id === imageId);
     if (imageToDelete && imageToDelete.url && imageToDelete.url.startsWith('blob:')) {
       URL.revokeObjectURL(imageToDelete.url);
-      console.log(`🗑️ Revoked URL for deleted image: ${imageToDelete.name}`);
+      // console.log(`🗑️ Revoked URL for deleted image: ${imageToDelete.name}`);
     }
     
     // ลบรูปจาก uploadImages
     setUploadImages((prev) => prev.filter((img) => img.id !== imageId));
-    console.log(`✅ ลบรูปจาก upload list: ${imageId}`);
+    // console.log(`✅ ลบรูปจาก upload list: ${imageId}`);
   } else {
     // ค้นหารูปจาก databaseImages โดยใช้ imageId
     const image = databaseImages.find((img) => img.id === imageId);
     
     if (!image) {
       console.error("ไม่พบรูปภาพในระบบ - imageId:", imageId);
-      console.log("Available images:", databaseImages.map(img => ({ id: img.id, name: img.name, key: img.key })));
+      // console.log("Available images:", databaseImages.map(img => ({ id: img.id, name: img.name, key: img.key })));
       alert("ไม่พบรูปภาพในระบบ");
       return;
     }
 
-    console.log("พบรูปภาพที่จะลบ:", { id: image.id, name: image.name, key: image.key });
+    // console.log("พบรูปภาพที่จะลบ:", { id: image.id, name: image.name, key: image.key });
 
     // ตรวจสอบว่ามี key หรือไม่
     if (!image.key) {
@@ -479,7 +470,7 @@ const confirmDelete = async () => {
         body: JSON.stringify({ key: image.key }),
       });
 
-      console.log("Response status:", res.status);
+      // console.log("Response status:", res.status);
 
       if (!res.ok) {
         const errorText = await res.text();
@@ -487,7 +478,7 @@ const confirmDelete = async () => {
         throw new Error(`ลบไฟล์ไม่สำเร็จ: ${res.status} ${errorText}`);
       }
 
-      console.log("ลบรูปภาพสำเร็จ, กำลังรีเฟรชหน้า...");
+      // console.log("ลบรูปภาพสำเร็จ, กำลังรีเฟรชหน้า...");
       
       // อัปเดต state ก่อนรีเฟรช (เพื่อให้ UI ตอบสนองเร็วขึ้น)
       setDatabaseImages(prev => prev.filter(img => img.id !== imageId));
@@ -510,9 +501,9 @@ const confirmDelete = async () => {
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
-    
-    console.log('📁 เริ่มประมวลผลไฟล์:', files.length, 'ไฟล์');
-    
+
+    // console.log('📁 เริ่มประมวลผลไฟล์:', files.length, 'ไฟล์');
+
     if (files.length === 0) {
       console.warn('ไม่มีไฟล์ที่เลือก');
       return;
@@ -525,7 +516,7 @@ const confirmDelete = async () => {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       
-      console.log(`📄 กำลังประมวลผลไฟล์ ${i + 1}/${files.length}:`, file.name);
+      // console.log(`📄 กำลังประมวลผลไฟล์ ${i + 1}/${files.length}:`, file.name);
 
       try {
         // ตรวจสอบประเภทไฟล์
@@ -537,10 +528,10 @@ const confirmDelete = async () => {
         }
         
         // ตรวจสอบขนาดไฟล์
-        if (file.size > 5 * 1024 * 1024) {
+        if (file.size > 10 * 1024 * 1024) {
           const sizeMB = (file.size / 1024 / 1024).toFixed(1);
-          console.warn(`❌ ไฟล์ "${file.name}" ขนาด ${sizeMB}MB เกิน 5MB`);
-          alert(`ไฟล์ "${file.name}" มีขนาด ${sizeMB}MB ซึ่งเกิน 5MB`);
+          // console.warn(`❌ ไฟล์ "${file.name}" ขนาด ${sizeMB}MB เกิน 10MB`);
+          alert(`ไฟล์ "${file.name}" มีขนาด ${sizeMB}MB ซึ่งเกิน 10MB กรุณาเลือกไฟล์ใหม่`);
           errorCount++;
           continue;
         }
@@ -561,7 +552,7 @@ const confirmDelete = async () => {
         validImages.push(newImage);
         processedCount++;
         
-        console.log(`✅ ประมวลผลสำเร็จ: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+        // console.log(`✅ ประมวลผลสำเร็จ: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
         
         // หน่วงเวลาเล็กน้อยเพื่อให้ UI ไม่ค้าง (ทุก 3 ไฟล์)
         if (i > 0 && (i + 1) % 3 === 0) {
@@ -601,7 +592,7 @@ const confirmDelete = async () => {
     }
 
     // แสดงผลสรุป
-    console.log(`🎯 ประมวลผลเสร็จสิ้น: สำเร็จ ${processedCount} ไฟล์, ผิดพลาด ${errorCount} ไฟล์`);
+    // console.log(`🎯 ประมวลผลเสร็จสิ้น: สำเร็จ ${processedCount} ไฟล์, ผิดพลาด ${errorCount} ไฟล์`);
     
     if (processedCount > 0) {
       if (errorCount === 0) {
@@ -723,7 +714,7 @@ function removeFileExtension(filename: string): string {
               </h2>
               
             </div>
-            <p className="text-xs text-gray-500">⚠️ สามารถอัปโหลดภาพได้หลายภาพในครั้งเดียว (แนะนำไม่เกิน 10 รูป)</p>
+            <p className="text-xs text-gray-500">⚠️ สามารถอัปโหลดภาพได้หลายภาพในครั้งเดียว</p>
 
             {/* Zone การอัปโหลด */}
             <div
@@ -737,7 +728,7 @@ function removeFileExtension(filename: string): string {
                 อัปโหลดหรือถ่ายรูปที่นี่
               </p>
               <p className="text-xs text-gray-500 mb-1">
-                รองรับไฟล์ JPG, PNG (ขนาดไม่เกิน 5MB)
+                รองรับไฟล์ JPG, PNG (ขนาดไม่เกิน 10MB)
               </p>
               <p className="text-xs text-blue-600">
                 💡 ระบบจะประมวลผลทีละไฟล์เพื่อป้องกันการค้าง

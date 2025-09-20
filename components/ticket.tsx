@@ -81,6 +81,10 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
       const data = await res_data.json();
       // console.log("data ticket : ", data);
       setDatajobs(data);
+      if(data.status === "จัดส่งแล้ว (POD)") {
+        document.getElementById("copySummaryBtn")?.focus();
+        document.getElementById("copySummaryBtn")?.classList.add("animate-bounce");
+      }
       setTickets(data.ticket);
 
       setPallet({ ...data.palletdata, load_id: data.load_id });
@@ -237,6 +241,9 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
         icon: "success",
         confirmButtonText: "ตกลง",
       });
+
+
+
     } catch (error) {
       console.error("เกิดข้อผิดพลาดในการเชื่อมต่อ:", error);
       Swal.fire({
@@ -1278,6 +1285,7 @@ summaryText = `🚨สรุปการทำงาน🚨
             </Button>
 
             <Button
+            id="copySummaryBtn"
               onClick={handleCopySummary}
               disabled={isLoading}
               className={`flex justify-center items-center z-50 h-15 transition-all duration-200 space-x-2 px-4 py-5 shadow-lg 
