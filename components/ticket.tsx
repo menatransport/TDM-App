@@ -227,6 +227,9 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
       // รีเฟรชข้อมูลและรีเซ็ต state
       await fetchData();
       setTimeline({});
+      
+      // ส่ง event เพื่อรีเซ็ต timeline component
+      window.dispatchEvent(new Event('timeline-reset'));
 
       Swal.fire({
         title: "บันทึกข้อมูลสำเร็จ",
@@ -765,7 +768,12 @@ summaryText = `🚨สรุปการทำงาน🚨
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                <TimelineStep db={tickets} onTimeChange={setTimeline} />
+                <TimelineStep 
+                  db={tickets} 
+                  onTimeChange={setTimeline}
+                  locatRecive={job.locat_recive}
+                  onSaveComplete={() => window.dispatchEvent(new Event('timeline-reset'))}
+                />
               </div>
             </CardContent>
           </Card>

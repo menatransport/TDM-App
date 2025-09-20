@@ -34,15 +34,18 @@ export const TimelineStep = ({
   db,
   onTimeChange,
   locatRecive,
+  onSaveComplete,
 }: {
   db: Typedata;
   onTimeChange: any;
   locatRecive?: string;
+  onSaveComplete?: () => void;
 }) => {
   const [selectedStatus, setSelectedStatus] = useState<StatusItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [imageStatus, setImagesStatus] = useState<File[]>([]);
   const [stamptime,setStamptime] = useState<string>('');
+  const [isStamping, setIsStamping] = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<string>(() => {
     const now = new Date();
     const year = now.getFullYear();
@@ -73,9 +76,26 @@ export const TimelineStep = ({
       setCurrentTime(`${year}-${month}-${day}T${hours}:${minutes}`);
     };
 
-    const interval = setInterval(updateCurrentTime, 30000); // อัปเดตทุก 30 วินาที
+    const interval = setInterval(updateCurrentTime, 1000); // อัปเดตทุก 1 วินาที
     return () => clearInterval(interval);
   }, []);
+
+  // Effect เพื่อ reset stamp เมื่อ save เสร็จ
+  useEffect(() => {
+    if (onSaveComplete) {
+      const resetStamp = () => {
+        setStamptime('');
+        setIsStamping(false);
+      };
+      
+      // เรียก resetStamp เมื่อมีการ save สำเร็จ
+      window.addEventListener('timeline-reset', resetStamp);
+      
+      return () => {
+        window.removeEventListener('timeline-reset', resetStamp);
+      };
+    }
+  }, [onSaveComplete]);
 
   const statusConfig: StatusItem[] = [
     {
@@ -259,10 +279,9 @@ export const TimelineStep = ({
   };
 
   const formchange = (id: string, key: string, date: string) => {
-
+    setIsStamping(true);
 
     fetchImages(id).then((fetchImages) => {
-  
       
       if (
         statusConfig.find((status) => status.key === key)?.title ==
@@ -271,7 +290,9 @@ export const TimelineStep = ({
         const hasOriginImages = fetchImages.some((img: any) => img.category === "origin");
         if (!hasOriginImages) {
           alert("โปรดแนบรูปภาพต้นทาง อย่างน้อย 1 รูปภาพ");
+          setIsStamping(false);
           router.push(`/picture?id=${id}&status=${statusConfig.find((status) => status.key === key)?.title}`);
+          return;
         }
       } else if (
         statusConfig.find((status) => status.key === key)?.title ==
@@ -281,15 +302,23 @@ export const TimelineStep = ({
         const hasDestinationImages = fetchImages.some((img: any) => img.category === "destination");
         if (!hasDestinationImages) {
           alert("โปรดแนบรูปภาพปลายทาง อย่างน้อย 1 รูปภาพ");
+          setIsStamping(false);
           router.push(`/picture?id=${id}&status=${statusConfig.find((status) => status.key === key)?.title}`);
+          return;
         }
       }
-      setStamptime(date);
-      onTimeChange({
-        load_id: id,
-        [key]: date,
-      });
-
+      
+      // Simulate stamping animation delay
+      setTimeout(() => {
+        setStamptime(date);
+        onTimeChange({
+          load_id: id,
+          [key]: date,
+        });
+        setIsStamping(false);
+      }, 800); // 0.8 second delay for stamp effect
+    }).catch(() => {
+      setIsStamping(false);
     });
   };
 
@@ -433,14 +462,30 @@ export const TimelineStep = ({
                     {!stamptime && (
                       <button
                         onClick={() => {
-                          const now = new Date();
-                          const formattedTime = formatOnsend(now.toISOString());
-                          formchange(db.load_id, status.key, formattedTime);
+                          if (!isStamping) {
+                            const now = new Date();
+                            const formattedTime = formatOnsend(now.toISOString());
+                            formchange(db.load_id, status.key, formattedTime);
+                          }
                         }}
-                        className="group flex flex-col items-center justify-center w-24 h-24 bg-gradient-to-br from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
+                        disabled={isStamping}
+                        className={`group flex flex-col items-center justify-center w-24 h-24 rounded-2xl shadow-lg transition-all duration-200 ${
+                          isStamping 
+                            ? 'bg-gradient-to-br from-gray-400 to-gray-500 cursor-not-allowed transform scale-95' 
+                            : 'bg-gradient-to-br from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white hover:shadow-xl hover:-translate-y-1 active:transform active:scale-95 active:translate-y-0'
+                        }`}
                       >
-                        <Stamp className="w-10 h-10 mb-2 group-hover:scale-110 transition-transform" />
-                        <span className="text-sm font-medium">แสตมป์เวลา</span>
+                        {isStamping ? (
+                          <>
+                            <div className="w-10 h-10 mb-2 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+                            <span className="text-sm font-medium text-white">กำลังแสตมป์...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Stamp className="w-10 h-10 mb-2 group-hover:scale-110 transition-transform text-white" />
+                            <span className="text-sm font-medium text-white">แสตมป์เวลา</span>
+                          </>
+                        )}
                       </button>
                     )}
 
@@ -494,7 +539,7 @@ export const TimelineStep = ({
                   <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-lg">
                     
                     <p className="text-xs text-orange-700 text-center">
-                      หากต้องการแก้ไขเวลา กรุณา
+                      หากเวลาไม่ถูกต้อง และต้องการแก้ไขเวลา กรุณา
                       <button
                         onClick={() => {
                           window.open("https://line.me/ti/g/rmCAQxMY_U", "_blank");
