@@ -596,7 +596,7 @@ summaryText = `🚨สรุปการทำงาน🚨
               <div className="relative flex justify-between items-start">
                 <div>
                   <CardTitle className="text-lg font-bold">
-                    📦{job.load_id}
+                    🆔{job.load_id}
                   </CardTitle>
                   <p className="ml-5 text-dark/90 text-xs font-medium">
                     {job.h_plate} • {job.t_plate}
@@ -804,9 +804,9 @@ summaryText = `🚨สรุปการทำงาน🚨
                   {isOpenPallet && (
                     <div className="px-4 pb-4 space-y-4 animate-in slide-in-from-top-2 duration-300">
                       {/* แลกเปลี่ยนพาเลท */}
-                      <div className="bg-blue-50 rounded-lg p-3">
-                        <label className="block text-sm font-medium text-blue-800 mb-2">
-                          🔄 แลกเปลี่ยนพาเลท
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <label className="block text-sm font-semibold text-gray-800 mb-2">
+                          แลกเปลี่ยนพาเลท
                         </label>
                         <div className="flex items-center space-x-3">
                           <button
@@ -827,7 +827,7 @@ summaryText = `🚨สรุปการทำงาน🚨
                               type="number"
                               value={pallet.change_pallet || "0"}
                               onChange={(e) => handleOnchange_pallet("change_pallet", e.target.value)}
-                              className="w-full text-center text-xl font-bold py-3 bg-white border-2 border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              className="w-full text-center text-xl font-bold py-3 bg-white border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent"
                               min="0"
                             />
                           
@@ -847,9 +847,9 @@ summaryText = `🚨สรุปการทำงาน🚨
                       </div>
 
                       {/* โอนพาเลท */}
-                      <div className="bg-purple-50 rounded-lg p-3">
-                        <label className="block text-sm font-medium text-purple-800 mb-2">
-                          📤 โอนพาเลท
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <label className="block text-sm font-semibold text-gray-800 mb-2">
+                          โอนพาเลท
                         </label>
                         <div className="flex items-center space-x-3">
                           <button
@@ -870,7 +870,7 @@ summaryText = `🚨สรุปการทำงาน🚨
                               type="number"
                               value={pallet.tranfer_pallet || "0"}
                               onChange={(e) => handleOnchange_pallet("tranfer_pallet", e.target.value)}
-                              className="w-full text-center text-xl font-bold py-3 bg-white border-2 border-purple-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                              className="w-full text-center text-xl font-bold py-3 bg-white border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent"
                               min="0"
                             />
                            
@@ -890,9 +890,9 @@ summaryText = `🚨สรุปการทำงาน🚨
                       </div>
 
                       {/* นำฝากพาเลท */}
-                      <div className="bg-orange-50 rounded-lg p-3">
-                        <label className="block text-sm font-medium text-orange-800 mb-2">
-                          📥 นำฝากพาเลท
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <label className="block text-sm font-semibold text-gray-800 mb-2">
+                          นำฝากพาเลท
                         </label>
                         <div className="flex items-center space-x-3">
                           <button
@@ -913,7 +913,7 @@ summaryText = `🚨สรุปการทำงาน🚨
                               type="number"
                               value={pallet.drop_pallet || "0"}
                               onChange={(e) => handleOnchange_pallet("drop_pallet", e.target.value)}
-                              className="w-full text-center text-xl font-bold py-3 bg-white border-2 border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                              className="w-full text-center text-xl font-bold py-3 bg-white border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent"
                               min="0"
                             />
                      
@@ -933,9 +933,9 @@ summaryText = `🚨สรุปการทำงาน🚨
                       </div>
 
                       {/* รับคืนพาเลท */}
-                      <div className="bg-green-50 rounded-lg p-3">
-                        <label className="block text-sm font-medium text-green-800 mb-2">
-                          📬 รับคืนพาเลท
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <label className="block text-sm font-semibold text-gray-800 mb-2">
+                          รับคืนพาเลท
                         </label>
                         <div className="flex items-center space-x-3">
                           <button
@@ -956,7 +956,7 @@ summaryText = `🚨สรุปการทำงาน🚨
                               type="number"
                               value={pallet.return_pallet || "0"}
                               onChange={(e) => handleOnchange_pallet("return_pallet", e.target.value)}
-                              className="w-full text-center text-xl font-bold py-3 bg-white border-2 border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                              className="w-full text-center text-xl font-bold py-3 bg-white border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent"
                               min="0"
                             />
                           
@@ -976,9 +976,9 @@ summaryText = `🚨สรุปการทำงาน🚨
                       </div>
 
                       {/* ยืมพาเลทลูกค้า */}
-                      <div className="bg-yellow-50 rounded-lg p-3">
-                        <label className="block text-sm font-medium text-yellow-800 mb-2">
-                          🤝 ยืมพาเลทลูกค้า
+                      <div className="bg-gray-50 border-2 border-red-300 border-dashed rounded-lg p-3 shadow-md">
+                        <label className="block text-sm font-semibold text-gray-800 mb-2">
+                          ยืมพาเลทลูกค้า
                         </label>
                         <div className="flex items-center space-x-3">
                           <button
@@ -999,7 +999,7 @@ summaryText = `🚨สรุปการทำงาน🚨
                               type="number"
                               value={pallet.borrow_customer_pallet || "0"}
                               onChange={(e) => handleOnchange_pallet("borrow_customer_pallet", e.target.value)}
-                              className="w-full text-center text-xl font-bold py-3 bg-white border-2 border-yellow-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                              className="w-full text-center text-xl font-bold py-3 bg-white border-2 border-red-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
                               min="0"
                             />
                     
@@ -1019,9 +1019,9 @@ summaryText = `🚨สรุปการทำงาน🚨
                       </div>
 
                       {/* คืนพาเลทลูกค้า */}
-                      <div className="bg-teal-50 rounded-lg p-3">
-                        <label className="block text-sm font-medium text-teal-800 mb-2">
-                          🔄 คืนพาเลทลูกค้า
+                      <div className="bg-gray-50 border-2 border-red-300 border-dashed rounded-lg p-3 shadow-md">
+                        <label className="block text-sm font-semibold text-gray-800 mb-2">
+                          คืนพาเลทลูกค้า
                         </label>
                         <div className="flex items-center space-x-3">
                           <button
@@ -1042,7 +1042,7 @@ summaryText = `🚨สรุปการทำงาน🚨
                               type="number"
                               value={pallet.return_customer_pallet || "0"}
                               onChange={(e) => handleOnchange_pallet("return_customer_pallet", e.target.value)}
-                              className="w-full text-center text-xl font-bold py-3 bg-white border-2 border-teal-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                              className="w-full text-center text-xl font-bold py-3 bg-white border-2 border-red-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
                               min="0"
                             />
             
@@ -1062,9 +1062,9 @@ summaryText = `🚨สรุปการทำงาน🚨
                       </div>
 
                       {/* คำแนะนำ */}
-                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                        <p className="text-sm text-amber-800 flex items-start space-x-2">
-                          <span className="text-amber-600 font-semibold">⚠️</span>
+                      <div className="bg-red-100 rounded-lg p-3 shadow-md">
+                        <p className="text-sm text-red-800 flex items-start space-x-2">
+                          <span className="text-red-600 font-semibold">⚠️</span>
                           <span>การยืม-ฝากพาเลทโปรดแจ้งเจ้าหน้าที่ให้รับทราบ</span>
                         </p>
                       </div>

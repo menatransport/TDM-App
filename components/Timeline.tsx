@@ -42,6 +42,7 @@ export const TimelineStep = ({
   const [selectedStatus, setSelectedStatus] = useState<StatusItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [imageStatus, setImagesStatus] = useState<File[]>([]);
+  const [stamptime,setStamptime] = useState<string>('');
   const [currentTime, setCurrentTime] = useState<string>(() => {
     const now = new Date();
     const year = now.getFullYear();
@@ -283,7 +284,7 @@ export const TimelineStep = ({
           router.push(`/picture?id=${id}&status=${statusConfig.find((status) => status.key === key)?.title}`);
         }
       }
-
+      setStamptime(date);
       onTimeChange({
         load_id: id,
         [key]: date,
@@ -428,52 +429,70 @@ export const TimelineStep = ({
                   </div>
                   
                   <div className="flex items-center justify-center space-x-4">
-                    {/* Stamp Time Button */}
-                    <button
-                      onClick={() => {
-                        const now = new Date();
-                        const formattedTime = formatOnsend(now.toISOString());
-                        formchange(db.load_id, status.key, formattedTime);
-                      }}
-                      className="group flex flex-col items-center justify-center w-24 h-24 bg-gradient-to-br from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
-                    >
-                      <Stamp className="w-8 h-8 mb-1 group-hover:scale-110 transition-transform" />
-                      <span className="text-xs font-medium">บันทึก</span>
-                    </button>
+                    {/* Stamp Time Button - แสดงเฉพาะเมื่อยังไม่มีเวลา */}
+                    {!stamptime && (
+                      <button
+                        onClick={() => {
+                          const now = new Date();
+                          const formattedTime = formatOnsend(now.toISOString());
+                          formchange(db.load_id, status.key, formattedTime);
+                        }}
+                        className="group flex flex-col items-center justify-center w-24 h-24 bg-gradient-to-br from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
+                      >
+                        <Stamp className="w-10 h-10 mb-2 group-hover:scale-110 transition-transform" />
+                        <span className="text-sm font-medium">แสตมป์เวลา</span>
+                      </button>
+                    )}
 
-                    {/* Cancel Button */}
-                    <button
-                      onClick={() => {
-                        const shouldCancel = confirm("ต้องการยกเลิกการบันทึกเวลานี้หรือไม่?");
-                        if (shouldCancel) {
-                          // สามารถเพิ่มฟังก์ชันยกเลิกที่นี่ได้
-                          console.log("ยกเลิกการบันทึกเวลาสำหรับ:", status.title);
-                        }
-                      }}
-                      className="group flex flex-col items-center justify-center w-24 h-24 bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
-                    >
-                      <X className="w-8 h-8 mb-1 group-hover:scale-110 transition-transform" />
-                      <span className="text-xs font-medium">ยกเลิก</span>
-                    </button>
+                    {/* Cancel Button - แสดงเฉพาะเมื่อมีเวลาแล้ว */}
+                    
                   </div>
 
-                  {/* แสดงเวลาปัจจุบัน */}
-                  <div className="mt-3 text-center">
-                    <p className="text-xs text-gray-500">เวลาปัจจุบัน</p>
-                    <p className="text-sm font-medium text-gray-700">
-                      {new Date().toLocaleString("th-TH", {
-                        year: "numeric",
-                        month: "short", 
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        second: "2-digit"
-                      })}
-                    </p>
-                  </div>
+                  {/* แสดงเวลาที่บันทึก - แสดงเฉพาะเมื่อมีเวลา */}
+                  {stamptime && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+
+                          <input 
+                            type="text" 
+                            value={formatDateTime(stamptime)} 
+                            disabled 
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 font-medium cursor-not-allowed focus:outline-none" 
+                          />
+                        </div>
+                        <div className="ml-3">
+                          <button
+                            onClick={() => {
+                              const shouldCancel = confirm("ต้องการป้อนเวลาปัจจุบันใหม่หรือไม่?");
+                              if (shouldCancel) {
+                                setStamptime('');
+                                onTimeChange({
+                                  load_id: db.load_id,
+                                  [status.key]: "",
+                                });
+                              }
+                            }}
+                            className="inline-flex items-center bg-red-600 px-1 py-1 text-xs rounded-full font-medium hover:bg-red-700 hover:text-red-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                          >
+                            <X className="w-4 h-4 text-white font-semibold" />
+                          </button>
+                        </div>
+                      </div>
+                
+                  )}
+
+                  {/* ประกาศแสดงเฉพาะเมื่อยังไม่บันทึกเวลา */}
+                  {!stamptime && (
+                    <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-lg">
+                      <p className="text-xs text-orange-700 text-center">
+                       🎯 เพื่อความแม่นยำของข้อมูล <br />ระบบจะใช้เวลาบันทึกปัจจุบัน และตำแหน่งปัจจุบัน
+                      </p>
+                    </div>
+                  )}
 
                   {/* แจ้งเตือนเกี่ยวกับการแก้ไข */}
                   <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-lg">
+                    
                     <p className="text-xs text-orange-700 text-center">
                       หากต้องการแก้ไขเวลา กรุณา
                       <button

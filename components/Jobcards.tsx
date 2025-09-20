@@ -216,7 +216,7 @@ export const Jobcards = ({ filterStatus, datajobs }: JobcardsProps) => {
                   <div className="relative flex justify-between items-start">
                     <div>
                       <h3 className="text-base font-bold text-dark mb-1">
-                        📦{job.load_id}
+                        🆔{job.load_id}
                       </h3>
                       <p className="text-dark/90 text-xs font-medium">
                         {job.h_plate} • {job.t_plate}
