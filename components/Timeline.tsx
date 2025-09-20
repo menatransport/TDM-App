@@ -11,6 +11,7 @@ import {
   FileOutput,
   ArrowRight,
   X,
+  Stamp,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -418,26 +419,72 @@ export const TimelineStep = ({
                 )}
               </div>
 
-              {/* Input สำหรับใส่เวลา */}
+              {/* การบันทึกเวลาด้วย Stamp */}
               {isNext && (
                 <div className="w-full rounded-xl border border-gray-200 bg-gray-50 p-4 shadow-sm hover:shadow-md transition-all duration-300">
-                  <div className="mb-2 flex items-center space-x-2 text-gray-700">
+                  <div className="mb-3 flex items-center space-x-2 text-gray-700">
                     <Clock className="h-5 w-5 text-orange-500" />
                     <span className="font-medium">บันทึกเวลา</span>
                   </div>
-                  <div className="space-y-2">
-                    <input 
-                      type="datetime-local"
-                      onFocus={() => {
-                        const shouldOpenLine = confirm("ระบบบันทึกเวลาปัจจุบันให้โดยอัตโนมัติไม่สามารถเปลี่ยนแปลงได้\nหากต้องการเปลี่ยนแปลงโปรดแจ้งกลุ่ม Line\n\nกด 'ตกลง' เพื่อแจ้งขอเปลี่ยนแปลง");
-                        if (shouldOpenLine) {
-                          window.open("https://line.me/ti/g/rmCAQxMY_U", "_blank");
+                  
+                  <div className="flex items-center justify-center space-x-4">
+                    {/* Stamp Time Button */}
+                    <button
+                      onClick={() => {
+                        const now = new Date();
+                        const formattedTime = formatOnsend(now.toISOString());
+                        formchange(db.load_id, status.key, formattedTime);
+                      }}
+                      className="group flex flex-col items-center justify-center w-24 h-24 bg-gradient-to-br from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
+                    >
+                      <Stamp className="w-8 h-8 mb-1 group-hover:scale-110 transition-transform" />
+                      <span className="text-xs font-medium">บันทึก</span>
+                    </button>
+
+                    {/* Cancel Button */}
+                    <button
+                      onClick={() => {
+                        const shouldCancel = confirm("ต้องการยกเลิกการบันทึกเวลานี้หรือไม่?");
+                        if (shouldCancel) {
+                          // สามารถเพิ่มฟังก์ชันยกเลิกที่นี่ได้
+                          console.log("ยกเลิกการบันทึกเวลาสำหรับ:", status.title);
                         }
                       }}
-                      id={status.key} 
-                      value={currentTime}               
-                      className="w-full appearance-none rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm text-gray-800 shadow-inner focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-all"
-                    />
+                      className="group flex flex-col items-center justify-center w-24 h-24 bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
+                    >
+                      <X className="w-8 h-8 mb-1 group-hover:scale-110 transition-transform" />
+                      <span className="text-xs font-medium">ยกเลิก</span>
+                    </button>
+                  </div>
+
+                  {/* แสดงเวลาปัจจุบัน */}
+                  <div className="mt-3 text-center">
+                    <p className="text-xs text-gray-500">เวลาปัจจุบัน</p>
+                    <p className="text-sm font-medium text-gray-700">
+                      {new Date().toLocaleString("th-TH", {
+                        year: "numeric",
+                        month: "short", 
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit"
+                      })}
+                    </p>
+                  </div>
+
+                  {/* แจ้งเตือนเกี่ยวกับการแก้ไข */}
+                  <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-lg">
+                    <p className="text-xs text-orange-700 text-center">
+                      หากต้องการแก้ไขเวลา กรุณา
+                      <button
+                        onClick={() => {
+                          window.open("https://line.me/ti/g/rmCAQxMY_U", "_blank");
+                        }}
+                        className="text-blue-600 hover:text-blue-800 underline mx-1"
+                      >
+                        แจ้งกลุ่ม Line ระบบ
+                      </button>
+                    </p>
                   </div>
                 </div>
               )}

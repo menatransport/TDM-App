@@ -17,6 +17,12 @@ import {
   ChevronDown,
   ChevronUp,
   Copy,
+  Package,
+  Plus,
+  Minus,
+  AlertTriangle,
+  X,
+  FileText,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -27,10 +33,9 @@ type TicketProps = {
 export const Ticket = ({ onLoadingChange }: TicketProps) => {
   const router = useRouter();
 
-  const [isOpen1, setIsOpen1] = useState(false);
-  const [isOpen2, setIsOpen2] = useState(false);
-  const [isOpen3, setIsOpen3] = useState(false);
-  const [isOpen4, setIsOpen4] = useState(false);
+  const [isOpenPallet, setIsOpenPallet] = useState(false);
+  const [isOpenDamage, setIsOpenDamage] = useState(false);
+  const [isOpenLDT, setIsOpenLDT] = useState(false);
   const [job, setDatajobs] = useState<any>({});
   const [tickets, setTickets] = useState<any>({});
   const [pallet, setPallet] = useState<any>({});
@@ -77,15 +82,12 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
       // console.log("data ticket : ", data);
       setDatajobs(data);
       setTickets(data.ticket);
-      // console.log("data pallet : ", data.palletdata);
 
       setPallet({ ...data.palletdata, load_id: data.load_id });
 
       setDamage(data.damage_detail || "");
       setLdt(data.ldt || "");
       setRolltrip(data.roll_trip || "0");
-
-      // เก็บข้อมูลเดิมสำหรับเปรียบเทียบ
       setOriginalData({
         damage: data.damage_detail || "",
         ldt: data.ldt || "",
@@ -778,176 +780,447 @@ summaryText = `🚨สรุปการทำงาน🚨
             </CardHeader>
             <CardContent>
               <div className="space-y-4 mb-4">
-                <div
-                  className="flex items-center justify-between text-sm font-medium p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg cursor-pointer hover:from-blue-100 hover:to-blue-150 transition-all duration-200 shadow-sm"
-                  onClick={() => setIsOpen1(!isOpen1)}
-                >
-                  <span className="text-blue-800">1. จัดการพาเลท</span>
-                  {isOpen1 ? (
-                    <ChevronUp size={20} className="text-blue-600" />
-                  ) : (
-                    <ChevronDown size={20} className="text-blue-600" />
-                  )}
-                </div>
-                {isOpen1 && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4 p-4 bg-gray-50 rounded-lg">
-                    <div className="space-y-1">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        แลกเปลี่ยนพาเลท
-                      </label>
-                      <input
-                        type="number"
-                        value={pallet.change_pallet}
-                        onChange={(e) =>
-                          handleOnchange_pallet("change_pallet", e.target.value)
-                        }
-                        className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        โอนพาเลท
-                      </label>
-                      <input
-                        type="number"
-                        value={pallet.tranfer_pallet}
-                        onChange={(e) =>
-                          handleOnchange_pallet(
-                            "tranfer_pallet",
-                            e.target.value
-                          )
-                        }
-                        className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        นำฝากพาเลท
-                      </label>
-                      <input
-                        type="number"
-                        value={pallet.drop_pallet}
-                        onChange={(e) =>
-                          handleOnchange_pallet("drop_pallet", e.target.value)
-                        }
-                        className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        รับคืนพาเลท
-                      </label>
-                      <input
-                        type="number"
-                        value={pallet.return_pallet}
-                        onChange={(e) =>
-                          handleOnchange_pallet("return_pallet", e.target.value)
-                        }
-                        className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        ยืมพาเลทลูกค้า
-                      </label>
-                      <input
-                        type="number"
-                        value={pallet.borrow_customer_pallet}
-                        onChange={(e) =>
-                          handleOnchange_pallet(
-                            "borrow_customer_pallet",
-                            e.target.value
-                          )
-                        }
-                        className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        คืนพาเลทลูกค้า
-                      </label>
-                      <input
-                        type="number"
-                        value={pallet.return_customer_pallet}
-                        onChange={(e) =>
-                          handleOnchange_pallet(
-                            "return_customer_pallet",
-                            e.target.value
-                          )
-                        }
-                        className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm"
-                      />
-                    </div>
-                    <p className="text-[14px] text-amber-600 mt-1">
-                      ⚠️ การยืม-ฝากพาเลทโปรดแจ้งเจ้าหน้าที่ให้รับทราบ
-                    </p>
-                  </div>
-                )}
-                <div
-                  className="flex items-center justify-between text-sm font-medium p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg cursor-pointer hover:from-blue-100 hover:to-blue-150 transition-all duration-200 shadow-sm"
-                  onClick={() => setIsOpen2(!isOpen2)}
-                >
-                  <span className="text-blue-800">
-                    2. รายละเอียดสินค้าชำรุด
-                  </span>
-                  {isOpen2 ? (
-                    <ChevronUp size={20} className="text-blue-600" />
-                  ) : (
-                    <ChevronDown size={20} className="text-blue-600" />
-                  )}
-                </div>
-                {isOpen2 && (
-                  <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                    <div className="space-y-1">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        รายละเอียดสินค้าชำรุด
-                      </label>
-                      <textarea
-                        rows={4}
-                        value={damage}
-                        onChange={(e) => setDamage(e.target.value)}
-                        placeholder="กรุณาระบุรายละเอียดของสินค้าที่ชำรุด เช่น วันที่เวลา ประเภทความเสียหาย สาเหตุ เป็นต้น"
-                        className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm resize-none"
-                      />
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      💡 กรุณาระบุรายละเอียดให้ชัดเจนพร้อมแนบรูปภาพ
-                      หากระบุจำนวนสินค้าที่เสียหาย
-                      ให้ติดต่อสอบถามกับเจ้าหน้าที่ทุกครั้ง❗
-                    </p>
-                  </div>
-                )}
-
-                {/* หัวข้อ 3 */}
-                <div
-                  className="flex items-center justify-between text-sm font-medium p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg cursor-pointer hover:from-blue-100 hover:to-blue-150 transition-all duration-200 shadow-sm"
-                  onClick={() => setIsOpen3(!isOpen3)}
-                >
-                  <span className="text-blue-800">3. เลขที่เอกสาร LDT</span>
-                  {isOpen3 ? (
-                    <ChevronUp size={20} className="text-blue-600" />
-                  ) : (
-                    <ChevronDown size={20} className="text-blue-600" />
-                  )}
-                </div>
-                {isOpen3 && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4 p-4 bg-gray-50 rounded-lg">
-                    <div className="space-y-1">
-                      <input
-                        type="text"
-                        value={ldt}
-                        onChange={(e) => setLdt(e.target.value)}
-                        placeholder="กรอกเลข LDT"
-                        className="w-full px-4 py-3 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm"
-                      />
+                {/* จำนวนพาเลท - Collapsible Card */}
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300">
+                  <div 
+                    className="p-4 cursor-pointer hover:bg-gray-50 transition-colors duration-200"
+                    onClick={() => setIsOpenPallet(!isOpenPallet)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-blue-100 rounded-lg">
+                          <Package className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-800">จำนวนพาเลท</h3>
+                        </div>
+                      </div>
+                      <div className={`p-2 rounded-full bg-gray-100 transition-all duration-300 ${isOpenPallet ? 'rotate-180 bg-blue-100' : ''}`}>
+                        <ChevronDown className={`w-5 h-5 ${isOpenPallet ? 'text-blue-600' : 'text-gray-600'}`} />
+                      </div>
                     </div>
                   </div>
-                )}
+                  
+                  {isOpenPallet && (
+                    <div className="px-4 pb-4 space-y-4 animate-in slide-in-from-top-2 duration-300">
+                      {/* แลกเปลี่ยนพาเลท */}
+                      <div className="bg-blue-50 rounded-lg p-3">
+                        <label className="block text-sm font-medium text-blue-800 mb-2">
+                          🔄 แลกเปลี่ยนพาเลท
+                        </label>
+                        <div className="flex items-center space-x-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const current = parseInt(pallet.change_pallet || "0");
+                              if (current > 0) {
+                                handleOnchange_pallet("change_pallet", (current - 1).toString());
+                              }
+                            }}
+                            className="w-10 h-10 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105"
+                          >
+                            <Minus className="w-4 h-4" />
+                          </button>
+                          
+                          <div className="flex-1 relative">
+                            <input
+                              type="number"
+                              value={pallet.change_pallet || "0"}
+                              onChange={(e) => handleOnchange_pallet("change_pallet", e.target.value)}
+                              className="w-full text-center text-xl font-bold py-3 bg-white border-2 border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              min="0"
+                            />
+                          
+                          </div>
+                          
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const current = parseInt(pallet.change_pallet || "0");
+                              handleOnchange_pallet("change_pallet", (current + 2).toString());
+                            }}
+                            className="w-10 h-10 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* โอนพาเลท */}
+                      <div className="bg-purple-50 rounded-lg p-3">
+                        <label className="block text-sm font-medium text-purple-800 mb-2">
+                          📤 โอนพาเลท
+                        </label>
+                        <div className="flex items-center space-x-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const current = parseInt(pallet.tranfer_pallet || "0");
+                              if (current > 0) {
+                                handleOnchange_pallet("tranfer_pallet", (current - 1).toString());
+                              }
+                            }}
+                            className="w-10 h-10 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105"
+                          >
+                            <Minus className="w-4 h-4" />
+                          </button>
+                          
+                          <div className="flex-1 relative">
+                            <input
+                              type="number"
+                              value={pallet.tranfer_pallet || "0"}
+                              onChange={(e) => handleOnchange_pallet("tranfer_pallet", e.target.value)}
+                              className="w-full text-center text-xl font-bold py-3 bg-white border-2 border-purple-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                              min="0"
+                            />
+                           
+                          </div>
+                          
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const current = parseInt(pallet.tranfer_pallet || "0");
+                              handleOnchange_pallet("tranfer_pallet", (current + 2).toString());
+                            }}
+                            className="w-10 h-10 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* นำฝากพาเลท */}
+                      <div className="bg-orange-50 rounded-lg p-3">
+                        <label className="block text-sm font-medium text-orange-800 mb-2">
+                          📥 นำฝากพาเลท
+                        </label>
+                        <div className="flex items-center space-x-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const current = parseInt(pallet.drop_pallet || "0");
+                              if (current > 0) {
+                                handleOnchange_pallet("drop_pallet", (current - 1).toString());
+                              }
+                            }}
+                            className="w-10 h-10 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105"
+                          >
+                            <Minus className="w-4 h-4" />
+                          </button>
+                          
+                          <div className="flex-1 relative">
+                            <input
+                              type="number"
+                              value={pallet.drop_pallet || "0"}
+                              onChange={(e) => handleOnchange_pallet("drop_pallet", e.target.value)}
+                              className="w-full text-center text-xl font-bold py-3 bg-white border-2 border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                              min="0"
+                            />
+                     
+                          </div>
+                          
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const current = parseInt(pallet.drop_pallet || "0");
+                              handleOnchange_pallet("drop_pallet", (current + 2).toString());
+                            }}
+                            className="w-10 h-10 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* รับคืนพาเลท */}
+                      <div className="bg-green-50 rounded-lg p-3">
+                        <label className="block text-sm font-medium text-green-800 mb-2">
+                          📬 รับคืนพาเลท
+                        </label>
+                        <div className="flex items-center space-x-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const current = parseInt(pallet.return_pallet || "0");
+                              if (current > 0) {
+                                handleOnchange_pallet("return_pallet", (current - 1).toString());
+                              }
+                            }}
+                            className="w-10 h-10 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105"
+                          >
+                            <Minus className="w-4 h-4" />
+                          </button>
+                          
+                          <div className="flex-1 relative">
+                            <input
+                              type="number"
+                              value={pallet.return_pallet || "0"}
+                              onChange={(e) => handleOnchange_pallet("return_pallet", e.target.value)}
+                              className="w-full text-center text-xl font-bold py-3 bg-white border-2 border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                              min="0"
+                            />
+                          
+                          </div>
+                          
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const current = parseInt(pallet.return_pallet || "0");
+                              handleOnchange_pallet("return_pallet", (current + 2).toString());
+                            }}
+                            className="w-10 h-10 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* ยืมพาเลทลูกค้า */}
+                      <div className="bg-yellow-50 rounded-lg p-3">
+                        <label className="block text-sm font-medium text-yellow-800 mb-2">
+                          🤝 ยืมพาเลทลูกค้า
+                        </label>
+                        <div className="flex items-center space-x-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const current = parseInt(pallet.borrow_customer_pallet || "0");
+                              if (current > 0) {
+                                handleOnchange_pallet("borrow_customer_pallet", (current - 1).toString());
+                              }
+                            }}
+                            className="w-10 h-10 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105"
+                          >
+                            <Minus className="w-4 h-4" />
+                          </button>
+                          
+                          <div className="flex-1 relative">
+                            <input
+                              type="number"
+                              value={pallet.borrow_customer_pallet || "0"}
+                              onChange={(e) => handleOnchange_pallet("borrow_customer_pallet", e.target.value)}
+                              className="w-full text-center text-xl font-bold py-3 bg-white border-2 border-yellow-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                              min="0"
+                            />
+                    
+                          </div>
+                          
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const current = parseInt(pallet.borrow_customer_pallet || "0");
+                              handleOnchange_pallet("borrow_customer_pallet", (current + 2).toString());
+                            }}
+                            className="w-10 h-10 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* คืนพาเลทลูกค้า */}
+                      <div className="bg-teal-50 rounded-lg p-3">
+                        <label className="block text-sm font-medium text-teal-800 mb-2">
+                          🔄 คืนพาเลทลูกค้า
+                        </label>
+                        <div className="flex items-center space-x-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const current = parseInt(pallet.return_customer_pallet || "0");
+                              if (current > 0) {
+                                handleOnchange_pallet("return_customer_pallet", (current - 1).toString());
+                              }
+                            }}
+                            className="w-10 h-10 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105"
+                          >
+                            <Minus className="w-4 h-4" />
+                          </button>
+                          
+                          <div className="flex-1 relative">
+                            <input
+                              type="number"
+                              value={pallet.return_customer_pallet || "0"}
+                              onChange={(e) => handleOnchange_pallet("return_customer_pallet", e.target.value)}
+                              className="w-full text-center text-xl font-bold py-3 bg-white border-2 border-teal-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                              min="0"
+                            />
+            
+                          </div>
+                          
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const current = parseInt(pallet.return_customer_pallet || "0");
+                              handleOnchange_pallet("return_customer_pallet", (current + 2).toString());
+                            }}
+                            className="w-10 h-10 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* คำแนะนำ */}
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                        <p className="text-sm text-amber-800 flex items-start space-x-2">
+                          <span className="text-amber-600 font-semibold">⚠️</span>
+                          <span>การยืม-ฝากพาเลทโปรดแจ้งเจ้าหน้าที่ให้รับทราบ</span>
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {/* รายละเอียดสินค้าชำรุด - Collapsible Card */}
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300">
+                  <div 
+                    className="p-4 cursor-pointer hover:bg-gray-50 transition-colors duration-200"
+                    onClick={() => setIsOpenDamage(!isOpenDamage)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-red-100 rounded-lg">
+                          <AlertTriangle className="w-5 h-5 text-red-600" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-800">สินค้าชำรุด</h3>
+                        </div>
+                      </div>
+                      <div className={`p-2 rounded-full bg-gray-100 transition-all duration-300 ${isOpenDamage ? 'rotate-180 bg-red-100' : ''}`}>
+                        <ChevronDown className={`w-5 h-5 ${isOpenDamage ? 'text-red-600' : 'text-gray-600'}`} />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {isOpenDamage && (
+                    <div className="px-4 pb-4 space-y-4 animate-in slide-in-from-top-2 duration-300">
+                      {/* Quick Templates */}
+                      {/* <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          🚀 เทมเพลตด่วน
+                        </label>
+                        <div className="grid grid-cols-3 md:grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setDamage("บรรจุภัณฑ์เสียหาย: ")}
+                            className="p-3 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-lg text-sm text-orange-800 font-medium transition-all duration-200 hover:scale-105"
+                          >
+                            📦 บรรจุภัณฑ์เสียหาย
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDamage("สินค้าแตกหัก: ")}
+                            className="p-3 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg text-sm text-red-800 font-medium transition-all duration-200 hover:scale-105"
+                          >
+                            💔 สินค้าแตกหัก
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDamage("สินค้าเปียก: ")}
+                            className="p-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg text-sm text-blue-800 font-medium transition-all duration-200 hover:scale-105"
+                          >
+                            💧 สินค้าเปียก
+                          </button>
+                        </div>
+                      </div> */}
+
+                      {/* Text Area */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          📝 รายละเอียดเพิ่มเติม
+                        </label>
+                        <textarea
+                          rows={4}
+                          value={damage}
+                          onChange={(e) => setDamage(e.target.value)}
+                          placeholder="กรุณาระบุรายละเอียดของสินค้าที่ชำรุด เช่น วันที่เวลา ประเภทความเสียหาย สาเหตุ จำนวนที่เสียหาย เป็นต้น"
+                          className="w-full px-4 py-3 text-sm text-gray-700 bg-white border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent hover:border-gray-300 transition-all duration-200 shadow-sm resize-none"
+                        />
+                      </div>
+
+                      {/* Clear Button */}
+                      {damage && (
+                        <div className="flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => setDamage("")}
+                            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105 flex items-center space-x-2"
+                          >
+                            <X className="w-4 h-4" />
+                            <span>ล้างข้อความ</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {/* คำแนะนำ */}
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                        <p className="text-sm text-red-800 flex items-start space-x-2">
+                          <span className="text-red-600 font-semibold">💡</span>
+                          <span>กรุณาระบุรายละเอียดให้ชัดเจนพร้อมแนบรูปภาพ หากระบุจำนวนสินค้าที่เสียหาย ให้ติดต่อสอบถามกับเจ้าหน้าที่ทุกครั้ง</span>
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* เลขที่เอกสาร LDT - Collapsible Card */}
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300">
+                  <div 
+                    className="p-4 cursor-pointer hover:bg-gray-50 transition-colors duration-200"
+                    onClick={() => setIsOpenLDT(!isOpenLDT)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-indigo-100 rounded-lg">
+                          <FileText className="w-5 h-5 text-indigo-600" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-800">เลขที่เอกสาร LDT</h3>
+                        </div>
+                      </div>
+                      <div className={`p-2 rounded-full bg-gray-100 transition-all duration-300 ${isOpenLDT ? 'rotate-180 bg-indigo-100' : ''}`}>
+                        <ChevronDown className={`w-5 h-5 ${isOpenLDT ? 'text-indigo-600' : 'text-gray-600'}`} />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {isOpenLDT && (
+                    <div className="px-4 pb-4 space-y-4 animate-in slide-in-from-top-2 duration-300">
+                      {/* Input with enhanced design */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          📄 เลข LDT
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                           
+                            placeholder="เช่นTT2508-1364 MT2509-0027/0028"
+                            className="w-full px-4 py-4 pr-12 text-lg font-mono text-gray-700 bg-white border-2 border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent hover:border-indigo-300 transition-all duration-200 shadow-sm"
+                          />
+                          <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                            <FileText className="w-5 h-5 text-gray-400" />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Quick Clear Button */}
+                      {ldt && (
+                        <div className="flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => setLdt("")}
+                            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105 flex items-center space-x-2"
+                          >
+                            <X className="w-4 h-4" />
+                            <span>ล้างเลข LDT</span>
+                          </button>
+                        </div>
+                      )}
+
+                    </div>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
