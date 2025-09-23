@@ -26,7 +26,7 @@ export const Logincomponent = () => {
   const [isChecked, setIsChecked] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [gpsPermission, setGpsPermission] = useState<'pending' | 'granted' | 'denied'>('pending');
-  const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [currentLocation, setCurrentLocation] = useState<{latlng_current: string} | null>(null);
   const [gpsError, setGpsError] = useState(""); 
   
   const [listname, setListname] = useState<string[]>([]);
@@ -57,7 +57,7 @@ export const Logincomponent = () => {
           };
           
           console.log('📍 GPS Location obtained:', coords);
-          setCurrentLocation(coords);
+          setCurrentLocation({latlng_current: `${coords.lat},${coords.lng}`});
           setGpsPermission('granted');
           setIsLoading(false);
           resolve(coords);
@@ -223,38 +223,23 @@ useEffect(() => {
         return;
       }
 
-      // let location = currentLocation;
-      
-      // if (!location || gpsPermission !== 'granted') {
-      //   try {
-      //     console.log('🔍 Requesting GPS permission...');
-      //     location = await requestGPSPermission();
-      //     console.log('✅ GPS permission granted:', location);
-      //   } catch (gpsError: any) {
-      //     setError(`❌ จำเป็นต้องเปิด GPS เพื่อใช้งานระบบ: ${gpsError.message}`);
-      //     setIsLoading(false);
-      //     return;
-      //   }
-      // }
-
-      // ถ้าได้ GPS แล้วค่อย login
       console.log('🔐 Proceeding with login...');
       const res = await fetch('/api/auth', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'latlng-current': currentLocation ? currentLocation.latlng_current : "",
         },
         body: JSON.stringify({ 
           username, 
           password,
-          location: location // ส่ง location ไปกับ login request
         }),
       });
       
       const data = await res.json();
-      
+      console.log('🔐 Login response data:', data);
       if (data.access_token) {
-        // บันทึก location ใน localStorage สำหรับใช้ในระบบ
+
         localStorage.setItem('userLocation', JSON.stringify(location));
         localStorage.setItem('locationTimestamp', new Date().toISOString());
         
@@ -271,8 +256,6 @@ useEffect(() => {
         localStorage.setItem("isLoggedIn", "true");
         localStorage.setItem("jwtToken", data.jwtToken);
         localStorage.setItem("access_token", data.access_token);
-        
-        console.log('✅ Login successful with location:', location);
         
         if(data.role === 'user') return router.push("/job");
         if(data.role === 'admin') return router.push("/admin");
@@ -293,7 +276,7 @@ useEffect(() => {
 
 
 return (
-<div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-4 relative overflow-hidden">
+<div className="min-h-screen bg-gradient-to-br from-green-100 to-emerald-200 flex items-center justify-center p-4 relative overflow-hidden">
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-20 -left-20 w-40 h-40 bg-green-200 bg-opacity-30 rounded-full animate-pulse"></div>
@@ -535,7 +518,7 @@ return (
     </div>
     {currentLocation && (
       <div className="mt-2 text-xs text-gray-500">
-        📍 Lat: {currentLocation.lat.toFixed(6)}, Lng: {currentLocation.lng.toFixed(6)}
+        📍 Lat: {currentLocation.latlng_current.split(",")[0]}, Lng: {currentLocation.latlng_current.split(",")[1]}
       </div>
     )}
   </div>

@@ -26,6 +26,7 @@ export async function POST(req: Request) {
 try {
   const Access_token  = req.headers.get('Authorization')?.replace('Bearer ', '');
   const value = await req.json();
+  console.log('ORDERS [API] Access Token || POST Data :', [Access_token,value]);
     const externalRes = await fetch(`https://backend-tdm.onrender.com/job-tickets`, {
       method: 'POST',
       headers: {

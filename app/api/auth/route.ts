@@ -11,6 +11,7 @@ export async function POST(req: Request) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
+      'latlng-current': req.headers.get('latlng-current') || '',
     },
     body: params.toString(),
   });
@@ -21,7 +22,7 @@ export async function POST(req: Request) {
   const token = generateToken({ username: username , role: db.role });
   console.log('[API] สร้าง Token:', token);
 
-  return NextResponse.json({ success: true, jwtToken: token, access_token: db.access_token ,role: db.role });
+  return NextResponse.json({ success: true, jwtToken: token, access_token: db.access_token ,role: db.role, latlng_current: db.latlng_current });
 }
 
 

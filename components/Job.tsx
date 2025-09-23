@@ -518,7 +518,7 @@ export const Jobcomponent = ({ onLoadingChange }: TicketProps) => {
             className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-4 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
           >
             <ChartPie className="w-4 h-4" /> 
-            ดูสถิติขนส่ง
+            ดูรายงาน
           </button>
 
         </div>

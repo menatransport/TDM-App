@@ -107,6 +107,7 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
   };
 
   const handleSaved = async () => {
+    console.log("timeline:", timeline);
     const result = await Swal.fire({
       title: "คุณต้องการยืนยันบันทึกข้อมูลหรือไม่?",
       text: "กรุณาตรวจสอบความถูกต้องของข้อมูลก่อนกดปุ่ม 'ตกลง'",
@@ -121,7 +122,7 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
 
     if (!result.isConfirmed) return;
 
-    console.log("timeline:", timeline);
+    
     if (
       Object.keys(timeline).length === 0 &&
       job.status !== "จัดส่งแล้ว (POD)"
@@ -1080,7 +1081,7 @@ summaryText = `🚨สรุปการทำงาน🚨
                       <div className="bg-red-100 rounded-lg p-3 shadow-md">
                         <p className="text-sm text-red-800 flex items-start space-x-2">
                           <span className="text-red-600 font-semibold">⚠️</span>
-                          <span>การยืม-ฝากพาเลทโปรดแจ้งเจ้าหน้าที่ให้รับทราบ</span>
+                          <span>การยืม-คืน-ฝากพาเลท โปรดแนบรูปและแจ้งเจ้าหน้าที่ให้รับทราบ</span>
                         </p>
                       </div>
                     </div>
@@ -1209,7 +1210,7 @@ summaryText = `🚨สรุปการทำงาน🚨
                         <div className="relative">
                           <input
                             type="text"
-                           
+                            onChange={(e) => setLdt(e.target.value)}
                             placeholder="เช่นTT2508-1364 MT2509-0027/0028"
                             className="w-full px-4 py-4 pr-12 text-lg font-mono text-gray-700 bg-white border-2 border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent hover:border-indigo-300 transition-all duration-200 shadow-sm"
                           />

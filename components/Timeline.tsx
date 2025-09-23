@@ -14,6 +14,7 @@ import {
   Stamp,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { stat } from "fs";
 
 interface Typedata {
   load_id: string;
@@ -28,6 +29,18 @@ interface Typedata {
   desination_datetime: string;
   docs_returned_datetime: string;
   end_unload_datetime: string;
+
+  start_recive_latlng: string;
+  intransit_latlng: string;
+  start_unload_latlng: string;
+  complete_latlng: string;
+  end_recive_latlng: string;
+  docs_submitted_latlng: string;
+  start_latlng: string;
+  origin_latlng: string;
+  desination_latlng: string;
+  docs_returned_latlng: string;
+  end_unload_latlng: string;
 }
 
 export const TimelineStep = ({
@@ -44,19 +57,20 @@ export const TimelineStep = ({
   const [selectedStatus, setSelectedStatus] = useState<StatusItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [imageStatus, setImagesStatus] = useState<File[]>([]);
-  const [stamptime,setStamptime] = useState<string>('');
+  const [stamptime, setStamptime] = useState<string>("");
   const [isStamping, setIsStamping] = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<string>(() => {
     const now = new Date();
     const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    const hours = String(now.getHours()).padStart(2, "0");
+    const minutes = String(now.getMinutes()).padStart(2, "0");
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   });
   type StatusItem = {
     key: keyof Typedata;
+    latlng: keyof Typedata;
     title: string;
     icon: React.ElementType;
     description: string;
@@ -69,10 +83,10 @@ export const TimelineStep = ({
     const updateCurrentTime = () => {
       const now = new Date();
       const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const day = String(now.getDate()).padStart(2, '0');
-      const hours = String(now.getHours()).padStart(2, '0');
-      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const month = String(now.getMonth() + 1).padStart(2, "0");
+      const day = String(now.getDate()).padStart(2, "0");
+      const hours = String(now.getHours()).padStart(2, "0");
+      const minutes = String(now.getMinutes()).padStart(2, "0");
       setCurrentTime(`${year}-${month}-${day}T${hours}:${minutes}`);
     };
 
@@ -84,15 +98,15 @@ export const TimelineStep = ({
   useEffect(() => {
     if (onSaveComplete) {
       const resetStamp = () => {
-        setStamptime('');
+        setStamptime("");
         setIsStamping(false);
       };
-      
+
       // เรียก resetStamp เมื่อมีการ save สำเร็จ
-      window.addEventListener('timeline-reset', resetStamp);
-      
+      window.addEventListener("timeline-reset", resetStamp);
+
       return () => {
-        window.removeEventListener('timeline-reset', resetStamp);
+        window.removeEventListener("timeline-reset", resetStamp);
       };
     }
   }, [onSaveComplete]);
@@ -100,6 +114,7 @@ export const TimelineStep = ({
   const statusConfig: StatusItem[] = [
     {
       key: "start_datetime",
+      latlng: "start_latlng",
       title: "รับงาน",
       icon: MapPin,
       description: "กดรับงานขนส่ง",
@@ -107,6 +122,7 @@ export const TimelineStep = ({
     },
     {
       key: "origin_datetime",
+      latlng: "origin_latlng",
       title: "ถึงต้นทาง",
       icon: Truck,
       description: "ถึงสถานที่ขึ้นสินค้า",
@@ -114,6 +130,7 @@ export const TimelineStep = ({
     },
     {
       key: "start_recive_datetime",
+      latlng: "start_recive_latlng",
       title: "เริ่มขึ้นสินค้า",
       icon: Package,
       description: "เริ่มขึ้นสินค้าจากต้นทาง",
@@ -121,6 +138,7 @@ export const TimelineStep = ({
     },
     {
       key: "end_recive_datetime",
+      latlng: "end_recive_latlng",
       title: "ขึ้นสินค้าเสร็จ",
       icon: Truck,
       description: "ขึ้นสินค้าจากต้นทางสำเร็จ",
@@ -128,6 +146,7 @@ export const TimelineStep = ({
     },
     {
       key: "intransit_datetime",
+      latlng: "intransit_latlng",
       title: "เริ่มขนส่ง",
       icon: Package,
       description: "เริ่มขนส่งสินค้า",
@@ -135,26 +154,28 @@ export const TimelineStep = ({
     },
     {
       key: "desination_datetime",
+      latlng: "desination_latlng",
       title: "ถึงปลายทาง",
       icon: Truck,
       description: "ถึงสถานที่ลงสินค้า",
       color: "bg-red-500",
     },
-    // เพิ่มสำหรับ Neo Factory เท่านั้น
-    ...(locatRecive === "บริษัท นีโอ แฟคทอรี่ จำกัด" 
+
+    ...(locatRecive === "บริษัท นีโอ แฟคทอรี่ จำกัด"
       ? [
           {
             key: "docs_submitted_datetime" as keyof Typedata,
+            latlng: "docs_submitted_latlng" as keyof Typedata,
             title: "ยื่นเอกสาร",
             icon: FileInput,
             description: "ยื่นเอกสารที่ปลายทาง",
             color: "bg-indigo-500",
           },
-        ] 
-      : []
-    ),
+        ]
+      : []),
     {
       key: "start_unload_datetime",
+      latlng: "start_unload_latlng",
       title: "เริ่มลงสินค้า",
       icon: Package,
       description: "เริ่มลงสินค้าจากปลายทาง",
@@ -162,26 +183,28 @@ export const TimelineStep = ({
     },
     {
       key: "end_unload_datetime",
+      latlng: "end_unload_latlng",
       title: "ลงสินค้าเสร็จ",
       icon: Home,
       description: "ลงสินค้าจากปลายทางสำเร็จ",
       color: "bg-green-500",
     },
-    // เพิ่มสำหรับ Neo Factory เท่านั้น
-    ...(locatRecive === "บริษัท นีโอ แฟคทอรี่ จำกัด" 
+
+    ...(locatRecive === "บริษัท นีโอ แฟคทอรี่ จำกัด"
       ? [
           {
             key: "docs_returned_datetime" as keyof Typedata,
+            latlng: "docs_returned_latlng" as keyof Typedata,
             title: "ได้รับเอกสารคืน",
             icon: FileOutput,
             description: "ได้รับเอกสารคืนจากปลายทาง",
-            color: "bg-yellow-500",
+            color: "bg-teal-500",
           },
-        ] 
-      : []
-    ),
+        ]
+      : []),
     {
       key: "complete_datetime",
+      latlng: "complete_latlng",
       title: "จัดส่งแล้ว (POD)",
       icon: Truck,
       description: "จัดการขนส่งสำเร็จ (POD)",
@@ -278,48 +301,62 @@ export const TimelineStep = ({
     return getimages.images;
   };
 
-  const formchange = (id: string, key: string, date: string) => {
+  const formchange = (id: string, key: string, date: string, latlng: string, latlngStamp: string) => {
     setIsStamping(true);
 
-    fetchImages(id).then((fetchImages) => {
-      
-      if (
-        statusConfig.find((status) => status.key === key)?.title ==
-        "ขึ้นสินค้าเสร็จ"
-      ) {
-        const hasOriginImages = fetchImages.some((img: any) => img.category === "origin");
-        if (!hasOriginImages) {
-          alert("โปรดแนบรูปภาพต้นทาง อย่างน้อย 1 รูปภาพ");
-          setIsStamping(false);
-          router.push(`/picture?id=${id}&status=${statusConfig.find((status) => status.key === key)?.title}`);
-          return;
+    fetchImages(id)
+      .then((fetchImages) => {
+        if (
+          statusConfig.find((status) => status.key === key)?.title ==
+          "ขึ้นสินค้าเสร็จ"
+        ) {
+          const hasOriginImages = fetchImages.some(
+            (img: any) => img.category === "origin"
+          );
+          if (!hasOriginImages) {
+            alert("โปรดแนบรูปภาพต้นทาง อย่างน้อย 1 รูปภาพ");
+            setIsStamping(false);
+            router.push(
+              `/picture?id=${id}&status=${
+                statusConfig.find((status) => status.key === key)?.title
+              }`
+            );
+            return;
+          }
+        } else if (
+          statusConfig.find((status) => status.key === key)?.title ==
+          "ลงสินค้าเสร็จ"
+        ) {
+          console.log("des");
+          const hasDestinationImages = fetchImages.some(
+            (img: any) => img.category === "destination"
+          );
+          if (!hasDestinationImages) {
+            alert("โปรดแนบรูปภาพปลายทาง อย่างน้อย 1 รูปภาพ");
+            setIsStamping(false);
+            router.push(
+              `/picture?id=${id}&status=${
+                statusConfig.find((status) => status.key === key)?.title
+              }`
+            );
+            return;
+          }
         }
-      } else if (
-        statusConfig.find((status) => status.key === key)?.title ==
-        "ลงสินค้าเสร็จ"
-      ) {
-        console.log('des');
-        const hasDestinationImages = fetchImages.some((img: any) => img.category === "destination");
-        if (!hasDestinationImages) {
-          alert("โปรดแนบรูปภาพปลายทาง อย่างน้อย 1 รูปภาพ");
+
+        // Simulate stamping animation delay
+        setTimeout(() => {
+          setStamptime(date);
+          onTimeChange({
+            load_id: id,
+            [key]: date,
+            [latlng]: latlngStamp,
+          });
           setIsStamping(false);
-          router.push(`/picture?id=${id}&status=${statusConfig.find((status) => status.key === key)?.title}`);
-          return;
-        }
-      }
-      
-      // Simulate stamping animation delay
-      setTimeout(() => {
-        setStamptime(date);
-        onTimeChange({
-          load_id: id,
-          [key]: date,
-        });
+        }, 300); // 0.3 second delay for stamp effect
+      })
+      .catch(() => {
         setIsStamping(false);
-      }, 800); // 0.8 second delay for stamp effect
-    }).catch(() => {
-      setIsStamping(false);
-    });
+      });
   };
 
   const getNextStatus = () => {
@@ -456,7 +493,7 @@ export const TimelineStep = ({
                     <Clock className="h-5 w-5 text-orange-500" />
                     <span className="font-medium">บันทึกเวลา</span>
                   </div>
-                  
+
                   <div className="flex items-center justify-center space-x-4">
                     {/* Stamp Time Button - แสดงเฉพาะเมื่อยังไม่มีเวลา */}
                     {!stamptime && (
@@ -464,85 +501,99 @@ export const TimelineStep = ({
                         onClick={() => {
                           if (!isStamping) {
                             const now = new Date();
-                            const formattedTime = formatOnsend(now.toISOString());
-                            formchange(db.load_id, status.key, formattedTime);
+                            const formattedTime = formatOnsend(
+                              now.toISOString()
+                            );
+                            navigator.geolocation.getCurrentPosition((position) => {
+                              const latlngStamp = position.coords.latitude + "," + position.coords.longitude;
+                              formchange(db.load_id, status.key, formattedTime, status.latlng, latlngStamp);
+                            }, (error) => {
+                              console.error("Error getting location:", error);
+                              alert("ไม่สามารถระบุตำแหน่งปัจจุบันได้ โปรดตรวจสอบการอนุญาตตำแหน่ง : " + error);
+                            });
                           }
                         }}
                         disabled={isStamping}
                         className={`group flex flex-col items-center justify-center w-24 h-24 rounded-2xl shadow-lg transition-all duration-200 ${
-                          isStamping 
-                            ? 'bg-gradient-to-br from-gray-400 to-gray-500 cursor-not-allowed transform scale-95' 
-                            : 'bg-gradient-to-br from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white hover:shadow-xl hover:-translate-y-1 active:transform active:scale-95 active:translate-y-0'
+                          isStamping
+                            ? "bg-gradient-to-br from-gray-400 to-gray-500 cursor-not-allowed transform scale-95"
+                            : "bg-gradient-to-br from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white hover:shadow-xl hover:-translate-y-1 active:transform active:scale-95 active:translate-y-0"
                         }`}
                       >
                         {isStamping ? (
                           <>
                             <div className="w-10 h-10 mb-2 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
-                            <span className="text-sm font-medium text-white">กำลังแสตมป์...</span>
+                            <span className="text-sm font-medium text-white">
+                              กำลังแสตมป์...
+                            </span>
                           </>
                         ) : (
                           <>
                             <Stamp className="w-10 h-10 mb-2 group-hover:scale-110 transition-transform text-white" />
-                            <span className="text-sm font-medium text-white">แสตมป์เวลา</span>
+                            <span className="text-sm font-medium text-white">
+                              แสตมป์เวลา
+                            </span>
                           </>
                         )}
                       </button>
                     )}
 
                     {/* Cancel Button - แสดงเฉพาะเมื่อมีเวลาแล้ว */}
-                    
                   </div>
 
                   {/* แสดงเวลาที่บันทึก - แสดงเฉพาะเมื่อมีเวลา */}
                   {stamptime && (
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-
-                          <input 
-                            type="text" 
-                            value={formatDateTime(stamptime)} 
-                            disabled 
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 font-medium cursor-not-allowed focus:outline-none" 
-                          />
-                        </div>
-                        <div className="ml-3">
-                          <button
-                            onClick={() => {
-                              const shouldCancel = confirm("ต้องการป้อนเวลาปัจจุบันใหม่หรือไม่?");
-                              if (shouldCancel) {
-                                setStamptime('');
-                                onTimeChange({
-                                  load_id: db.load_id,
-                                  [status.key]: "",
-                                });
-                              }
-                            }}
-                            className="inline-flex items-center bg-red-600 px-1 py-1 text-xs rounded-full font-medium hover:bg-red-700 hover:text-red-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                          >
-                            <X className="w-4 h-4 text-white font-semibold" />
-                          </button>
-                        </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <input
+                          type="text"
+                          value={formatDateTime(stamptime)}
+                          disabled
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 font-medium cursor-not-allowed focus:outline-none"
+                        />
                       </div>
-                
+                      <div className="ml-3">
+                        <button
+                          onClick={() => {
+                            const shouldCancel = confirm(
+                              "ต้องการป้อนเวลาปัจจุบันใหม่หรือไม่?"
+                            );
+                            if (shouldCancel) {
+                              setStamptime("");
+                              onTimeChange({
+                                load_id: db.load_id,
+                                [status.key]: "",
+                              });
+                            }
+                          }}
+                          className="inline-flex items-center bg-red-600 px-1 py-1 text-xs rounded-full font-medium hover:bg-red-700 hover:text-red-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                        >
+                          <X className="w-4 h-4 text-white font-semibold" />
+                        </button>
+                      </div>
+                    </div>
                   )}
 
                   {/* ประกาศแสดงเฉพาะเมื่อยังไม่บันทึกเวลา */}
                   {!stamptime && (
                     <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-lg">
                       <p className="text-xs text-orange-700 text-center">
-                       🎯 เพื่อความแม่นยำของข้อมูล <br />ระบบจะใช้เวลาบันทึกปัจจุบัน และตำแหน่งปัจจุบัน
+                        🎯 เพื่อความแม่นยำของข้อมูล <br />
+                        ระบบจะใช้เวลาบันทึกปัจจุบัน และตำแหน่งปัจจุบัน
                       </p>
                     </div>
                   )}
 
                   {/* แจ้งเตือนเกี่ยวกับการแก้ไข */}
                   <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-lg">
-                    
                     <p className="text-xs text-orange-700 text-center">
                       หากเวลาไม่ถูกต้อง และต้องการแก้ไขเวลา กรุณา
                       <button
                         onClick={() => {
-                          window.open("https://line.me/ti/g/rmCAQxMY_U", "_blank");
+                          window.open(
+                            "https://line.me/ti/g/rmCAQxMY_U",
+                            "_blank"
+                          );
                         }}
                         className="text-blue-600 hover:text-blue-800 underline mx-1"
                       >

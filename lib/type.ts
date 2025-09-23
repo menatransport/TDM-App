@@ -1,3 +1,5 @@
+import { Timestamp } from "next/dist/server/lib/cache-handlers/types";
+
 // lib/type.ts
 export interface TransportItem {
   load_id: string;
@@ -25,4 +27,21 @@ export interface TransportItem {
   create_at: string;
   update_by: string;
   update_at: string;
+  driver_info: {
+    latlng_current: string;
+    timestamp_login: string;
+  };
+  ticket_info?: {
+    start_datetime?: string;
+    origin_datetime?: string;
+    start_recive_datetime?: string;
+    end_recive_datetime?: string;
+    intransit_datetime?: string;
+    destination_datetime?: string;
+    docs_submitted_datetime?: string;
+    start_unload_datetime?: string;
+    docs_returned_datetime?: string;
+    end_unload_datetime?: string;
+    complete_datetime?: string;
+  };
 }
