@@ -96,7 +96,7 @@ export const TimelineStep = ({
 
   // Effect เพื่อ reset stamp เมื่อ save เสร็จ
   useEffect(() => {
-    if (onSaveComplete) {
+    if (onSaveComplete && typeof window !== 'undefined') {
       const resetStamp = () => {
         setStamptime("");
         setIsStamping(false);
@@ -499,18 +499,27 @@ export const TimelineStep = ({
                     {!stamptime && (
                       <button
                         onClick={() => {
-                          if (!isStamping) {
+                          if (!isStamping && typeof window !== 'undefined' && typeof navigator !== 'undefined') {
                             const now = new Date();
                             const formattedTime = formatOnsend(
                               now.toISOString()
                             );
-                            navigator.geolocation.getCurrentPosition((position) => {
-                              const latlngStamp = position.coords.latitude + "," + position.coords.longitude;
-                              formchange(db.load_id, status.key, formattedTime, status.latlng, latlngStamp);
-                            }, (error) => {
-                              console.error("Error getting location:", error);
-                              alert("ไม่สามารถระบุตำแหน่งปัจจุบันได้ โปรดตรวจสอบการอนุญาตตำแหน่ง : " + error);
-                            });
+                            
+                            if (navigator.geolocation) {
+                              navigator.geolocation.getCurrentPosition((position) => {
+                                const latlngStamp = position.coords.latitude + "," + position.coords.longitude;
+                                formchange(db.load_id, status.key, formattedTime, status.latlng, latlngStamp);
+                              }, (error) => {
+                                console.error("Error getting location:", error);
+                                alert("ไม่สามารถระบุตำแหน่งปัจจุบันได้ โปรดตรวจสอบการอนุญาตตำแหน่ง : " + error.message);
+                              }, {
+                                enableHighAccuracy: true,
+                                timeout: 10000,
+                                maximumAge: 60000
+                              });
+                            } else {
+                              alert("เบราว์เซอร์ของคุณไม่รองรับการระบุตำแหน่ง");
+                            }
                           }
                         }}
                         disabled={isStamping}
@@ -590,10 +599,13 @@ export const TimelineStep = ({
                       หากเวลาไม่ถูกต้อง และต้องการแก้ไขเวลา กรุณา
                       <button
                         onClick={() => {
-                          window.open(
-                            "https://line.me/ti/g/rmCAQxMY_U",
-                            "_blank"
-                          );
+                          if (typeof window !== 'undefined') {
+                            window.open(
+                              "https://line.me/ti/g/rmCAQxMY_U",
+                              "_blank",
+                              "noopener,noreferrer"
+                            );
+                          }
                         }}
                         className="text-blue-600 hover:text-blue-800 underline mx-1"
                       >

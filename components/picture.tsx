@@ -64,11 +64,12 @@ export const Picture = ({ onLoadingChange }: TicketProps) => {
   const router = useRouter();
 
 useEffect(() => {
-  const params = new URLSearchParams(window.location.search);
-  const jobId = params.get("id");
-  const status = params.get("status") || "";
-  setJobId(jobId);
-  setStatus(status);
+  if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    const jobId = params.get("id");
+    const status = params.get("status") || "";
+    setJobId(jobId);
+    setStatus(status);
 
   const fetchImages = async () => {
     try {
@@ -104,12 +105,13 @@ useEffect(() => {
   // Cleanup function เมื่อ component unmount
   return () => {
     // ล้าง object URLs เพื่อปล่อย memory
-    uploadImages.forEach(image => {
-      if (image.url && image.url.startsWith('blob:')) {
-        URL.revokeObjectURL(image.url);
-      }
-    });
-  };
+      uploadImages.forEach(image => {
+        if (image.url && image.url.startsWith('blob:')) {
+          URL.revokeObjectURL(image.url);
+        }
+      });
+    };
+  }
 }, []);
 
 
@@ -118,6 +120,12 @@ useEffect(() => {
 // Helper function สำหรับ compress รูปภาพ
 const compressImage = (file: File, quality: number = 0.7): Promise<File> => {
   return new Promise((resolve) => {
+    // ตรวจสอบว่าอยู่ใน client-side
+    if (typeof document === 'undefined') {
+      resolve(file);
+      return;
+    }
+
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d')!;
     const img = new Image();

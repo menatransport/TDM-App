@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mena FastTrack - ออฟไลน์</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+        }
+        .container {
+            text-align: center;
+            padding: 2rem;
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 400px;
+            width: 90%;
+        }
+        .icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+        h1 {
+            color: #2d3748;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+        p {
+            color: #718096;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+        .retry-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .retry-btn:hover {
+            background: #059669;
+            transform: translateY(-2px);
+        }
+        .status {
+            margin-top: 1rem;
+            padding: 0.5rem;
+            background: #f7fafc;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            color: #4a5568;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">📡</div>
+        <h1>ไม่มีการเชื่อมต่ออินเทอร์เน็ต</h1>
+        <p>
+            แอปพลิเคชัน Mena FastTrack ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ในขณะนี้
+            <br><br>
+            กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่อีกครั้ง
+        </p>
+        <button class="retry-btn" onclick="retryConnection()">
+            🔄 ลองเชื่อมต่อใหม่
+        </button>
+        <div class="status" id="status">
+            สถานะ: ออฟไลน์
+        </div>
+    </div>
+
+    <script>
+        function retryConnection() {
+            const statusElement = document.getElementById('status');
+            statusElement.textContent = 'กำลังลองเชื่อมต่อ...';
+            
+            // Check if online
+            if (navigator.onLine) {
+                statusElement.textContent = 'กำลังโหลด...';
+                window.location.href = '/';
+            } else {
+                setTimeout(() => {
+                    statusElement.textContent = 'ยังไม่มีการเชื่อมต่ออินเทอร์เน็ต';
+                }, 1000);
+            }
+        }
+
+        // Listen for online status
+        window.addEventListener('online', () => {
+            document.getElementById('status').textContent = 'เชื่อมต่อสำเร็จ! กำลังโหลด...';
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 1000);
+        });
+
+        window.addEventListener('offline', () => {
+            document.getElementById('status').textContent = 'สถานะ: ออฟไลน์';
+        });
+
+        // Update status on load
+        document.addEventListener('DOMContentLoaded', () => {
+            const status = navigator.onLine ? 'ออนไลน์' : 'ออฟไลน์';
+            document.getElementById('status').textContent = `สถานะ: ${status}`;
+        });
+    </script>
+</body>
+</html>

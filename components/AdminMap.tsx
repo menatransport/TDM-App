@@ -127,8 +127,12 @@ export function AdminMap({ jobView, closeModal, refreshTable }: AdminMapProps) {
 
   // ฟังก์ชันแปลง lat,lng string เป็น object
   const parseLatLng = (latlngStr: string) => {
+    try {
     const [lat, lng] = latlngStr.split(",").map((s) => parseFloat(s.trim()));
     return { lat, lon: lng };
+    } catch (error) {
+      return { lat: 13.7563, lon: 100.5018 };
+    }
   };
 
   // ฟังก์ชันคำนวณระยะทาง (Haversine formula)
@@ -173,13 +177,14 @@ export function AdminMap({ jobView, closeModal, refreshTable }: AdminMapProps) {
     return { isNear: false, location: null, distance: null };
   };
 
-  // ฟังก์ชันสร้าง Timeline markers จาก ticketdata
+  // ฟังก์ชันสร้าง Timeline markers จาก ticket_info
   const createTimelineMarkers = (map: any, data: any, originCoords: any, destCoords: any): { originDetails: string[], destDetails: string[] } => {
-    if (!data.ticketdata || !data.ticketdata[0]) {
+    if (!data.ticket_info) {
+      console.log("⚠️ No ticket_info available");
       return { originDetails: [], destDetails: [] };
     }
 
-    const ticket = data.ticketdata[0];
+    const ticket = data.ticket_info;
     const timelineEvents = [
       { 
         name: 'เริ่มงาน', 
@@ -218,8 +223,8 @@ export function AdminMap({ jobView, closeModal, refreshTable }: AdminMapProps) {
       },
       { 
         name: 'ถึงปลายทาง', 
-        datetime: ticket.destination_datetime, 
-        latlng: ticket.destination_latlng,
+        datetime: ticket.desination_datetime, 
+        latlng: ticket.desination_latlng,
         icon: '-',
         color: '#f50bafff'
       },
@@ -387,41 +392,26 @@ export function AdminMap({ jobView, closeModal, refreshTable }: AdminMapProps) {
         return;
       }
 
-      // ใช้ข้อมูล MockData
-      const data = jobView || MockData[0];
+      const data = jobView ;
 
       if (!data) {
         console.log("⚠️ No data available for map");
         return;
       }
 
-      console.log("📊 Map data:", data);
-
       // แปลง coordinates
       let originLatlng, destLatlng, currentLatlng;
-
-      if (jobView) {
-        // สำหรับข้อมูลจริงจาก database - ใช้ MockData เป็น fallback
-        originLatlng = MockData[0].origin_latlng;
-        destLatlng = MockData[0].destination_latlng;
-        currentLatlng = MockData[0].current_latlng;
+      if (data) {
+        originLatlng = data.latlng_recive;
+        destLatlng = data.latlng_deliver;
+        currentLatlng = data.driver_info.latlng_current;
       } else {
-        // สำหรับ MockData
-        const mockData = data as (typeof MockData)[0];
-        originLatlng = mockData.origin_latlng;
-        destLatlng = mockData.destination_latlng;
-        currentLatlng = mockData.current_latlng;
+        return
       }
 
-      const originCoords = parseLatLng(originLatlng);
-      const destCoords = parseLatLng(destLatlng);
-      const currentCoords = parseLatLng(currentLatlng);
-
-      console.log("📍 Coordinates:", {
-        originCoords,
-        destCoords,
-        currentCoords,
-      });
+      const originCoords = parseLatLng(originLatlng) || { lat: 13.7563, lon: 100.5018 }; // กรุงเทพฯ
+      const destCoords = parseLatLng(destLatlng) || { lat: 13.7563, lon: 100.5018 }; // กรุงเทพฯ
+      const currentCoords = parseLatLng(currentLatlng) || { lat: 13.7563, lon: 100.5018 }; // กรุงเทพฯ
 
       // สร้างแผนที่
       const map = new window.longdo.Map({
@@ -474,7 +464,7 @@ export function AdminMap({ jobView, closeModal, refreshTable }: AdminMapProps) {
                     properties: {
                       title: "🚛 ตำแหน่งปัจจุบัน",
                       description: `สถานะ: ${
-                        jobView?.status || MockData[0].status
+                        jobView?.status 
                       }`,
                     },
                   },
@@ -501,7 +491,7 @@ export function AdminMap({ jobView, closeModal, refreshTable }: AdminMapProps) {
             // Fallback: ใช้ Marker ธรรมดาสำหรับตำแหน่งปัจจุบัน
             const currentMarker = new window.longdo.Marker(currentCoords, {
               title: "🚛 ตำแหน่งปัจจุบัน",
-              detail: `สถานะ: ${jobView?.status || MockData[0].status}`,
+              detail: `สถานะ: ${jobView?.status }`,
               icon: {
                 url: "https://img.icons8.com/color/48/000000/truck.png",
                 size: { width: 45, height: 45 },
@@ -511,35 +501,38 @@ export function AdminMap({ jobView, closeModal, refreshTable }: AdminMapProps) {
             map.Overlays.add(currentMarker);
           }
 
-          // ====== สร้าง Timeline markers จาก ticketdata ======
+          // ====== สร้าง Timeline markers จาก ticket_info ======
           const timelineDetails = createTimelineMarkers(map, data, originCoords, destCoords);
 
           // ====== สร้าง Markers อื่นๆ ======
           // Marker ต้นทาง - ใช้ icon สีเขียว
+          if(originCoords.lat === 13.7563 && originCoords.lon === 100.5018 && destCoords.lat === 13.7563 && destCoords.lon === 100.5018) {
+            return;
+          }
           const originDetailText = jobView
             ? (jobView as any).locat_recive || "ต้นทาง"
-            : MockData[0].origin;
+            : "unknown origin";
           
-        const fullOriginDetail =
-  timelineDetails.originDetails.length > 0
-    ? `${originDetailText}<br>📄 Timeline:<ul><li>${timelineDetails.originDetails.join('</li><li>')}</li></ul>`
-    : originDetailText;
+          const fullOriginDetail =
+            timelineDetails.originDetails.length > 0
+            ? `${originDetailText}<br>📄 Timeline:<ul><li>${timelineDetails.originDetails.join('</li><li>')}</li></ul>`
+            : originDetailText;
 
 
-          const originMarker = new window.longdo.Marker(originCoords, {
-            title: "🚩 จุดต้นทาง",
-            detail: fullOriginDetail,
-            icon: {
-              url: "https://img.icons8.com/ultraviolet/48/000000/marker.png",
-              size: { width: 40, height: 40 },
-              anchor: { x: 20, y: 40 },
-            },
-          });
+            const originMarker = new window.longdo.Marker(originCoords, {
+              title: "🚩 จุดต้นทาง",
+              detail: fullOriginDetail,
+              icon: {
+                url: "https://img.icons8.com/ultraviolet/48/000000/marker.png",
+                size: { width: 40, height: 40 },
+                anchor: { x: 20, y: 40 },
+              },
+            });
 
           // Marker ปลายทาง - ใช้ icon สีแดง
           const destDetailText = jobView
             ? (jobView as any).locat_deliver || "ปลายทาง"
-            : MockData[0].destination;
+            : "unknown destination";
           
           const fullDestDetail = timelineDetails.destDetails.length > 0
             ? `${destDetailText}<br>📄 Timeline:<ul><li>${timelineDetails.destDetails.join('</li><li>')}</li></ul>`
@@ -590,7 +583,7 @@ export function AdminMap({ jobView, closeModal, refreshTable }: AdminMapProps) {
                     console.log(`⏱️ Estimated time: ${timeMinutes} minutes`);
 
                     // คำนวณระยะทางตามสถานะ
-                    const currentStatus = jobView?.status || MockData[0].status;
+                    const currentStatus = jobView?.status
                     let distanceLabel = `ระยะทางรวม: ${distanceKm.toFixed(
                       1
                     )} กม. (${timeMinutes} นาที)`;
@@ -670,7 +663,7 @@ export function AdminMap({ jobView, closeModal, refreshTable }: AdminMapProps) {
               destCoords.lon
             ) / 1000; // แปลงเป็น km
 
-            const currentStatus = jobView?.status || MockData[0].status;
+            const currentStatus = jobView?.status 
             let distanceLabel = `ระยะทางโดยตรง: ${distanceKm.toFixed(1)} กม.`;
 
             if (currentStatus === "รับงาน") {
@@ -838,7 +831,7 @@ export function AdminMap({ jobView, closeModal, refreshTable }: AdminMapProps) {
                 </p>
                 <p className="text-gray-500 text-sm mt-1">Longdo Map API</p>
                 <p className="text-gray-400 text-xs mt-2">
-                  {jobView ? `Data: ${jobView.load_id}` : "Using MockData"}
+                  {jobView ? `Data: ${jobView.load_id}` : "Using unknown data"}
                 </p>
               </div>
             </div>

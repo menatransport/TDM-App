@@ -8,7 +8,49 @@ const withPWA = nextPWA({
   disable: isDev,
   register: true,
   skipWaiting: true,
+  fallbacks: {
+    document: '/offline.html', // เพิ่มหน้า offline
+  },
   runtimeCaching: [
+    {
+      urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+      handler: "CacheFirst",
+      options: {
+        cacheName: "google-fonts-cache",
+        expiration: {
+          maxEntries: 10,
+          maxAgeSeconds: 60 * 60 * 24 * 365, // 365 วัน
+        },
+        cacheableResponse: {
+          statuses: [0, 200],
+        },
+      },
+    },
+    {
+      urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+      handler: "CacheFirst",
+      options: {
+        cacheName: "gstatic-fonts-cache",
+        expiration: {
+          maxEntries: 10,
+          maxAgeSeconds: 60 * 60 * 24 * 365, // 365 วัน
+        },
+        cacheableResponse: {
+          statuses: [0, 200],
+        },
+      },
+    },
+    {
+      urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/i,
+      handler: "CacheFirst",
+      options: {
+        cacheName: "images-cache",
+        expiration: {
+          maxEntries: 100,
+          maxAgeSeconds: 60 * 60 * 24 * 30, // 30 วัน
+        },
+      },
+    },
     {
       urlPattern: /^https?.*/,
       handler: "NetworkFirst",
@@ -16,16 +58,15 @@ const withPWA = nextPWA({
         cacheName: "offlineCache",
         expiration: {
           maxEntries: 200,
+          maxAgeSeconds: 60 * 60 * 24, // 1 วัน
         },
+        networkTimeoutSeconds: 3,
       },
     },
   ],
 });
 
 const nextConfig = {
-  experimental: {
-    appDir: true,
-  },
   eslint: {
     ignoreDuringBuilds: true, // ปิดการตรวจ ESLint ตอน build
   },

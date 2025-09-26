@@ -37,7 +37,7 @@ export interface TransportItem {
     start_recive_datetime?: string;
     end_recive_datetime?: string;
     intransit_datetime?: string;
-    destination_datetime?: string;
+    desination_datetime?: string;
     docs_submitted_datetime?: string;
     start_unload_datetime?: string;
     docs_returned_datetime?: string;

@@ -55,15 +55,20 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
   });
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const jobId = params.get("id");
-    const access_token = localStorage.getItem("access_token");
-    setAccesstoken(access_token);
+    // ตรวจสอบว่าอยู่ใน client-side หรือไม่
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const jobId = params.get("id");
+      const access_token = localStorage.getItem("access_token");
+      setAccesstoken(access_token);
 
-    fetchData();
+      fetchData();
+    }
   }, []);
 
   const fetchData = async () => {
+    if (typeof window === 'undefined') return;
+    
     const params = new URLSearchParams(window.location.search);
     const jobId = params.get("id");
     const access_token = localStorage.getItem("access_token");
@@ -441,6 +446,11 @@ summaryText = `🚨สรุปการทำงาน🚨
 
   const handleCopySummary = async () => {
     try {
+      // ตรวจสอบว่าอยู่ใน client-side
+      if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+        return;
+      }
+
       const summaryText = generateSummaryText();
 
       // ตรวจสอบว่า browser รองรับ Clipboard API หรือไม่
@@ -455,6 +465,8 @@ summaryText = `🚨สรุปการทำงาน🚨
         });
       } else {
         // วิธีที่ 2: Fallback สำหรับ browser เก่าหรือ HTTP
+        if (typeof document === 'undefined') return;
+        
         const textArea = document.createElement("textarea");
         textArea.value = summaryText;
         textArea.style.position = "fixed";

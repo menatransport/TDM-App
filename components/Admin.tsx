@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { ensureArray, safeMap, safeFilter, safeFind, safeLength, normalizeApiResponse } from "../lib/arrayHelpers";
 import {
   Search,
   Filter,
@@ -26,6 +27,7 @@ import {
   Check,
   FileSpreadsheet,
   ChartPie,
+  BookUser,
 } from "lucide-react";
 import Swal from "sweetalert2";
 import { AdminView } from "@/components/AdminView";
@@ -62,6 +64,7 @@ export const Admintool = () => {
   const [transportData, setTransportData] = useState<TransportItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [listCustomer, setListCustomer] = useState<string[]>([]);
   const [sortColumn, setSortColumn] = useState<keyof TransportItem | null>(
     null
   );
@@ -91,8 +94,10 @@ export const Admintool = () => {
 
   const [modalMap, setmodalMap] = useState<{
     show: boolean;
+    job: TransportItem | null;
   }>({
     show: false,
+    job: null,
   });
 
   // State สำหรับการอัปเดตเวลา
@@ -100,6 +105,7 @@ export const Admintool = () => {
 
   useEffect(() => {
     // console.log("📋 Listname จากหน้า Login:", listname);
+    setListCustomer(["บริษัท นีโอ แฟคทอรี่ จำกัด"]);
   }, []);
 
   // อัปเดตเวลาทุก 30 วินาที สำหรับ real-time highlight
@@ -154,8 +160,11 @@ export const Admintool = () => {
         },
       });
       const data = await res.json();
-       console.log("🚚 ข้อมูลที่ค้นหา:", data);
-      setTransportData(data.jobs);
+      console.log("🚚 ข้อมูลที่ค้นหา:", data);
+      
+      // ใช้ utility function เพื่อ normalize response
+      const normalizedData = normalizeApiResponse(data);
+      setTransportData(normalizedData.jobs);
       setLoading(false);
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -248,7 +257,9 @@ export const Admintool = () => {
     const lastInputId = loadIds[loadIds.length - 1];
 
     // ดึง load_id ที่ไม่ซ้ำกันจาก transportData
-    const uniqueLoadIds = [...new Set(transportData.map(item => item.load_id))];
+    const uniqueLoadIds = [...new Set(
+      safeMap(transportData, (item: TransportItem) => item.load_id)
+    )];
 
     // กรอง load_id ที่ตรงกับ ID สุดท้ายที่พิมพ์
     if (lastInputId.length > 0) {
@@ -331,7 +342,7 @@ export const Admintool = () => {
       const filename = `${timestamp}_menafasttrack.xlsx`;
       const ticketdata = transportData; // ใช้ transportData แทน mockData
       // เตรียมข้อมูลสำหรับ Excel
-      const excelData = transportData.map((item, index) => ({
+      const excelData = safeMap(transportData, (item: TransportItem, index) => ({
         'ลำดับ': index + 1,
         'รหัสขนส่ง': item.load_id || '',
         'ชื่อพจส.': item.driver_name || '',
@@ -351,7 +362,7 @@ export const Admintool = () => {
         'วันที่เวลาเริ่มขึ้นสินค้า': item.ticket_info?.start_recive_datetime || '',
         'วันที่เวลาขึ้นสินค้าเสร็จ': item.ticket_info?.end_recive_datetime || '',
         'วันที่เวลาเริ่มขนส่ง': item.ticket_info?.intransit_datetime || '',
-        // 'วันที่ถึงปลายทาง': item.ticket_info?.desination_datetime || '',
+        'วันที่ถึงปลายทาง': item.ticket_info?.desination_datetime || '',
         'วันที่เวลาส่งเอกสาร': item.ticket_info?.docs_submitted_datetime || '',
         'วันที่เวลาเริ่มลงสินค้า': item.ticket_info?.start_unload_datetime || '',
         'วันที่เวลาลงสินค้าเสร็จ': item.ticket_info?.end_unload_datetime || '',
@@ -424,11 +435,19 @@ export const Admintool = () => {
 
   // ✅ ดู / แก้ไข / ลบ
   const handleView = (id: any) => {
-    const jobData = transportData.find((item) => item.load_id === id); // ✅ ใช้ find
+    const jobData = safeFind(transportData, (item: TransportItem) => item.load_id === id); // ✅ ใช้ find
     if (jobData) {
       setmodalView({ show: true, job: jobData });
     }
   };
+
+  const handleMap = (id: any) => {
+    const jobData = safeFind(transportData, (item: TransportItem) => item.load_id === id); // ✅ ใช้ find
+    if (jobData) {
+      setmodalMap({ show: true, job: jobData });
+    }
+  };
+
 
 
   const handleClose = (close: boolean) => {
@@ -511,7 +530,7 @@ export const Admintool = () => {
   // Sort data
   const sortedData = useMemo(() => {
     // เรียงลำดับตาม highlight ก่อน แล้วค่อยเรียงตาม column ที่เลือก
-    return [...transportData].sort((a, b) => {
+    return [...ensureArray<TransportItem>(transportData)].sort((a, b) => {
       // ตรวจสอบ highlight priority
       const aHighlight = getRowHighlight(a);
       const bHighlight = getRowHighlight(b);
@@ -764,7 +783,9 @@ export const Admintool = () => {
                     const lastInputId = loadIds[loadIds.length - 1];
 
                     // หา load_id ที่ตรงแบบแม่นยำ หรือ ID แรกที่ตรงใน suggestions
-                    const uniqueLoadIds = [...new Set(transportData.map(item => item.load_id))];
+                    const uniqueLoadIds = [...new Set(
+                      safeMap(transportData, (item: TransportItem) => item.load_id)
+                    )];
                     const exactMatch = uniqueLoadIds.find(
                       (loadId) =>
                         loadId.toLowerCase() === lastInputId.toLowerCase()
@@ -811,7 +832,7 @@ export const Admintool = () => {
                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-40 overflow-y-auto">
                   {filteredLoadIds.map((loadId, index) => {
                     // หาข้อมูลเพิ่มเติมจาก transportData
-                    const jobData = transportData.find(item => item.load_id === loadId);
+                    const jobData = safeFind(transportData, (item: TransportItem) => item.load_id === loadId);
                     return (
                       <div
                         key={index}
@@ -922,6 +943,8 @@ export const Admintool = () => {
               />
             </div>
 
+            
+
             {/* Status */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
@@ -986,6 +1009,31 @@ export const Admintool = () => {
                 </optgroup>
               </select>
             </div>
+
+            {/* location_receive */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                <BookUser  size={16} />
+                ลูกค้า
+              </label>
+              <select
+                onChange={(e) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    locat_recive: e.target.value,
+                  }))
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+              >
+                <option value="">เลือกลูกค้า</option>
+                {listCustomer.map((customer, index) => (
+                  <option key={index} value={customer}>
+                    {customer}
+                  </option>
+                ))}
+              </select>
+            </div>
+
           </div>
 
           <div
@@ -1022,7 +1070,7 @@ export const Admintool = () => {
               <div>
                 <p className="text-sm text-gray-600">งานทั้งหมด</p>
                 <p className="text-2xl font-bold text-gray-800">
-                  {transportData.length}
+                  {safeLength(transportData)}
                 </p>
               </div>
               <div className="bg-blue-100 p-3 rounded-full">
@@ -1037,8 +1085,7 @@ export const Admintool = () => {
                 <p className="text-sm text-gray-600">ยกเลิก</p>
                 <p className="text-2xl font-bold text-red-800">
                   {
-                    transportData.filter(
-                      (item) =>
+                    safeFilter(transportData, (item: TransportItem) =>
                         item.status === "ยกเลิก" ||
                         item.status === "ตกคิว" ||
                         item.status === "ซ่อม" ||
@@ -1059,8 +1106,8 @@ export const Admintool = () => {
                 <p className="text-sm text-gray-600">พร้อมรับงาน</p>
                 <p className="text-2xl font-bold text-yellow-600">
                   {
-                    transportData.filter(
-                      (item) => item.status === "พร้อมรับงาน"
+                    safeFilter(transportData, (item: TransportItem) => 
+                      item.status === "พร้อมรับงาน"
                     ).length
                   }
                 </p>
@@ -1298,7 +1345,7 @@ export const Admintool = () => {
                     </div>
                     <div className="mt-2 flex gap-2">
                      <button
-                      onClick={() => setmodalMap({ show: true})}
+                      onClick={() => setmodalView({...modalView, show: true, job: item})}
                       className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors"
                     >
                       <MapPin  size={16} />
@@ -1459,10 +1506,8 @@ export const Admintool = () => {
                             </button>
                             
                             <button className="bg-yellow-500 hover:bg-yellow-600 text-white p-2 rounded-lg">
-                        <MapPin size={16} 
-                       onClick={() => setmodalMap({ show: true})}
-                        />
-                      </button>
+                              <MapPin size={16} onClick={() => handleMap(item.load_id)} />
+                            </button>
 
 
                             <button className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg">
@@ -1586,7 +1631,7 @@ export const Admintool = () => {
       
       {modalMap.show && (
         <AdminMap
-         jobView={modalView.job}
+          jobView={modalMap.job}
           closeModal={(close: boolean) => handleClose(close)}
           refreshTable={() => handleSearch()}
         />
