@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { stat } from "fs";
+import Swal from "sweetalert2";
 
 interface Typedata {
   load_id: string;
@@ -600,11 +601,19 @@ export const TimelineStep = ({
                       <button
                         onClick={() => {
                           if (typeof window !== 'undefined') {
-                            window.open(
-                              "https://line.me/ti/g/rmCAQxMY_U",
-                              "_blank",
-                              "noopener,noreferrer"
-                            );
+                            navigator.clipboard.writeText(db.load_id);
+                            Swal.fire({
+                              icon: 'success',
+                              title: 'คัดลอก Load ID '+ db.load_id +' สำเร็จ',
+                              text: 'โปรดนำไปวางในกลุ่มและแจ้งปัญหาที่เกิดขึ้น',
+                              confirmButtonText: 'ตกลง'
+                            }).then(() => {
+                              window.open(
+                                "https://line.me/ti/g/rmCAQxMY_U",
+                                "_blank",
+                                "noopener,noreferrer"
+                              );
+                            });                            
                           }
                         }}
                         className="text-blue-600 hover:text-blue-800 underline mx-1"
