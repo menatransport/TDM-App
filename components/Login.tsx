@@ -452,7 +452,7 @@ return (
             {/* Login button */}
             <button
               onClick={handleLogin}
-              // disabled={isLoading || gpsPermission === 'denied' || (!currentLocation && gpsPermission !== 'granted')}
+              disabled={isLoading || gpsPermission === 'denied' || (!currentLocation && gpsPermission !== 'granted')}
               className={`w-full mt-10 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none group ${
                 gpsPermission === 'granted' && currentLocation
                   ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600'
@@ -467,11 +467,11 @@ return (
                   </>
                 ) : gpsPermission === 'denied' ? (
                   <>
-                    🌍 จำเป็นต้องเปิด GPS
+                    จำเป็นต้องเปิด GPS
                   </>
                 ) : !currentLocation ? (
                   <>
-                    🔍 กำลังรอ GPS...
+                    กำลังรอ GPS...
                   </>
                 ) : (
                   <>
@@ -531,7 +531,7 @@ return (
       disabled={isLoading}
       className="w-full text-sm bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition-colors disabled:opacity-50"
     >
-      🌍 เปิดใช้งาน GPS
+       เปิดใช้งาน GPS
     </button>
   </div>
 )}
