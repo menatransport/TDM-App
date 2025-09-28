@@ -494,26 +494,30 @@ export const Jobcomponent = ({ onLoadingChange }: TicketProps) => {
         <div className="flex flex-row items-start gap-2 mx-2">
           <button 
             onClick={() => {
-              // ตรวจสอบว่ามี username หรือไม่
-              if (!username) {
-                alert("ไม่พบข้อมูลผู้ใช้งาน กรุณาเข้าสู่ระบบใหม่");
-                return;
-              }
-              const filterValue = `include%EE%80%800%EE%80%80EQ%EE%80%80${encodeURIComponent(username)}`;
+              Swal.fire({ 
+                title:"ขออภัยในความไม่สะดวก ขณะนี้ระบบกำลังอยู่ในระหว่างการปรับปรุงข้อมูลชั่วคราว กรุณาติดต่อผู้ดูแลระบบหากมีข้อสงสัยเพิ่มเติม ขอบคุณค่ะ",
+                icon: "info",
+                confirmButtonText: "ตกลง",
+              });
+              // if (!username) {
+              //   alert("ไม่พบข้อมูลผู้ใช้งาน กรุณาเข้าสู่ระบบใหม่");
+              //   return;
+              // }
+              // const filterValue = `include%EE%80%800%EE%80%80EQ%EE%80%80${encodeURIComponent(username)}`;
               
-              const paramObj = {
-                "df22": filterValue
-              };
+              // const paramObj = {
+              //   "df22": filterValue
+              // };
 
-              const jsonString = JSON.stringify(paramObj);
+              // const jsonString = JSON.stringify(paramObj);
               
-              const encodedParams = encodeURIComponent(jsonString);
+              // const encodedParams = encodeURIComponent(jsonString);
               
 
-              const url = `https://lookerstudio.google.com/reporting/0c8e5234-e485-41cb-85a9-45506a773b30/page/p_nhftjp31vd?params=${encodedParams}`;
+              // const url = `https://lookerstudio.google.com/reporting/0c8e5234-e485-41cb-85a9-45506a773b30/page/p_nhftjp31vd?params=${encodedParams}`;
               
-              console.log('Final URL:', url);
-              window.open(url, "_blank");
+              // console.log('Final URL:', url);
+              // window.open(url, "_blank");
             }}
             className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-4 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
           >
