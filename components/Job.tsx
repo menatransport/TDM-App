@@ -491,7 +491,7 @@ export const Jobcomponent = ({ onLoadingChange }: TicketProps) => {
         <hr className="my-4 border-gray-200" />
         
         {/* External Statistics Button */}
-        <div className="flex flex-row items-start gap-2 mx-2">
+        <div className="hidden flex-row items-start gap-2 mx-2">
           <button 
             onClick={() => {
               Swal.fire({ 
