@@ -60,6 +60,8 @@ export const TimelineStep = ({
   const [imageStatus, setImagesStatus] = useState<File[]>([]);
   const [stamptime, setStamptime] = useState<string>("");
   const [isStamping, setIsStamping] = useState<boolean>(false);
+  const [lastClickTime, setLastClickTime] = useState<number>(0);
+  const [gpsTimeout, setGpsTimeout] = useState<NodeJS.Timeout | null>(null);
   const [currentTime, setCurrentTime] = useState<string>(() => {
     const now = new Date();
     const year = now.getFullYear();
@@ -101,6 +103,10 @@ export const TimelineStep = ({
       const resetStamp = () => {
         setStamptime("");
         setIsStamping(false);
+        if (gpsTimeout) {
+          clearTimeout(gpsTimeout);
+          setGpsTimeout(null);
+        }
       };
 
       // เรียก resetStamp เมื่อมีการ save สำเร็จ
@@ -108,9 +114,13 @@ export const TimelineStep = ({
 
       return () => {
         window.removeEventListener("timeline-reset", resetStamp);
+        // ทำความสะอาด timeout เมื่อ component unmount
+        if (gpsTimeout) {
+          clearTimeout(gpsTimeout);
+        }
       };
     }
-  }, [onSaveComplete]);
+  }, [onSaveComplete, gpsTimeout]);
 
   const statusConfig: StatusItem[] = [
     {
@@ -302,62 +312,60 @@ export const TimelineStep = ({
     return getimages.images;
   };
 
-  const formchange = (id: string, key: string, date: string, latlng: string, latlngStamp: string) => {
-    setIsStamping(true);
-
-    fetchImages(id)
-      .then((fetchImages) => {
-        if (
-          statusConfig.find((status) => status.key === key)?.title ==
-          "ขึ้นสินค้าเสร็จ"
-        ) {
-          const hasOriginImages = fetchImages.some(
-            (img: any) => img.category === "origin"
-          );
-          if (!hasOriginImages) {
-            alert("โปรดแนบรูปภาพต้นทาง อย่างน้อย 1 รูปภาพ");
-            setIsStamping(false);
-            router.push(
-              `/picture?id=${id}&status=${
-                statusConfig.find((status) => status.key === key)?.title
-              }`
-            );
-            return;
-          }
-        } else if (
-          statusConfig.find((status) => status.key === key)?.title ==
-          "ลงสินค้าเสร็จ"
-        ) {
-          console.log("des");
-          const hasDestinationImages = fetchImages.some(
-            (img: any) => img.category === "destination"
-          );
-          if (!hasDestinationImages) {
-            alert("โปรดแนบรูปภาพปลายทาง อย่างน้อย 1 รูปภาพ");
-            setIsStamping(false);
-            router.push(
-              `/picture?id=${id}&status=${
-                statusConfig.find((status) => status.key === key)?.title
-              }`
-            );
-            return;
-          }
-        }
-
-        // Simulate stamping animation delay
-        setTimeout(() => {
-          setStamptime(date);
-          onTimeChange({
-            load_id: id,
-            [key]: date,
-            [latlng]: latlngStamp,
-          });
+  const formchange = async (id: string, key: string, date: string, latlng: string, latlngStamp: string) => {
+    try {
+      const images = await fetchImages(id);
+      
+      if (
+        statusConfig.find((status) => status.key === key)?.title ==
+        "ขึ้นสินค้าเสร็จ"
+      ) {
+        const hasOriginImages = images.some(
+          (img: any) => img.category === "origin"
+        );
+        if (!hasOriginImages) {
+          alert("โปรดแนบรูปภาพต้นทาง อย่างน้อย 1 รูปภาพ");
           setIsStamping(false);
-        }, 300); // 0.3 second delay for stamp effect
-      })
-      .catch(() => {
-        setIsStamping(false);
+          router.push(
+            `/picture?id=${id}&status=${
+              statusConfig.find((status) => status.key === key)?.title
+            }`
+          );
+          return;
+        }
+      } else if (
+        statusConfig.find((status) => status.key === key)?.title ==
+        "ลงสินค้าเสร็จ"
+      ) {
+        const hasDestinationImages = images.some(
+          (img: any) => img.category === "destination"
+        );
+        if (!hasDestinationImages) {
+          alert("โปรดแนบรูปภาพปลายทาง อย่างน้อย 1 รูปภาพ");
+          setIsStamping(false);
+          router.push(
+            `/picture?id=${id}&status=${
+              statusConfig.find((status) => status.key === key)?.title
+            }`
+          );
+          return;
+        }
+      }
+
+      // บันทึกทันทีไม่ต้อง setTimeout
+      setStamptime(date);
+      onTimeChange({
+        load_id: id,
+        [key]: date,
+        [latlng]: latlngStamp,
       });
+      setIsStamping(false);
+      
+    } catch (error) {
+      console.error("Error in formchange:", error);
+      setIsStamping(false);
+      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่");
+    }
   };
 
   const getNextStatus = () => {
@@ -500,41 +508,80 @@ export const TimelineStep = ({
                     {!stamptime && (
                       <button
                         onClick={() => {
-                          if (!isStamping && typeof window !== 'undefined' && typeof navigator !== 'undefined') {
-                            const now = new Date();
-                            const formattedTime = formatOnsend(
-                              now.toISOString()
-                            );
-                            
-                            if (navigator.geolocation) {
-                              navigator.geolocation.getCurrentPosition((position) => {
-                                const latlngStamp = position.coords.latitude + "," + position.coords.longitude;
-                                formchange(db.load_id, status.key, formattedTime, status.latlng, latlngStamp);
-                              }, (error) => {
-                                console.error("Error getting location:", error);
-                                alert("ไม่สามารถระบุตำแหน่งปัจจุบันได้ โปรดตรวจสอบการอนุญาตตำแหน่ง : " + error.message);
-                              }, {
-                                enableHighAccuracy: true,
-                                timeout: 10000,
-                                maximumAge: 60000
-                              });
-                            } else {
-                              alert("เบราว์เซอร์ของคุณไม่รองรับการระบุตำแหน่ง");
-                            }
+                          // ป้องกันการกดซ้ำ
+                          const now = Date.now();
+                          if (now - lastClickTime < 1000) return; // ป้องกันกดซ้ำภายใน 1 วินาที
+                          setLastClickTime(now);
+                          
+                          if (isStamping || typeof window === 'undefined' || typeof navigator === 'undefined') return;
+                          
+                          setIsStamping(true);
+                          
+                          const currentTime = new Date();
+                          const formattedTime = formatOnsend(currentTime.toISOString());
+                          
+                          if (!navigator.geolocation) {
+                            alert("เบราว์เซอร์ของคุณไม่รองรับการระบุตำแหน่ง");
+                            setIsStamping(false);
+                            return;
                           }
+
+                          // เพิ่ม timeout สำหรับ GPS
+                          const timeoutId = setTimeout(() => {
+                            setIsStamping(false);
+                            alert("การขอตำแหน่ง GPS ใช้เวลานานเกินไป กรุณาลองใหม่");
+                          }, 15000); // 15 วินาที
+                          
+                          setGpsTimeout(timeoutId);
+
+                          navigator.geolocation.getCurrentPosition(
+                            (position) => {
+                              if (gpsTimeout) clearTimeout(timeoutId);
+                              const latlngStamp = `${position.coords.latitude},${position.coords.longitude}`;
+                              formchange(db.load_id, status.key, formattedTime, status.latlng, latlngStamp);
+                            }, 
+                            (error) => {
+                              if (gpsTimeout) clearTimeout(timeoutId);
+                              setIsStamping(false);
+                              
+                              console.error("Error getting location:", error);
+                              
+                              let errorMessage = "ไม่สามารถระบุตำแหน่งปัจจุบันได้ ";
+                              switch (error.code) {
+                                case error.PERMISSION_DENIED:
+                                  errorMessage += "กรุณาอนุญาตการใช้ตำแหน่งในเบราว์เซอร์";
+                                  break;
+                                case error.POSITION_UNAVAILABLE:
+                                  errorMessage += "กรุณาตรวจสอบการเชื่อมต่อ GPS";
+                                  break;
+                                case error.TIMEOUT:
+                                  errorMessage += "การขอตำแหน่งใช้เวลานานเกินไป กรุณาลองใหม่";
+                                  break;
+                                default:
+                                  errorMessage += error.message;
+                              }
+                              
+                              alert(errorMessage);
+                            }, 
+                            {
+                              enableHighAccuracy: true,
+                              timeout: 12000, // ลด timeout เหลือ 12 วินาที
+                              maximumAge: 30000 // ลด cache เหลือ 30 วินาที
+                            }
+                          );
                         }}
                         disabled={isStamping}
                         className={`group flex flex-col items-center justify-center w-24 h-24 rounded-2xl shadow-lg transition-all duration-200 ${
                           isStamping
-                            ? "bg-gradient-to-br from-gray-400 to-gray-500 cursor-not-allowed transform scale-95"
+                            ? "bg-gradient-to-br from-gray-400 to-gray-500 cursor-not-allowed transform scale-95 opacity-75"
                             : "bg-gradient-to-br from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white hover:shadow-xl hover:-translate-y-1 active:transform active:scale-95 active:translate-y-0"
                         }`}
                       >
                         {isStamping ? (
                           <>
-                            <div className="w-10 h-10 mb-2 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
-                            <span className="text-sm font-medium text-white">
-                              กำลังแสตมป์...
+                            <div className="w-8 h-8 mb-2 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
+                            <span className="text-xs font-medium text-white text-center leading-tight">
+                              รอสักครู่...
                             </span>
                           </>
                         ) : (
@@ -548,7 +595,6 @@ export const TimelineStep = ({
                       </button>
                     )}
 
-                    {/* Cancel Button - แสดงเฉพาะเมื่อมีเวลาแล้ว */}
                   </div>
 
                   {/* แสดงเวลาที่บันทึก - แสดงเฉพาะเมื่อมีเวลา */}
@@ -585,14 +631,14 @@ export const TimelineStep = ({
                   )}
 
                   {/* ประกาศแสดงเฉพาะเมื่อยังไม่บันทึกเวลา */}
-                  {!stamptime && (
+                  {/* {!stamptime && (
                     <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-lg">
                       <p className="text-xs text-orange-700 text-center">
                         🎯 เพื่อความแม่นยำของข้อมูล <br />
                         ระบบจะใช้เวลาบันทึกปัจจุบัน และตำแหน่งปัจจุบัน
                       </p>
                     </div>
-                  )}
+                  )} */}
 
                   {/* แจ้งเตือนเกี่ยวกับการแก้ไข */}
                   <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-lg">
