@@ -118,7 +118,7 @@ export const Logincomponent = () => {
         console.log('Permission API not supported, will request on login');
       }
     };
-
+    requestGPSPermission();
     checkGPSStatus();
   }, []);
 
