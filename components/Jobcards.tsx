@@ -30,10 +30,11 @@ export const Jobcards = ({ filterStatus, datajobs }: JobcardsProps) => {
     const receiveTime = job.date_recive ? new Date(job.date_recive) : null;
     const deliverTime = job.date_deliver ? new Date(job.date_deliver) : null;
     
-    // ตรวจสอบเฉพาะสถานะ "รับงาน" หรือ "พร้อมรับงาน"
-    const isTargetStatus = job.status === "รับงาน" || job.status === "พร้อมรับงาน";
-    
-    if (!isTargetStatus) {
+
+    const isTargetStatus_origin = job.status === "รับงาน" || job.status === "พร้อมรับงาน";
+    const isTargetStatus_deliver = job.status === "ถึงต้นทาง" || job.status === "เริ่มขึ้นสินค้า" || job.status === "ขึ้นสินค้าเสร็จ" || job.status === "เริ่มขนส่ง";
+
+    if (!isTargetStatus_origin && !isTargetStatus_deliver) {
       return { 
         className: "", 
         message: "", 
@@ -42,11 +43,9 @@ export const Jobcards = ({ filterStatus, datajobs }: JobcardsProps) => {
       };
     }
 
-    // ตรวจสอบเวลารับสินค้า (date_recive)
-    if (receiveTime) {
+    if (receiveTime && isTargetStatus_origin) {
       const oneHourBeforeReceive = new Date(receiveTime.getTime() - (60 * 60 * 1000));
       
-      // เกินเวลารับสินค้าแล้ว - สีแดง
       if (currentTime >= receiveTime) {
         return {
           className: "border-red-500 bg-red-50 shadow-red-200",
@@ -68,7 +67,7 @@ export const Jobcards = ({ filterStatus, datajobs }: JobcardsProps) => {
     }
 
     // ตรวจสอบเวลาส่งสินค้า (date_deliver)
-    if (deliverTime) {
+    if (deliverTime && isTargetStatus_deliver) {
       const oneHourBeforeDeliver = new Date(deliverTime.getTime() - (60 * 60 * 1000));
       
       // เกินเวลาส่งสินค้าแล้ว - สีแดง
