@@ -369,8 +369,8 @@ export const Admintool = () => {
         'วันที่เวลาลงสินค้าเสร็จ': item.ticket_info?.end_unload_datetime || '',
         'วันที่เวลาคืนเอกสาร': item.ticket_info?.docs_returned_datetime || '',
         'วันที่เวลาออกจากปลายทาง': item.ticket_info?.complete_datetime || '',
-        'วันที่สร้าง': item.create_at || '',
-        'อัพเดทล่าสุด': item.update_at || ''
+        'วันที่สร้าง': item.created_at || '',
+        'อัพเดทล่าสุด': item.updated_at || ''
       }));
 
       // สร้าง workbook และ worksheet

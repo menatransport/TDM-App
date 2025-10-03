@@ -47,7 +47,7 @@ export const Logincomponent = () => {
       };
 
       setGpsError("");
-      setIsLoading(true);
+      // setIsLoading(true);
 
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -59,7 +59,7 @@ export const Logincomponent = () => {
           console.log('📍 GPS Location obtained:', coords);
           setCurrentLocation({latlng_current: `${coords.lat},${coords.lng}`});
           setGpsPermission('granted');
-          setIsLoading(false);
+          // setIsLoading(false);
           resolve(coords);
         },
         (error) => {
@@ -105,7 +105,7 @@ export const Logincomponent = () => {
           if (permission.state === 'granted') {
             // ถ้ามี permission แล้ว ให้ขอ location เลย
             try {
-              await requestGPSPermission();
+              // await requestGPSPermission();
             } catch (error) {
               console.log('GPS permission granted but failed to get location');
             }
@@ -118,7 +118,7 @@ export const Logincomponent = () => {
         console.log('Permission API not supported, will request on login');
       }
     };
-    requestGPSPermission();
+    // requestGPSPermission();
     checkGPSStatus();
   }, []);
 
@@ -232,7 +232,7 @@ useEffect(() => {
         }
       }
 
-      console.log('🔐 Proceeding with login...');
+
       const res = await fetch('/api/auth', {
         method: 'POST',
         headers: {
@@ -461,7 +461,7 @@ return (
             {/* Login button */}
             <button
               onClick={handleLogin}
-              disabled={isLoading || gpsPermission === 'denied' || (!currentLocation && gpsPermission !== 'granted')}
+              disabled={isLoading || gpsPermission === 'denied'}
               className={`w-full mt-10 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none group ${
                 (gpsPermission === 'granted' && currentLocation) || gpsPermission === 'pending'
                   ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600'
@@ -530,7 +530,7 @@ return (
 )}
 
 {gpsPermission === 'pending' && !currentLocation && (
-  <div className="mb-4 p-3 rounded-lg border border-gray-200 bg-blue-50">
+  <div className="hidden mb-4 p-3 rounded-lg border border-gray-200 bg-blue-50">
     {/* <div className="flex items-center space-x-2 mb-2">
       <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
       <span className="text-sm text-blue-700">กำลังตรวจสอบ GPS...</span>

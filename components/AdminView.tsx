@@ -24,12 +24,35 @@ import {
   Loader2,
 } from "lucide-react";
 import Swal from "sweetalert2";
+import { DateTimePicker } from "@/components/ui/datetime-picker";
 
 interface AdminViewProps {
   jobView: TransportItem | null;
   closeModal: (close: boolean) => void;
   refreshTable?: () => void;
 }
+
+// Helper function to format date with +7 hours timezone
+const formatDateTH = (dateString: string | null | undefined): string => {
+  if (!dateString) return "";
+  
+  const date = new Date(dateString);
+  // Add 7 hours for Thailand timezone
+  date.setHours(date.getHours() + 7);
+  
+  const months = [
+    "ม.ค", "ก.พ", "มี.ค", "เม.ย", "พ.ค", "มิ.ย",
+    "ก.ค", "ส.ค", "ก.ย", "ต.ค", "พ.ย", "ธ.ค"
+  ];
+  
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = months[date.getMonth()];
+  const year = date.getFullYear();
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  
+  return `${day} ${month} ${year}, ${hours}:${minutes}`;
+};
 
 export function AdminView({ jobView, closeModal, refreshTable }: AdminViewProps) {
   const [activeTab, setActiveTab] = useState("jobs");
@@ -375,14 +398,12 @@ export function AdminView({ jobView, closeModal, refreshTable }: AdminViewProps)
                       <Calendar className="w-4 h-4" />
                       วันที่ขึ้นสินค้า
                     </label>
-                    <input
-                      type="datetime-local"
-                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm sm:text-base"
+                    <DateTimePicker
                       value={formData?.date_recive || ""}
-                      onChange={(e) =>
-                        handleChange("date_recive", e.target.value)
-                      }
-                      readOnly={btn === "edit"}
+                      onChange={(value) => handleChange("date_recive", value)}
+                      placeholder="เลือกวันที่และเวลาขึ้นสินค้า"
+                      disabled={btn === "edit"}
+                      className="text-sm sm:text-base px-3 sm:px-4 py-2 sm:py-3"
                     />
                   </div>
 
@@ -392,14 +413,12 @@ export function AdminView({ jobView, closeModal, refreshTable }: AdminViewProps)
                       <Calendar className="w-4 h-4" />
                       วันที่ลงสินค้า
                     </label>
-                    <input
-                      type="datetime-local"
-                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm sm:text-base"
+                    <DateTimePicker
                       value={formData?.date_deliver || ""}
-                      onChange={(e) =>
-                        handleChange("date_deliver", e.target.value)
-                      }
-                      readOnly={btn === "edit"}
+                      onChange={(value) => handleChange("date_deliver", value)}
+                      placeholder="เลือกวันที่และเวลาลงสินค้า"
+                      disabled={btn === "edit"}
+                      className="text-sm sm:text-base px-3 sm:px-4 py-2 sm:py-3"
                     />
                   </div>
 
@@ -490,7 +509,7 @@ export function AdminView({ jobView, closeModal, refreshTable }: AdminViewProps)
                       type="text"
                       className="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-200 rounded-md bg-gray-50 text-gray-600"
                       placeholder="ชื่อผู้สร้าง"
-                      value={formData?.create_by || ""}
+                      value={formData?.created_by || ""}
                       readOnly
                     />
                   </div>
@@ -499,7 +518,7 @@ export function AdminView({ jobView, closeModal, refreshTable }: AdminViewProps)
                     <input
                       type="text"
                       className="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-200 rounded-md bg-gray-50 text-gray-600"
-                      value={formData?.create_at || ""}
+                      value={formatDateTH(formData?.created_at)}
                       readOnly
                     />
                   </div>
@@ -511,7 +530,7 @@ export function AdminView({ jobView, closeModal, refreshTable }: AdminViewProps)
                       type="text"
                       className="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-200 rounded-md bg-gray-50 text-gray-600"
                       placeholder="ชื่อผู้แก้ไข"
-                      value={formData?.update_by || ""}
+                      value={formData?.updated_by || ""}
                       readOnly
                     />
                   </div>
@@ -520,7 +539,7 @@ export function AdminView({ jobView, closeModal, refreshTable }: AdminViewProps)
                     <input
                       type="text"
                       className="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-200 rounded-md bg-gray-50 text-gray-600"
-                      value={formData?.update_at || ""}
+                      value={formatDateTH(formData?.updated_at)}
                       readOnly
                     />
                   </div>

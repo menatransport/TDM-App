@@ -23,10 +23,10 @@ export interface TransportItem {
   pallet_type: string;
   pallet_plan: number;
   unload_cost: string;
-  create_by: string;
-  create_at: string;
-  update_by: string;
-  update_at: string;
+  created_by: string;
+  created_at: string;
+  updated_by: string;
+  updated_at: string;
   driver_info: {
     latlng_current: string;
     timestamp_login: string;
