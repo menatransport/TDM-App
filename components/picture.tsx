@@ -81,15 +81,12 @@ useEffect(() => {
       });
 
       const getimages = await res.json();
-      // console.log("Fetched images from API:", getimages);
-      
-      // เพิ่ม id ที่ unique ให้กับแต่ละรูป
+
       const imagesWithId = (getimages.images || []).map((image: any, index: number) => ({
         ...image,
-        id: image.key || `db-image-${index}-${Date.now()}`, // ใช้ key เป็น id หรือสร้าง id ใหม่
+        id: image.key || `db-image-${index}-${Date.now()}`, 
       }));
       
-      // console.log("Images with ID:", imagesWithId);
       setDatabaseImages(imagesWithId);
       onLoadingChange(false)
     } catch (error) {
@@ -102,9 +99,8 @@ useEffect(() => {
     fetchImages();
   }
 
-  // Cleanup function เมื่อ component unmount
   return () => {
-    // ล้าง object URLs เพื่อปล่อย memory
+
       uploadImages.forEach(image => {
         if (image.url && image.url.startsWith('blob:')) {
           URL.revokeObjectURL(image.url);
@@ -115,34 +111,29 @@ useEffect(() => {
 }, []);
 
 
-
-
-// ฟังก์ชัน compress รูปภาพที่ปรับปรุงให้เร็วขึ้น
 const compressImage = (file: File, quality: number = 0.8): Promise<File> => {
   return new Promise((resolve) => {
-    // ตรวจสอบว่าอยู่ใน client-side
+
     if (typeof document === 'undefined') {
       resolve(file);
       return;
     }
 
-    // ถ้าไฟล์เล็กกว่า 500KB ไม่ต้อง compress
     if (file.size < 512000) {
       resolve(file);
       return;
     }
 
     const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d', { alpha: false })!; // ปิด alpha channel เพื่อความเร็ว
+    const ctx = canvas.getContext('2d', { alpha: false })!; 
     const img = new Image();
     
     img.onload = () => {
-      // คำนวณขนาดใหม่อย่างชาญฉลาด
-      const maxWidth = 1200; // ลดขนาดสูงสุดลงเพื่อความเร็ว
+      const maxWidth = 1200; 
       const maxHeight = 800;
       let { width, height } = img;
       
-      // ใช้ขนาดเดิมถ้าไม่ใหญ่เกินไป
+
       if (width <= maxWidth && height <= maxHeight) {
         canvas.width = width;
         canvas.height = height;
@@ -152,23 +143,20 @@ const compressImage = (file: File, quality: number = 0.8): Promise<File> => {
         canvas.height = Math.floor(height * ratio);
       }
       
-      // ปรับการวาดรูปให้เร็วขึ้น
       ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'medium'; // ใช้ medium แทน high
+      ctx.imageSmoothingQuality = 'medium'; 
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       
-      // ปรับ quality ตามขนาดไฟล์
+
       let finalQuality = quality;
       const fileSizeMB = file.size / (1024 * 1024);
       if (fileSizeMB > 5) {
-        finalQuality = 0.6; // ลด quality สำหรับไฟล์ใหญ่
+        finalQuality = 0.6; 
       } else if (fileSizeMB > 2) {
         finalQuality = 0.7;
       }
-      
-      // แปลงเป็น blob
+
       canvas.toBlob((blob) => {
-        // ปล่อย memory
         URL.revokeObjectURL(img.src);
         
         if (blob) {
@@ -207,59 +195,66 @@ const handleUpload = async () => {
 
   try {
    
-    
-    // เตรียมไฟล์แบบ batch เพื่อความเร็ว (ประมวลผลแบบ chunk)
-    const CHUNK_SIZE = 3; // ประมวลผลครั้งละ 3 ไฟล์
-    const preparedFiles: any[] = [];
-    
-    for (let i = 0; i < uploadImages.length; i += CHUNK_SIZE) {
-      const chunk = uploadImages.slice(i, i + CHUNK_SIZE);
-      
-      const chunkResults = await Promise.all(
-        chunk.map(async (img) => {
-          if (!img.file) return null;
-          
-          const fileSizeMB = img.file.size / (1024 * 1024);
-          let processedFile = img.file;
-          
-          // Compress เฉพาะไฟล์ที่ใหญ่กว่า 0.5MB
-          if (fileSizeMB > 0.5) {
-            processedFile = await compressImage(img.file);
-          }
-          
-          return {
-            file: new File([processedFile], img.name, { type: processedFile.type }),
-            originalName: img.name
-          };
-        })
-      );
-      
-      preparedFiles.push(...chunkResults.filter(f => f !== null));
-      
-      // หยุดพักเล็กน้อยระหว่าง chunk เพื่อไม่ให้ UI หยุดทำงาน
-      if (i + CHUNK_SIZE < uploadImages.length) {
-        await new Promise(resolve => setTimeout(resolve, 10));
-      }
-    }
 
-    if (preparedFiles.length === 0) {
+    const prepareFiles = await Promise.all(
+      uploadImages.map(async (img, index) => {
+        if (!img.file) return null;
+        
+        const fileSizeMB = img.file.size / (1024 * 1024);
+        let processedFile = img.file;
+        
+        if (fileSizeMB > 1) {
+         
+          processedFile = await compressImage(img.file, 0.8);
+          const newSizeMB = processedFile.size / (1024 * 1024);
+          
+        }
+        
+        return {
+          file: new File([processedFile], img.name, { type: processedFile.type }),
+          originalName: img.name
+        };
+      })
+    );
+
+    const validFiles = prepareFiles.filter(f => f !== null);
+    if (validFiles.length === 0) {
       alert('ไม่มีไฟล์ที่จะอัปโหลด');
       return;
     }
 
-    // แบ่งเป็น batches แบบง่าย (3 ไฟล์ต่อ batch)
-    const BATCH_SIZE = 3;
-    const batches: any[][] = [];
-    for (let i = 0; i < preparedFiles.length; i += BATCH_SIZE) {
-      batches.push(preparedFiles.slice(i, i + BATCH_SIZE));
-    }
+
+    const OPTIMIZED_BATCH_SIZE = 1.5 * 1024 * 1024;
+    const createOptimizedBatches = (files: any[]) => {
+      const batches: any[][] = [];
+      let currentBatch: any[] = [];
+      let currentSize = 0;
+
+      for (const fileData of files) {
+        
+        if (currentSize + fileData.file.size > OPTIMIZED_BATCH_SIZE && currentBatch.length > 0) {
+          batches.push(currentBatch);
+          currentBatch = [];
+          currentSize = 0;
+        }
+        currentBatch.push(fileData);
+        currentSize += fileData.file.size;
+      }
+
+      if (currentBatch.length > 0) {
+        batches.push(currentBatch);
+      }
+
+      return batches;
+    };
+
+    const batches = createOptimizedBatches(validFiles);
 
     let successCount = 0;
     let failCount = 0;
 
-    // Upload แบบ sequential เพื่อความเสถียร
-    for (let i = 0; i < batches.length; i++) {
-      const batch = batches[i];
+    const uploadBatch = async (batch: any[], batchIndex: number) => {
+
       const formData = new FormData();
       
       batch.forEach((fileData) => {
@@ -267,43 +262,53 @@ const handleUpload = async () => {
       });
 
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // timeout 30 วินาที
+
         
         const res = await fetch('/api/upload', {
           method: 'POST',
           body: formData,
-          signal: controller.signal
         });
-
-        clearTimeout(timeoutId);
-
+  
         if (res.ok) {
-          successCount += batch.length;
+          return { success: batch.length, fail: 0 };
         } else {
-          failCount += batch.length;
-          console.error(`❌ Batch ${i + 1} ล้มเหลว:`, res.status);
+          return { success: 0, fail: batch.length };
         }
 
       } catch (error) {
-        failCount += batch.length;
-        console.error(`❌ Error ใน batch ${i + 1}:`, error);
+        return { success: 0, fail: batch.length };
       }
+     
+    };
+
+    const PARALLEL_LIMIT = 2;
+    for (let i = 0; i < batches.length; i += PARALLEL_LIMIT) {
+ 
+      const currentBatches = batches.slice(i, i + PARALLEL_LIMIT);
       
-      // พักเล็กน้อยระหว่าง batch
-      if (i < batches.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const results = await Promise.all(
+        currentBatches.map((batch, idx) => uploadBatch(batch, i + idx))
+      );
+
+      results.forEach(result => {
+        successCount += result.success;
+        failCount += result.fail;
+      });
+
+      if (i + PARALLEL_LIMIT < batches.length) {
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
+ 
     }
 
-    // แสดงผลรวม
     if (successCount > 0) {
       if (failCount === 0) {
-        // console.log('🎉 อัปโหลดสำเร็จทั้งหมด!');
-        alert(`✅ อัปโหลดสำเร็จทั้งหมด ${successCount} รูป!`);
+        console.log('🎉 อัปโหลดสำเร็จทั้งหมด!');
+        alert(`✅ อัปโหลดสำเร็จทั้งหมด ${successCount} รูปภาพ!`);
       } else {
-        // console.log(`⚠️ อัปโหลดเสร็จสิ้น: สำเร็จ ${successCount}, ล้มเหลว ${failCount}`);
-        alert(`⚠️ อัปโหลดเสร็จสิ้น: สำเร็จ ${successCount} รูป, ล้มเหลว ${failCount} รูป`);
+        console.log(`⚠️ อัปโหลดเสร็จสิ้น: สำเร็จ ${successCount}, ล้มเหลว ${failCount}`);
+        alert(`⚠️ อัปโหลดเสร็จสิ้น: สำเร็จ ${successCount} รูปภาพ, ล้มเหลว ${failCount} รูปภาพ`);
       }
 
       location.reload();
@@ -320,7 +325,7 @@ const handleUpload = async () => {
     if (err.name === 'AbortError') {
       alert('❌ การอัปโหลดใช้เวลานานเกินไป กรุณาลองใหม่');
     } else if (err.name === 'TypeError' && err.message.includes('fetch')) {
-      alert('❌ ปัญหาการเชื่อมต่อ กรุณาตรวจสอบอินเทอร์เน็ตและลองใหม่');
+      alert('❌ ปัญหาการเชื่อมต่อ กรุณาลองใหม่อีกครั้ง');
     } else {
       alert(`❌ เกิดข้อผิดพลาดขณะอัปโหลด: ${err.message || 'Unknown error'}`);
     }
@@ -518,7 +523,6 @@ const confirmDelete = async () => {
     const validImages: ImageFile[] = [];
     const errors: string[] = [];
 
-    // ประมวลผลไฟล์แบบ batch เพื่อความเร็ว
     const PROCESS_BATCH_SIZE = 5;
     for (let i = 0; i < files.length; i += PROCESS_BATCH_SIZE) {
       const batch = files.slice(i, i + PROCESS_BATCH_SIZE);
@@ -526,8 +530,9 @@ const confirmDelete = async () => {
       const batchResults = await Promise.all(
         batch.map(async (file, batchIndex) => {
           try {
-            // ตรวจสอบประเภทไฟล์
+
             if (!file.type.startsWith('image/')) {
+              alert(`${file.name} ไม่ใช่รูปภาพ`);
               return { error: `${file.name} ไม่ใช่รูปภาพ` };
             }
             
@@ -553,6 +558,7 @@ const confirmDelete = async () => {
             return { image: newImage };
             
           } catch (error) {
+            alert(`เกิดข้อผิดพลาดกับไฟล์ ${file.name}`);
             return { error: `เกิดข้อผิดพลาดในการประมวลผล ${file.name}` };
           }
         })
@@ -739,8 +745,8 @@ function removeFileExtension(filename: string): string {
             {/* Zone การอัปโหลด */}
             <div
               className="border-2 border-dashed border-emerald-300 rounded-xl p-8 text-center hover:border-emerald-500 hover:bg-emerald-50 transition-all duration-200 cursor-pointer"
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
+                // onDragOver={handleDragOver}
+                // onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
             >
               <ImagePlus className="h-12 w-12 text-emerald-400 mx-auto mb-4" />
@@ -754,7 +760,6 @@ function removeFileExtension(filename: string): string {
                 ref={fileInputRef}
                 type="file"
                 multiple
-                accept="image/*,.jpg,.jpeg,.png"
                 onChange={handleFileSelect}
                 className="hidden"
               />

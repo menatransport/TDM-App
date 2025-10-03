@@ -125,7 +125,7 @@ export function AdminMap({ jobView, closeModal, refreshTable }: AdminMapProps) {
     document.head.appendChild(script);
   };
 
-  // ฟังก์ชันแปลง lat,lng string เป็น object
+
   const parseLatLng = (latlngStr: string) => {
     try {
     const [lat, lng] = latlngStr.split(",").map((s) => parseFloat(s.trim()));
@@ -135,14 +135,14 @@ export function AdminMap({ jobView, closeModal, refreshTable }: AdminMapProps) {
     }
   };
 
-  // ฟังก์ชันคำนวณระยะทาง (Haversine formula)
+
   const calculateDistance = (
     lat1: number,
     lon1: number,
     lat2: number,
     lon2: number
   ) => {
-    const R = 6371; // รัศมีของโลกในกิโลเมตร
+    const R = 6371; 
     const dLat = ((lat2 - lat1) * Math.PI) / 180;
     const dLon = ((lon2 - lon1) * Math.PI) / 180;
     const a =
@@ -152,11 +152,10 @@ export function AdminMap({ jobView, closeModal, refreshTable }: AdminMapProps) {
         Math.sin(dLon / 2) *
         Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distance = R * c * 1000; // แปลงเป็นเมตร
+    const distance = R * c * 1000; 
     return distance;
   };
 
-  // ฟังก์ชันตรวจสอบว่าจุดอยู่ใกล้จุดต้นทางหรือปลายทางหรือไม่
   const isNearLocation = (targetCoords: {lat: number, lon: number}, originCoords: {lat: number, lon: number}, destCoords: {lat: number, lon: number}) => {
     const distanceToOrigin = calculateDistance(
       targetCoords.lat, targetCoords.lon,
@@ -177,10 +176,9 @@ export function AdminMap({ jobView, closeModal, refreshTable }: AdminMapProps) {
     return { isNear: false, location: null, distance: null };
   };
 
-  // ฟังก์ชันสร้าง Timeline markers จาก ticket_info
+
   const createTimelineMarkers = (map: any, data: any, originCoords: any, destCoords: any): { originDetails: string[], destDetails: string[] } => {
     if (!data.ticket_info) {
-      console.log("⚠️ No ticket_info available");
       return { originDetails: [], destDetails: [] };
     }
 
@@ -276,7 +274,6 @@ export function AdminMap({ jobView, closeModal, refreshTable }: AdminMapProps) {
         const nearCheck = isNearLocation(eventCoords, originCoords, destCoords);
 
         if (nearCheck.isNear) {
-          // เพิ่มเข้าไปใน detail ของ marker หลัก
           const detailText = `${event.icon} ${event.name}: ${event.datetime}`;
           
           if (nearCheck.location === 'origin') {
@@ -285,7 +282,6 @@ export function AdminMap({ jobView, closeModal, refreshTable }: AdminMapProps) {
             destDetails.push(detailText);
           }
         } else {
-          // สร้าง marker แยก
           const eventMarker = new window.longdo.Marker(eventCoords, {
             title: `${event.name}`,
             detail: `📅 ${event.datetime}`,

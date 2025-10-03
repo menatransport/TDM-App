@@ -28,6 +28,7 @@ import {
   FileSpreadsheet,
   ChartPie,
   BookUser,
+  Table,
 } from "lucide-react";
 import Swal from "sweetalert2";
 import { AdminView } from "@/components/AdminView";
@@ -662,6 +663,17 @@ export const Admintool = () => {
     handleSearch();
   }, []);
 
+  const displayActive = (name : string) => {
+    console.log("Displaying active:", name);
+    switch(name) {
+      case "ตารางข้อมูล":
+        break;
+      case "แดชบอร์ด":
+        break;      
+    }
+
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 relative overflow-hidden">
       {/* Background Elements */}
@@ -690,13 +702,14 @@ export const Admintool = () => {
                 <Plus size={20} />
                 <span className="hidden sm:inline">เพิ่มงานใหม่</span>
               </button>
-              <button 
+             
+              {/* <button 
                 onClick={() => window.open('https://lookerstudio.google.com/s/vjSdVuS7MCg', '_blank')}
                 className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow hover:shadow-md border border-gray-200"
               >
                 <ChartPie  size={20} />
                 <span className="hidden sm:inline">แดชบอร์ด</span>
-              </button>
+              </button> */}
             </div>
           </div>
         </div>
@@ -1162,6 +1175,22 @@ export const Admintool = () => {
             </div>
           </div>
         </div>
+
+        <div className="hidden justify-start mb-4 gap-4">
+           <button
+                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow hover:shadow-md border border-gray-200"
+              >
+                <Table size={20} />
+                <span className="hidden sm:inline">ตารางข้อมูล</span>
+              </button>
+           <button
+                onClick={() => displayActive('แดชบอร์ด')}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 shadow hover:shadow-md border border-gray-200"
+              >
+                <ChartPie size={20} />
+                <span className="hidden sm:inline">แดชบอร์ด</span>
+              </button>
+          </div>
 
         {/* Data Table */}
         <div className="bg-white backdrop-blur-md rounded-2xl shadow-xl border border-white/30 overflow-hidden relative">
