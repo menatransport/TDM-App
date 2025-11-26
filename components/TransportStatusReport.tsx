@@ -1095,7 +1095,7 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
               </div>
             </div>
 
-            <div className="overflow-y-auto max-h-106">
+            <div className="overflow-y-auto overflow-x-hidden max-h-106">
               {applyColumnFilters(enrichedData).map((item) => {
                 const receiveTime = new Date(item.date_recive);
                 const deliverTime = new Date(item.date_deliver);
@@ -1122,7 +1122,7 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                   receiveDateOnly.getTime() === today.getTime() &&
                   deliverDateOnly.getTime() === today.getTime()
                 ) {
-                  startPos = (receiveHour / 24) * 100;
+                  startPos = (receiveHour / 25) * 100;
                   barWidth = ((deliverHour - receiveHour) / 24) * 100;
                   timeLabel = `${format(receiveTime, "HH:mm")}-${format(
                     deliverTime,
@@ -1130,8 +1130,8 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                   )}`;
                   barColor = "bg-blue-500";
                 } else if (receiveDateOnly.getTime() === today.getTime()) {
-                  startPos = (receiveHour / 24) * 100;
-                  barWidth = ((24 - receiveHour) / 24) * 100;
+                  startPos = (receiveHour / 25) * 100;
+                  barWidth = ((25 - receiveHour) / 25) * 100;
                   timeLabel = `${format(receiveTime, "HH:mm")}→+1d ${format(
                     deliverTime,
                     "HH:mm"
@@ -1141,7 +1141,7 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                 } else if (deliverDateOnly.getTime() === today.getTime()) {
                   // เริ่มเมื่อวาน ส่งวันนี้
                   startPos = 0;
-                  barWidth = (deliverHour / 24) * 100;
+                  barWidth = (deliverHour / 25) * 100;
                   timeLabel = `-1d ${format(receiveTime, "HH:mm")}→${format(
                     deliverTime,
                     "HH:mm"
@@ -1207,20 +1207,14 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                           "d/M HH:mm"
                         )} → ${item.locat_deliver} ${format(deliverTime, "d/M HH:mm")}`}
                       >
-                        {/* ต้นทาง - ซ้าย */}
-                        <span className="truncate px-1 text-xs flex-shrink-0" title={item.locat_recive}>
-                          🏠 {item.locat_recive.length > 15 ? `${item.locat_recive.substring(0, 15)}...` : item.locat_recive}
-                        </span>
+                  
 
                         {/* เวลา - กลาง */}
-                        <span className="truncate px-1 text-xs text-center flex-grow font-semibold" title={timeLabel}>
+                        <span className="truncate px-1 text-xs text-center flex-grow font-semibold" title={`ต้นทาง: ${item.locat_recive}\n ปลายทาง: ${item.locat_deliver} \nเวลารับ-ส่ง: ${timeLabel}`}>
                           {timeLabel}
                         </span>
 
-                        {/* ปลายทาง - ขวา */}
-                        <span className="truncate px-1 text-xs flex-shrink-0 text-right" title={item.locat_deliver}>
-                          {item.locat_deliver.length > 15 ? `${item.locat_deliver.substring(0, 15)}...` : item.locat_deliver} 🏁
-                        </span>
+                    
                       </div>
 
                       {delayStatus.isDelayed && (
@@ -1716,24 +1710,12 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                           const oneHourInMs = 60 * 60 * 1000; // 1 ชั่วโมง
                           const isGpsOutdated = (currentTimeMs - gpsUpdatedAt) > oneHourInMs;
 
-                          if (isGpsOutdated) {
-                            return (
-                              <td colSpan={2} className="px-[0.25em] py-[0.25em] text-center bg-red-400 border-r border-gray-100">
-                                <div className="space-y-0.5">
-                                  <div className="text-white font-semibold text-xs truncate max-w-auto"
-                                  title={`ไม่มีสัญญาณ GPS ล่าสุด : ${item.vehicle_info.gps_updated_at}`}>
-                                    ⚠️ ไม่มีสัญญาณ GPS
-                                  </div>
-                                
-                                </div>
-                              </td>
-                            );
-                          }
-
                           return (
                             <>
                               <td className="px-[0.25em] py-[0.25em] text-center border-r border-gray-100">
-                                {item.distanceInfo ? (
+                                {isGpsOutdated ? (
+                                  <span className="text-gray-400 text-[clamp(0.65rem,0.85vw,0.75rem)]">-</span>
+                                ) : item.distanceInfo ? (
                                   <div
                                     className="space-y-0.5"
                                     title={`${item.distanceInfo.distance.toFixed(2)} กิโลเมตร, ${item.distanceInfo.duration} นาที`}
@@ -1748,7 +1730,14 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                               </td>
                               {/* Risk Assessment */}
                               <td className="px-[0.25em] py-[0.25em] text-center border-r border-gray-100">
-                                {item.riskAssessment ? (
+                                {isGpsOutdated ? (
+                                  <div className="flex items-center justify-center">
+                                    <span className="inline-flex items-center px-[0.5em] py-[0.25em] rounded-lg text-[clamp(0.65rem,0.85vw,0.75rem)] bg-red-100 text-red-800 font-semibold "
+                                      title={`ไม่มีสัญญาณ GPS ล่าสุด : ${item.vehicle_info.gps_updated_at}`}>
+                                      ⚠️GPS
+                                    </span>
+                                  </div>
+                                ) : item.riskAssessment ? (
                                   <div className="flex items-center justify-center">
                                     <span
                                       className={`inline-flex items-center px-[0.25em] rounded-lg text-[clamp(0.65rem,0.85vw,0.75rem)] ${item.riskAssessment.color} w-auto`}

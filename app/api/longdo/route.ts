@@ -13,7 +13,7 @@ export async function GET(req: Request) {
     // console.log("LONGDO_API_KEY : ", process.env.LONGDO_API_KEY);
     // console.log("queryString :", "https://api.longdo.com/RouteService/json/route/guide?" + queryString + "&key=" + process.env.LONGDO_API_KEY);
     try {
-        const response = await fetch("https://api.longdo.com/RouteService/json/route/guide?" + queryString + "&key=657049216c4c370977197048c841a727",
+        const response = await fetch("https://api.longdo.com/RouteService/json/route/guide?" + queryString + "&key=" + process.env.LONGDO_API_KEY,
             {
                 method: 'GET',
                 headers: {

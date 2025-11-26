@@ -163,7 +163,7 @@ export const Admintool = () => {
         },
       });
       const data = await res.json();
-      console.log("🚚 ข้อมูลที่ค้นหา:", data);
+      // console.log("🚚 ข้อมูลที่ค้นหา:", data);
       
       const normalizedData = normalizeApiResponse(data);
       setTransportData(normalizedData.jobs);

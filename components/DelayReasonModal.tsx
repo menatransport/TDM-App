@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { X, Save, AlertTriangle, ChevronDown } from 'lucide-react';
 import { TransportItem } from '@/lib/type';
 import { format, parseISO } from "date-fns";
-
+import { AdminView } from './AdminView';
 interface DelayReasonModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -46,7 +46,6 @@ const DELAY_REASONS_BY_CATEGORY = {
   ]
 };
 
-// Flatten all reasons for autocomplete
 const DELAY_REASONS = Object.values(DELAY_REASONS_BY_CATEGORY).flat();
 
 export const DelayReasonModal: React.FC<DelayReasonModalProps> = ({
@@ -55,7 +54,7 @@ export const DelayReasonModal: React.FC<DelayReasonModalProps> = ({
   transportData,
   onSave
 }) => {
-  // Filter data that needs delay reasons
+
   const filteredData = useMemo(() => {
     return transportData.filter(item => {
       const originDelay = item.dw_jobdata_info?.client_kpi_origin === "delay";
@@ -69,17 +68,17 @@ export const DelayReasonModal: React.FC<DelayReasonModalProps> = ({
 
   const [editedData, setEditedData] = useState<TransportItem[]>(filteredData);
   const [showSuggestions, setShowSuggestions] = useState<{ [key: string]: boolean }>({});
+  const [selectedItem, setSelectedItem] = useState<TransportItem | null>(null);
+  const [showAdminView, setShowAdminView] = useState(false);
 
   React.useEffect(() => {
     setEditedData(filteredData);
   }, [filteredData]);
 
-  // Close dropdowns when clicking outside
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
       
-      // Check if click is outside any dropdown
       const isOutsideDropdown = !target.closest('.dropdown-container');
       
       if (isOutsideDropdown) {
@@ -87,7 +86,6 @@ export const DelayReasonModal: React.FC<DelayReasonModalProps> = ({
       }
     };
 
-    // Add event listener when any dropdown is open
     const hasOpenDropdown = Object.values(showSuggestions).some(Boolean);
     if (hasOpenDropdown) {
       document.addEventListener('mousedown', handleClickOutside);
@@ -150,6 +148,16 @@ export const DelayReasonModal: React.FC<DelayReasonModalProps> = ({
 
     onSave(modifiedItems);
     onClose();
+  };
+
+  const openAdminView = (item: TransportItem) => {
+    setSelectedItem(item);
+    setShowAdminView(true);
+  };
+
+  const closeAdminView = () => {
+    setShowAdminView(false);
+    setSelectedItem(null);
   };
 
   if (!isOpen) return null;
@@ -221,7 +229,10 @@ export const DelayReasonModal: React.FC<DelayReasonModalProps> = ({
                   
                   return (
                     <tr key={item.load_id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                      <td className="px-4 py-3 text-xs font-medium text-gray-900">
+                      <td className="px-4 py-3 text-xs font-semibold cursor-pointer text-blue-700"
+                       title='เปิดดูข้อมูลเพิ่มเติม'
+                       onClick={() => openAdminView(item)}
+                      >
                         {item.load_id}
                       </td>
                       <td className="px-4 py-3 text-xs text-gray-600">
@@ -410,6 +421,14 @@ export const DelayReasonModal: React.FC<DelayReasonModalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* AdminView Modal */}
+      {showAdminView && selectedItem && (
+        <AdminView
+          jobView={selectedItem}
+          closeModal={closeAdminView}
+        />
+      )}
     </div>
   );
 };
