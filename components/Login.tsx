@@ -584,7 +584,7 @@ return (
             isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
           }`}
         >
-          <p className="font-semibold" >Version 3.5.2</p>
+          <p className="font-semibold" >Version 3.6.0</p>
           <p>© 2025 MENA TRANSPORT PUBLIC.CO.,LTD</p>
         </div>
       </div>
