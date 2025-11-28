@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, use } from "react";
 import { ensureArray, safeMap, safeFilter, safeFind, safeLength, normalizeApiResponse } from "../lib/arrayHelpers";
 import {
   Search,
@@ -38,8 +38,10 @@ import { AdminCreateNew } from "@/components/AdminCreateNew";
 import { AdminMap } from "@/components/AdminMap";
 import { DelayReasonModal } from "@/components/DelayReasonModal";
 import { TransportItem } from "@/lib/type";
-import { usegetListName } from "@/lib/userStore";
 import * as XLSX from 'xlsx';
+import { AdminDashboard } from "@/components/AdminDashboard";
+import { TransportStatusReport } from "@/components/TransportStatusReport";
+import { set } from "date-fns";
 
 const itemsPerPage = 10;
 
@@ -53,12 +55,11 @@ const today = toThaiDate(now);
 const sevenDaysAgo = toThaiDate(new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000));
 const tomorrow = toThaiDate(new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000));
 
-import { AdminDashboard } from "@/components/AdminDashboard";
-import { TransportStatusReport } from "@/components/TransportStatusReport";
+
 
 export const Admintool = () => {
   const [activeView, setActiveView] = useState<'table' | 'dashboard' | 'report_status'>('table');
-  const listname = usegetListName();
+  const  [listname, setlistname] = useState<string[]>([]); 
   const [filters, setFilters] = useState({
     date_plan: { date_plan_start: sevenDaysAgo, date_plan_end: tomorrow },
     load_id: "",
@@ -117,7 +118,26 @@ export const Admintool = () => {
 
 
   useEffect(() => {
-    // console.log("📋 Listname จากหน้า Login:", listname);
+    const fetchListName = async () => {
+      try {
+        const res = await fetch("/api/auth", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        const data = await res.json();
+        if (res.ok) {
+        const username = data.users.map((user: { username: string }) => user.username);
+        // console.log("🚚 ชื่อพจส.ที่ดึงมาได้:", username);
+         setlistname(username);
+        }
+      } catch (error) {
+        console.error("Error fetching driver names:", error);
+      }
+    };
+
+    fetchListName();
     setListCustomer(["บริษัท นีโอ แฟคทอรี่ จำกัด"]);
   }, []);
 
@@ -163,7 +183,7 @@ export const Admintool = () => {
         },
       });
       const data = await res.json();
-      // console.log("🚚 ข้อมูลที่ค้นหา:", data);
+      console.log("🚚 ข้อมูลที่ค้นหา:", data);
       
       const normalizedData = normalizeApiResponse(data);
       setTransportData(normalizedData.jobs);
@@ -191,6 +211,7 @@ export const Admintool = () => {
     const lastInputName = names[names.length - 1];
 
     if (lastInputName.length > 0) {
+     
       const filtered = listname.filter((name) => {
         const isAlreadySelected = names
           .slice(0, -1)
@@ -206,6 +227,7 @@ export const Admintool = () => {
       setFilteredDriverNames(filtered);
       setShowDriverSuggestions(filtered.length > 0);
     } else {
+ 
       const selectedNames = names.slice(0, -1);
       const availableNames = listname.filter(
         (name) =>
@@ -409,8 +431,10 @@ export const Admintool = () => {
         'น้ำหนักสินค้า': item.weight || '',
         'ประเภทเชื้อเพลิง': item.fuel_type || '',
         'หมายเหตุ': item.remark || '',
-        'ontime_origin': item.dw_jobdata_info?.client_kpi_origin || '',
-        'ontime_destination': item.dw_jobdata_info?.client_kpi_destination || '',
+        'ontime_arrival': item.dw_jobdata_info?.client_kpi_origin || '',
+        'ontime_delivery': item.dw_jobdata_info?.client_kpi_destination || '',
+        'reason_kpi_arrival': item.reason_kpi_origin || '',
+        'reason_kpi_delivery': item.reason_kpi_destination || '',
         'วันที่เวลารับงาน': item.ticket_info?.start_datetime || '',
         'วันที่เวลาถึงต้นทาง': item.ticket_info?.origin_datetime || '',
         'วันที่เวลาเริ่มขึ้นสินค้า': item.ticket_info?.start_recive_datetime || '',
@@ -446,8 +470,10 @@ export const Admintool = () => {
         { wch: 12 },  // น้ำหนักสินค้า
         { wch: 15 },  // ประเภทเชื้อเพลิง
         { wch: 30 },  // หมายเหตุ
-        { wch: 15 },  // ontime_origin
-        { wch: 15 },  // ontime_destination
+        { wch: 15 },  // ontime_arrival
+        { wch: 15 },  // ontime_delivery
+        { wch: 30 },  // reason_kpi_arrival
+        { wch: 30 },  // reason_kpi_delivery
         { wch: 15 },  //วันที่เวลารับงาน
         { wch: 15 },  //วันที่เวลาถึงต้นทาง
         { wch: 15 },  //วันที่เวลาเริ่มขึ้นสินค้า
@@ -773,7 +799,6 @@ export const Admintool = () => {
                         : null;
 
                     if (exactMatch) {
-                      // ถ้าตรงแบบแม่นยำ ใช้ ID นั้น
                       loadIds[loadIds.length - 1] = exactMatch;
                       const newValue = loadIds.join(", ") + ", ";
                       setFilters((prev) => ({

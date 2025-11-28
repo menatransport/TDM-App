@@ -5,6 +5,7 @@ import { X, Save, AlertTriangle, ChevronDown } from 'lucide-react';
 import { TransportItem } from '@/lib/type';
 import { format, parseISO } from "date-fns";
 import { AdminView } from './AdminView';
+import { DELAY_REASONS_BY_CATEGORY } from '@/lib/list';
 interface DelayReasonModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -12,41 +13,6 @@ interface DelayReasonModalProps {
   onSave: (updatedData: TransportItem[]) => void;
 }
 
-const DELAY_REASONS_BY_CATEGORY = {
-  "Transportation (ขนส่ง)": [
-    "ปัญหารถเสีย",
-    "ปัญหารถติด", 
-    "อุบัติเหตุระหว่างทาง",
-    "ฝนตกหนัก",
-    "ปัญหาพนักงานจัดส่ง",
-    "สื่อสารภายในผิดพลาด",
-    "เส้นทางถูกปิดกั้น / ประกาศเคอร์ฟิว",
-    "รถเติมเชื้อเพลิงระหว่างทาง",
-    "รถติดเวลา (Truck ban)",
-    "พนักงานจัดส่งหลงทาง",
-    "พนักงานจัดส่งหลับลืม",
-    "โดนตรวจโดยเจ้าหน้าที่ / ด่านตรวจ",
-    "โหลดเกินน้ำหนัก / ต้องสลับรถ",
-    "พนักงานจัดส่งลืมบันทึกเวลาบนแอป"
-  ],
-  "Customer (ลูกค้า)": [
-    "การดำเนินงานที่ลูกค้าล่าช้า",
-    "แพลนงานไม่สอดคล้องกับช่วงเวลา",
-    "ลูกค้าไม่สามารถรับสินค้าได้ตามช่วงเวลา",
-    "ได้รับเอกสารคืนล่าช้า",
-    "ลูกค้าขอให้มาส่งช้ากว่ากำหนด",
-    "สาขาปิด",
-    "ทางเข้าติดขัด",
-    "ไม่มีพื้นที่จอดรถ"
-
-  ],
-  "Warehouse (คลังสินค้า)": [
-    "โหลดสินค้าออกจากต้นทางล่าช้า",
-    "โหลดสินค้าผิด / ขาด / เกิน ทำให้ต้องกลับมาแก้ไข"
-  ]
-};
-
-const DELAY_REASONS = Object.values(DELAY_REASONS_BY_CATEGORY).flat();
 
 export const DelayReasonModal: React.FC<DelayReasonModalProps> = ({
   isOpen,
@@ -54,6 +20,7 @@ export const DelayReasonModal: React.FC<DelayReasonModalProps> = ({
   transportData,
   onSave
 }) => {
+  const [filterMode, setFilterMode] = useState<'pending' | 'completed'>('pending');
 
   const filteredData = useMemo(() => {
     return transportData.filter(item => {
@@ -62,9 +29,16 @@ export const DelayReasonModal: React.FC<DelayReasonModalProps> = ({
       const originReasonMissing = !item.reason_kpi_origin || item.reason_kpi_origin.trim() === "";
       const destinationReasonMissing = !item.reason_kpi_destination || item.reason_kpi_destination.trim() === "";
       
-      return ((originDelay && originReasonMissing) || (destinationDelay && destinationReasonMissing))&& item.status == "จัดส่งแล้ว (POD)";
+      const isPending = ((originDelay && originReasonMissing) || (destinationDelay && destinationReasonMissing)) && item.status == "จัดส่งแล้ว (POD)";
+      const isCompleted = ((originDelay && !originReasonMissing) || (destinationDelay && !destinationReasonMissing)) && item.status == "จัดส่งแล้ว (POD)";
+      
+      if (filterMode === 'pending') {
+        return isPending;
+      } else {
+        return isCompleted;
+      }
     });
-  }, [transportData]);
+  }, [transportData, filterMode]);
 
   const [editedData, setEditedData] = useState<TransportItem[]>(filteredData);
   const [showSuggestions, setShowSuggestions] = useState<{ [key: string]: boolean }>({});
@@ -166,15 +140,41 @@ export const DelayReasonModal: React.FC<DelayReasonModalProps> = ({
     <div className="fixed inset-0 bg-opacity-40 backdrop-blur-sm flex items-center justify-center z-50 p-1 sm:p-2">
       <div className="bg-white rounded-2xl shadow-2xl max-w-[95vw] w-8xl max-h-[105vh] overflow-hidden">
         {/* Header */}
-        <div className="bg-purple-600 text-white p-6 flex items-center justify-between">
+        <div className="bg-purple-600 text-white p-3 flex items-center justify-between border-b-4 border-purple-400">
           <div className="flex items-center gap-3">
             <AlertTriangle size={24} />
             <div>
               <h2 className="text-xl font-bold">จัดการเหตุผลการล่าช้า</h2>
               <p className="text-purple-100 text-sm">
-                พบข้อมูลที่ต้องระบุเหตุผล {filteredData.length} รายการ
+                {filterMode === 'pending' 
+                  ? `พบข้อมูลที่ต้องระบุเหตุผล ${filteredData.length} รายการ`
+                  : `ข้อมูลที่ระบุเหตุผลแล้ว ${filteredData.length} รายการ`
+                }
               </p>
             </div>
+          </div>
+          <div className="flex items-center gap-20">
+          <div className="flex gap-1 bg-purple-700 rounded-full p-1 border-2 border-white">
+            <button 
+              onClick={() => setFilterMode('pending')}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+                filterMode === 'pending' 
+                  ? 'bg-white text-purple-700 shadow-sm' 
+                  : 'text-white cursor-pointer transition-colors'
+              }`}
+            >
+              Pending
+            </button>
+            <button 
+              onClick={() => setFilterMode('completed')}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+                filterMode === 'completed' 
+                  ? 'bg-white text-purple-700 shadow-sm' 
+                  : 'text-white  cursor-pointer transition-colors'
+              }`}
+            >
+              Completed
+            </button>
           </div>
           <button
             onClick={onClose}
@@ -182,6 +182,7 @@ export const DelayReasonModal: React.FC<DelayReasonModalProps> = ({
           >
             <X size={24} />
           </button>
+          </div>
         </div>
 
         {/* Data Table */}

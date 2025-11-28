@@ -111,9 +111,16 @@ interface ListNameStore {
   setListname: (name: string[]) => void
 }
 
-export const useListName = create<ListNameStore>()((set) => ({
-  listname: [],
-  setListname: (name: string[]) => set({ listname: name })
-}))
+export const useListName = create<ListNameStore>()(
+  persist(
+    (set) => ({
+      listname: [],
+      setListname: (name: string[]) => set({ listname: name })
+    }),
+    {
+      name: 'listname-storage',
+    }
+  )
+)
 
 export const usegetListName = () => useListName((state) => state.listname)

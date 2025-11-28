@@ -22,9 +22,11 @@ import {
   Fuel,
   Phone,
   Loader2,
+  ClipboardList,
 } from "lucide-react";
 import Swal from "sweetalert2";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
+import { DELAY_REASONS_BY_CATEGORY } from '@/lib/list';
 
 interface AdminViewProps {
   jobView: TransportItem | null;
@@ -476,6 +478,57 @@ export function AdminView({ jobView, closeModal, refreshTable }: AdminViewProps)
                       }
                       readOnly={btn === "edit"}
                     />
+                  </div>
+                  <br></br>
+
+                   {/* reason_kpi_origin */}
+                  <div>
+                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                      <ClipboardList className="w-4 h-4" />
+                      เหตุผลล่าช้า ต้นทาง
+                    </label>
+                    <input
+                      type="text"
+                      list="delay-reasons-origin"
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm sm:text-base"
+                      value={formData?.reason_kpi_origin || ""}
+                      onChange={(e) =>
+                        handleChange("reason_kpi_origin", e.target.value)
+                      }
+                      readOnly={btn === "edit"}
+                    />
+                    <datalist id="delay-reasons-origin">
+                      {Object.entries(DELAY_REASONS_BY_CATEGORY).map(([category, reasons]) => (
+                        reasons.map((reason) => (
+                          <option key={`origin-${category}-${reason}`} value={reason} />
+                        ))
+                      ))}
+                    </datalist>
+                  </div>
+
+                   {/* reason_kpi_destination */}
+                  <div>
+                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                      <ClipboardList className="w-4 h-4" />
+                      เหตุผลล่าช้า ปลายทาง
+                    </label>
+                    <input
+                      type="text"
+                      list="delay-reasons-destination"
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm sm:text-base"
+                      value={formData?.reason_kpi_destination || ""}
+                      onChange={(e) =>
+                        handleChange("reason_kpi_destination", e.target.value)
+                      }
+                      readOnly={btn === "edit"}
+                    />
+                    <datalist id="delay-reasons-destination">
+                      {Object.entries(DELAY_REASONS_BY_CATEGORY).map(([category, reasons]) => (
+                        reasons.map((reason) => (
+                          <option key={`destination-${category}-${reason}`} value={reason} />
+                        ))
+                      ))}
+                    </datalist>
                   </div>
 
                   {/* Remark */}

@@ -341,9 +341,11 @@ export const AdminDashboard = ({ transportData }: AdminDashboardProps) => {
   // Process data for Origin Reason Codes
   const originReasonData = useMemo(() => {
     const reasonCounts: { [key: string]: number } = {};
-    
-    filteredTransportData.forEach(item => {
-      const reasonCode = item.reason_kpi_origin;
+    // console.log('filteredTransportData:', filteredTransportData); 
+    const delayData = filteredTransportData.filter(item =>item.dw_jobdata_info.client_kpi_origin  === 'delay');
+    // console.log('Delay Data for Origin Reason Codes:', delayData);
+    delayData.forEach(item => {
+      const reasonCode = item.reason_kpi_origin 
       
         reasonCounts[reasonCode] = (reasonCounts[reasonCode] || 0) + 1;
       
@@ -360,8 +362,8 @@ export const AdminDashboard = ({ transportData }: AdminDashboardProps) => {
   // Process data for Destination Reason Codes
   const destinationReasonData = useMemo(() => {
     const reasonCounts: { [key: string]: number } = {};
-    
-    filteredTransportData.forEach(item => {
+    const delayData = filteredTransportData.filter(item =>item.dw_jobdata_info.client_kpi_destination  === 'delay');
+    delayData.forEach(item => {
       const reasonCode = item.reason_kpi_destination;
      
         reasonCounts[reasonCode] = (reasonCounts[reasonCode] || 0) + 1;
@@ -494,11 +496,11 @@ export const AdminDashboard = ({ transportData }: AdminDashboardProps) => {
 
     if (chartType === 'originReason') {
       filteredData = filteredTransportData.filter(item => 
-        item.reason_kpi_origin === reasonCode
+        item.reason_kpi_origin === reasonCode && item.dw_jobdata_info.client_kpi_origin === 'delay'
       );
     } else if (chartType === 'destinationReason') {
       filteredData = filteredTransportData.filter(item => 
-        item.reason_kpi_destination === reasonCode
+        item.reason_kpi_destination === reasonCode && item.dw_jobdata_info.client_kpi_destination === 'delay'
       );
     }
     
@@ -614,11 +616,12 @@ export const AdminDashboard = ({ transportData }: AdminDashboardProps) => {
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={400}>
-            <PieChart>
+            <PieChart >
               <Pie
                 data={data}
                 cx="50%"
                 cy="50%"
+                
                 labelLine={false}
                 label={(entry: any) => `${entry.name}: ${(entry.percent * 100).toFixed(0)}%`}
                 outerRadius={120}

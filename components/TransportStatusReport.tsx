@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { TransportItem } from "@/lib/type";
-import Swal from 'sweetalert2';
+import Swal from "sweetalert2";
 
 import {
   Truck,
@@ -30,6 +30,8 @@ import {
   Map,
   Camera,
   Check,
+  CircleParking,
+  Power,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { AdminMap } from "./AdminMap";
@@ -53,7 +55,7 @@ const FilterDropdown = ({
   onFilterChange,
   onClearFilter,
   showDropdown,
-  onToggleDropdown
+  onToggleDropdown,
 }: {
   column: string;
   values: string[];
@@ -74,14 +76,20 @@ const FilterDropdown = ({
         <span className="truncate">
           {selectedValues.length > 0
             ? `${selectedValues.length} เลือก`
-            : 'เลือกทั้งหมด'
-          }
+            : "เลือกทั้งหมด"}
         </span>
-        <ChevronDown size={12} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown
+          size={12}
+          className={`transition-transform ${isOpen ? "rotate-180" : ""}`}
+        />
       </button>
 
       {isOpen && (
-        <div className={`absolute top-full left-0 z-150 ${column == "risk" ? 'w-auto' : 'min-w-[16em] max-w-[20em]'} mt-1 font-light bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto`}>
+        <div
+          className={`absolute top-full left-0 z-150 ${
+            column == "risk" ? "w-auto" : "min-w-[16em] max-w-[20em]"
+          } mt-1 font-light bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto`}
+        >
           <div className="p-[0.5em] border-b border-gray-200">
             <div className="flex items-center justify-between">
               <span className="text-[clamp(0.65rem,0.9vw,0.75rem)] font-light text-gray-700">
@@ -98,14 +106,22 @@ const FilterDropdown = ({
 
           <div className="max-h-48 overflow-y-auto">
             {values.map((value, index) => (
-              <label key={index} className="flex items-left gap-2 px-[0.75em] py-[0.5em] hover:bg-gray-50 cursor-pointer">
+              <label
+                key={index}
+                className="flex items-left gap-2 px-[0.75em] py-[0.5em] hover:bg-gray-50 cursor-pointer"
+              >
                 <input
                   type="checkbox"
                   checked={selectedValues.includes(value)}
-                  onChange={(e) => onFilterChange(column, value, e.target.checked)}
+                  onChange={(e) =>
+                    onFilterChange(column, value, e.target.checked)
+                  }
                   className="w-[1em] h-[1em] text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                 />
-                <span className="text-[clamp(0.65rem,0.9vw,0.75rem)] font-light text-gray-700" title={value}>
+                <span
+                  className="text-[clamp(0.65rem,0.9vw,0.75rem)] font-light text-gray-700"
+                  title={value}
+                >
                   {value}
                 </span>
                 {selectedValues.includes(value) && (
@@ -128,19 +144,19 @@ export const TransportStatusReport = ({
   const [refreshing, setRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState<"gantt" | "grid">("grid");
 
-  const [columnFilters, setColumnFilters] = useState<{ [key: string]: string[] }>(
-    {
-      load_id: [],
-      driver_name: [],
-      phone: [],
-      status: [],
-      origin: [],
-      destination: [],
-      distance: [],
-      risk: [],
-      delay: [],
-    }
-  );
+  const [columnFilters, setColumnFilters] = useState<{
+    [key: string]: string[];
+  }>({
+    load_id: [],
+    driver_name: [],
+    phone: [],
+    status: [],
+    origin: [],
+    destination: [],
+    distance: [],
+    risk: [],
+    delay: [],
+  });
 
   const [showInfoTooltip, setShowInfoTooltip] = useState<string | null>(null);
   const [showDropdown, setShowDropdown] = useState<string | null>(null);
@@ -186,17 +202,20 @@ export const TransportStatusReport = ({
     if (isMobile) {
       // Store original viewport
       const originalViewport = document.querySelector('meta[name="viewport"]');
-      const originalContent = originalViewport?.getAttribute('content');
+      const originalContent = originalViewport?.getAttribute("content");
 
       // Set new viewport for dashboard
       if (originalViewport) {
-        originalViewport.setAttribute('content', 'width=1024, initial-scale=0.5, maximum-scale=2, user-scalable=yes');
+        originalViewport.setAttribute(
+          "content",
+          "width=1024, initial-scale=0.5, maximum-scale=2, user-scalable=yes"
+        );
       }
 
       // Restore original viewport on cleanup
       return () => {
         if (originalViewport && originalContent) {
-          originalViewport.setAttribute('content', originalContent);
+          originalViewport.setAttribute("content", originalContent);
         }
       };
     }
@@ -239,29 +258,31 @@ export const TransportStatusReport = ({
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          "params": JSON.stringify({
+          params: JSON.stringify({
             flat: currentLat,
             flon: currentLng,
             tlat: targetLat,
             tlon: targetLng,
-            type: 16
-          })
+            type: 16,
+          }),
         },
-        signal: controller.signal
+        signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
 
       if (!res.ok) {
         throw new Error(`API error: ${res.status}`);
       }
 
-      const dbRes = await res.json()
-      const dbResData = dbRes.data[0]
+      const dbRes = await res.json();
+      const dbResData = dbRes.data[0];
 
       if (dbResData) {
-        const duration = ((dbResData.distance) / 1000) / 50 * 60; // นาที (ความเร็วเฉลี่ย 50 km/h)
-        const estimatedArrival = new Date(currentTime.getTime() + duration * 60000);
+        const duration = (dbResData.distance / 1000 / 50) * 60; // นาที (ความเร็วเฉลี่ย 50 km/h)
+        const estimatedArrival = new Date(
+          currentTime.getTime() + duration * 60000
+        );
         return {
           distance: Math.round(dbResData.distance) / 1000,
           duration: Math.round(duration),
@@ -276,28 +297,29 @@ export const TransportStatusReport = ({
       const a =
         Math.sin(dLat / 2) * Math.sin(dLat / 2) +
         Math.cos((currentLat * Math.PI) / 180) *
-        Math.cos((targetLat * Math.PI) / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
+          Math.cos((targetLat * Math.PI) / 180) *
+          Math.sin(dLon / 2) *
+          Math.sin(dLon / 2);
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       const distance = R * c;
 
       const duration = (distance / 50) * 60; // นาที (ความเร็วเฉลี่ย 50 km/h)
-      const estimatedArrival = new Date(currentTime.getTime() + duration * 60000);
+      const estimatedArrival = new Date(
+        currentTime.getTime() + duration * 60000
+      );
 
       return {
         distance: Math.round(distance * 10) / 10,
         duration: Math.round(duration),
         estimatedArrival,
       };
-
     } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
+      if (error instanceof Error && error.name === "AbortError") {
         console.warn("API timeout - using fallback calculation");
       } else {
         console.error("Error calling Longdo API:", error);
       }
-      
+
       // Fallback calculation เมื่อ API ล้มเหลว
       const R = 6371;
       const dLat = ((targetLat - currentLat) * Math.PI) / 180;
@@ -305,14 +327,16 @@ export const TransportStatusReport = ({
       const a =
         Math.sin(dLat / 2) * Math.sin(dLat / 2) +
         Math.cos((currentLat * Math.PI) / 180) *
-        Math.cos((targetLat * Math.PI) / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
+          Math.cos((targetLat * Math.PI) / 180) *
+          Math.sin(dLon / 2) *
+          Math.sin(dLon / 2);
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       const distance = R * c;
 
       const duration = (distance / 50) * 60;
-      const estimatedArrival = new Date(currentTime.getTime() + duration * 60000);
+      const estimatedArrival = new Date(
+        currentTime.getTime() + duration * 60000
+      );
 
       return {
         distance: Math.round(distance * 10) / 10,
@@ -421,48 +445,57 @@ export const TransportStatusReport = ({
 
   // ฟังก์ชันสำหรับดึง unique values สำหรับแต่ละ column
   const getUniqueValues = (column: string) => {
-    const values = enrichedData.map(item => {
-      switch (column) {
-        case 'load_id':
-          return item.load_id;
-        case 'driver_name':
-          return item.driver_name;
-        case 'phone':
-          return item.phone;
-        case 'status':
-          return item.status;
-        case 'origin':
-          return item.locat_recive;
-        case 'destination':
-          return item.locat_deliver;
-        case 'risk':
-          return item.riskAssessment ? (
-            item.riskAssessment.level === 'low' ? 'ต่ำ' :
-              item.riskAssessment.level === 'moderate' ? 'ปานกลาง' : 'สูง'
-          ) : '-'
-        default:
-          return '';
-      }
-    }).filter(Boolean);
+    const values = enrichedData
+      .map((item) => {
+        switch (column) {
+          case "load_id":
+            return item.load_id;
+          case "driver_name":
+            return item.driver_name;
+          case "phone":
+            return item.phone;
+          case "status":
+            return item.status;
+          case "origin":
+            return item.locat_recive;
+          case "destination":
+            return item.locat_deliver;
+          case "risk":
+            return item.riskAssessment
+              ? item.riskAssessment.level === "low"
+                ? "ต่ำ"
+                : item.riskAssessment.level === "moderate"
+                ? "ปานกลาง"
+                : "สูง"
+              : "-";
+          default:
+            return "";
+        }
+      })
+      .filter(Boolean);
 
     return [...new Set(values)].sort();
   };
 
   // ฟังก์ชันสำหรับจัดการ checkbox filter
-  const handleFilterChange = (column: string, value: string, checked: boolean) => {
-    setColumnFilters(prev => ({
+  const handleFilterChange = (
+    column: string,
+    value: string,
+    checked: boolean
+  ) => {
+    setColumnFilters((prev) => ({
       ...prev,
       [column]: checked
         ? [...prev[column], value]
-        : prev[column].filter(v => v !== value)
+        : prev[column].filter((v) => v !== value),
     }));
   };
 
   // ฟังก์ชันสำหรับ clear filter
   const clearFilter = (column: string) => {
-    setColumnFilters(prev => ({
+    setColumnFilters((prev) => ({
       ...prev,
-      [column]: []
+      [column]: [],
     }));
   };
 
@@ -470,38 +503,51 @@ export const TransportStatusReport = ({
   const applyColumnFilters = (data: any[]) => {
     let filteredData = data.filter((item) => {
       // Load ID Filter - ถ้าไม่มีการเลือก หมายถึงแสดงทั้งหมด
-      const matchLoadId = columnFilters.load_id.length === 0 ||
+      const matchLoadId =
+        columnFilters.load_id.length === 0 ||
         columnFilters.load_id.includes(item.load_id);
 
-      const matchDriver = columnFilters.driver_name.length === 0 ||
+      const matchDriver =
+        columnFilters.driver_name.length === 0 ||
         columnFilters.driver_name.includes(item.driver_name);
 
-      const matchPhone = columnFilters.phone.length === 0 ||
+      const matchPhone =
+        columnFilters.phone.length === 0 ||
         columnFilters.phone.includes(item.phone);
 
-      const matchStatus = columnFilters.status.length === 0 ||
+      const matchStatus =
+        columnFilters.status.length === 0 ||
         columnFilters.status.includes(item.status);
 
-      const matchOrigin = columnFilters.origin.length === 0 ||
+      const matchOrigin =
+        columnFilters.origin.length === 0 ||
         columnFilters.origin.includes(item.locat_recive);
 
-      const matchDestination = columnFilters.destination.length === 0 ||
+      const matchDestination =
+        columnFilters.destination.length === 0 ||
         columnFilters.destination.includes(item.locat_deliver);
 
       // Risk filter
-      const riskText = item.riskAssessment ? (
-        item.riskAssessment.level === 'low' ? 'ต่ำ' :
-          item.riskAssessment.level === 'moderate' ? 'ปานกลาง' : 'สูง'
-      ) : '-';
-      const matchRisk = columnFilters.risk.length === 0 ||
+      const riskText = item.riskAssessment
+        ? item.riskAssessment.level === "low"
+          ? "ต่ำ"
+          : item.riskAssessment.level === "moderate"
+          ? "ปานกลาง"
+          : "สูง"
+        : "-";
+      const matchRisk =
+        columnFilters.risk.length === 0 ||
         columnFilters.risk.includes(riskText);
 
       // Distance และ Delay filters ยังคงใช้ string search เพราะเป็นข้อมูลที่คำนวณ
       const distanceText = item.distanceInfo
         ? `${item.distanceInfo.distance} กม. ${item.distanceInfo.duration} นาที`
         : "-";
-      const matchDistance = columnFilters.distance.length === 0 ||
-        columnFilters.distance.some(filter => distanceText.toLowerCase().includes(filter.toLowerCase()));
+      const matchDistance =
+        columnFilters.distance.length === 0 ||
+        columnFilters.distance.some((filter) =>
+          distanceText.toLowerCase().includes(filter.toLowerCase())
+        );
 
       // Delay filter
       const originStatuses = ["พร้อมรับงาน", "รับงาน"];
@@ -514,7 +560,7 @@ export const TransportStatusReport = ({
         "ยื่นเอกสาร",
         "ได้รับเอกสารคืน",
         "เริ่มลงสินค้า",
-        "ลงสินค้าเสร็จ"
+        "ลงสินค้าเสร็จ",
       ];
       let delayText = "";
 
@@ -528,8 +574,11 @@ export const TransportStatusReport = ({
         delayText = item.status === "จัดส่งแล้ว (POD)" ? "เสร็จสิ้น" : "";
       }
 
-      const matchDelay = columnFilters.delay.length === 0 ||
-        columnFilters.delay.some(filter => delayText.toLowerCase().includes(filter.toLowerCase()));
+      const matchDelay =
+        columnFilters.delay.length === 0 ||
+        columnFilters.delay.some((filter) =>
+          delayText.toLowerCase().includes(filter.toLowerCase())
+        );
 
       return (
         matchLoadId &&
@@ -703,13 +752,14 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
     if (filteredData.length === 0) return;
 
     // กรองข้อมูลที่ต้องคำนวณล่วงหน้า
-    const itemsToCalculate = filteredData.filter(item => {
+    const itemsToCalculate = filteredData.filter((item) => {
       if (item.status === "จัดส่งแล้ว (POD)") return false;
       const currentLatLng = item.vehicle_info.current_latlng;
       const destination = getDestinationByStatus(item);
       return currentLatLng && destination.latLng;
     });
 
+    
     if (itemsToCalculate.length === 0) return;
 
     // แบ่งเป็น chunks เพื่อประมวลผลเป็นกลุ่ม (10 items ต่อ batch)
@@ -730,7 +780,9 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
             const destination = getDestinationByStatus(item);
             const targetLatLng = destination.latLng;
 
-            const [currentLat, currentLng] = currentLatLng.split(",").map(Number);
+            const [currentLat, currentLng] = currentLatLng
+              .split(",")
+              .map(Number);
             const [targetLat, targetLng] = targetLatLng.split(",").map(Number);
 
             // ตรวจสอบความถูกต้องของพิกัด
@@ -746,22 +798,26 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                 targetLat,
                 targetLng
               );
-              
+
               if (distanceInfo) {
                 return { load_id: item.load_id, distanceInfo };
               }
             }
             return null;
           } catch (error) {
-            console.error("Error calculating distance for item:", item.load_id, error);
+            console.error(
+              "Error calculating distance for item:",
+              item.load_id,
+              error
+            );
             return null;
           }
         });
 
         const chunkResults = await Promise.all(chunkPromises);
-        
+
         // รวมผลลัพธ์ของ chunk นี้
-        chunkResults.forEach(result => {
+        chunkResults.forEach((result) => {
           if (result) {
             newDistanceData[result.load_id] = result.distanceInfo;
           }
@@ -811,8 +867,9 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
         return {
           isDelayed: true,
           delayTime: delayMinutes,
-          message: `ล่าช้า ${Math.floor(delayMinutes / 60)} ชม. ${delayMinutes % 60
-            } น.`,
+          message: `ล่าช้า ${Math.floor(delayMinutes / 60)} ชม. ${
+            delayMinutes % 60
+          } น.`,
         };
       } else {
         return {
@@ -848,12 +905,11 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
         await onRefreshData();
       }
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       await calculateDistanceForAllItems();
-
     } catch (error) {
-      console.error('Error refreshing data:', error);
+      console.error("Error refreshing data:", error);
     } finally {
       setTimeout(() => {
         setRefreshing(false);
@@ -866,27 +922,38 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
       const dataToExport = applyColumnFilters(enrichedData);
 
       const now = new Date();
-      const fileName = `${format(now, 'yyyy-MM-dd_HH-mm')}_updatestatus.csv`;
+      const fileName = `${format(now, "yyyy-MM-dd_HH-mm")}_updatestatus.csv`;
 
       const headers = [
-        'รหัสงาน',
-        'พนักงานขับรถ',
-        'ทะเบียนรถ',
-        'เบอร์โทร',
-        'สถานะ',
-        'ต้นทาง',
-        'เวลาขึ้นสินค้า',
-        'ปลายทาง',
-        'เวลาส่งสินค้า',
-        'ระยะทาง (กม.)',
-        'เวลาที่ใช้ (นาที)',
-        'ความเสี่ยง'
+        "รหัสงาน",
+        "พนักงานขับรถ",
+        "ทะเบียนรถ",
+        "เบอร์โทร",
+        "สถานะ",
+        "สถานะจีพีเอสรถ",
+        "ต้นทาง",
+        "เวลาขึ้นสินค้า",
+        "ปลายทาง",
+        "เวลาส่งสินค้า",
+        "ระยะทาง (กม.)",
+        "เวลาที่ใช้ (นาที)",
+        "ความเสี่ยง",
       ];
 
-      const csvData = dataToExport.map(item => {
+      const csvData = dataToExport.map((item) => {
         let delayStatus;
         const originStatuses = ["พร้อมรับงาน", "รับงาน"];
-        const destinationStatuses = ["ถึงต้นทาง", "เริ่มขึ้นสินค้า", "ขึ้นสินค้าเสร็จ", "เริ่มขนส่ง", "ถึงปลายทาง", "ยื่นเอกสาร", "เริ่มลงสินค้า", "ลงสินค้าเสร็จ", "ได้รับเอกสารคืน"];
+        const destinationStatuses = [
+          "ถึงต้นทาง",
+          "เริ่มขึ้นสินค้า",
+          "ขึ้นสินค้าเสร็จ",
+          "เริ่มขนส่ง",
+          "ถึงปลายทาง",
+          "ยื่นเอกสาร",
+          "เริ่มลงสินค้า",
+          "ลงสินค้าเสร็จ",
+          "ได้รับเอกสารคืน",
+        ];
 
         if (originStatuses.includes(item.status)) {
           delayStatus = getDelayStatus(item.date_recive, item.status);
@@ -896,7 +963,7 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
           delayStatus = {
             isDelayed: false,
             delayTime: 0,
-            message: item.status === "จัดส่งแล้ว (POD)" ? "เสร็จสิ้น" : ""
+            message: item.status === "จัดส่งแล้ว (POD)" ? "เสร็จสิ้น" : "",
           };
         }
 
@@ -906,41 +973,50 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
           item.h_plate,
           item.phone,
           item.status,
+          item.vehicle_info.status || "-",
           item.locat_recive,
           formatDateTime(item.date_recive),
           item.locat_deliver,
           formatDateTime(item.date_deliver),
-          item.distanceInfo?.distance || '0',
-          item.distanceInfo?.duration || '0',
-          item.riskAssessment ? (
-            item.riskAssessment.level === 'low' ? 'ต่ำ' :
-              item.riskAssessment.level === 'moderate' ? 'ปานกลาง' : 'สูง'
-          ) : '-'
+          item.distanceInfo?.distance || "0",
+          item.distanceInfo?.duration || "0",
+          item.riskAssessment
+            ? item.riskAssessment.level === "low"
+              ? "ต่ำ"
+              : item.riskAssessment.level === "moderate"
+              ? "ปานกลาง"
+              : "สูง"
+            : "-",
         ];
       });
 
       const csvContent = [headers, ...csvData]
-        .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-        .join('\n');
+        .map((row) =>
+          row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")
+        )
+        .join("\n");
 
-      const BOM = '\uFEFF';
-      const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const BOM = "\uFEFF";
+      const blob = new Blob([BOM + csvContent], {
+        type: "text/csv;charset=utf-8;",
+      });
 
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', fileName);
-      link.style.visibility = 'hidden';
+      link.setAttribute("href", url);
+      link.setAttribute("download", fileName);
+      link.style.visibility = "hidden";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      console.log(`✅ ส่งออกข้อมูล ${dataToExport.length} รายการสำเร็จ: ${fileName}`);
-
+      console.log(
+        `✅ ส่งออกข้อมูล ${dataToExport.length} รายการสำเร็จ: ${fileName}`
+      );
     } catch (error) {
-      console.error('❌ เกิดข้อผิดพลาดในการส่งออกข้อมูล:', error);
-      alert('เกิดข้อผิดพลาดในการส่งออกข้อมูล กรุณาลองใหม่อีกครั้ง');
+      console.error("❌ เกิดข้อผิดพลาดในการส่งออกข้อมูล:", error);
+      alert("เกิดข้อผิดพลาดในการส่งออกข้อมูล กรุณาลองใหม่อีกครั้ง");
     }
   };
 
@@ -976,10 +1052,11 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
           <div className="flex bg-gray-200 rounded-lg p-[0.25em]">
             <button
               onClick={() => setViewMode("grid")}
-              className={`px-[0.5em] py-[0.25em] rounded-md text-[clamp(0.75rem,1vw,0.875rem)] transition-colors cursor-pointer ${viewMode === "grid"
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-600 hover:text-gray-900"
-                }`}
+              className={`px-[0.5em] py-[0.25em] rounded-md text-[clamp(0.75rem,1vw,0.875rem)] transition-colors cursor-pointer ${
+                viewMode === "grid"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
             >
               <Grid3X3 size={16} className="inline mr-1" />
               Grid
@@ -987,16 +1064,16 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
 
             <button
               onClick={() => setViewMode("gantt")}
-              className={`px-[0.5em] py-[0.25em] rounded-md text-[clamp(0.75rem,1vw,0.875rem)] transition-colors cursor-pointer ${viewMode === "gantt"
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-600 hover:text-gray-900"
-                }`}
+              className={`px-[0.5em] py-[0.25em] rounded-md text-[clamp(0.75rem,1vw,0.875rem)] transition-colors cursor-pointer ${
+                viewMode === "gantt"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
             >
               <BarChart3 size={16} className="inline mr-1" />
               Gantt
             </button>
           </div>
-
         </div>
       </div>
 
@@ -1004,7 +1081,8 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
           <div className="p-2 bg-gray-800 text-white">
             <h3 className="font-semibold text-sm">
-              Timeline Chart • {applyColumnFilters(enrichedData).length} จาก {enrichedData.length} รายการ
+              Timeline Chart • {applyColumnFilters(enrichedData).length} จาก{" "}
+              {enrichedData.length} รายการ
             </h3>
           </div>
 
@@ -1040,7 +1118,7 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                 <div className="w-32 px-2 py-2 border-r border-gray-300">
                   <FilterDropdown
                     column="driver_name"
-                    values={getUniqueValues('driver_name')}
+                    values={getUniqueValues("driver_name")}
                     selectedValues={columnFilters.driver_name}
                     onFilterChange={handleFilterChange}
                     onClearFilter={clearFilter}
@@ -1052,7 +1130,7 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                 <div className="w-20 px-2 py-2 border-r border-gray-300">
                   <FilterDropdown
                     column="status"
-                    values={getUniqueValues('status')}
+                    values={getUniqueValues("status")}
                     selectedValues={columnFilters.status}
                     onFilterChange={handleFilterChange}
                     onClearFilter={clearFilter}
@@ -1061,8 +1139,7 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                   />
                 </div>
 
-                <div className="flex-1 px-2 py-2">
-                </div>
+                <div className="flex-1 px-2 py-2"></div>
               </div>
 
               {/* Time Scale */}
@@ -1082,11 +1159,12 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                   <div
                     className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-30"
                     style={{
-                      left: `${((new Date().getHours() +
-                        new Date().getMinutes() / 60) /
-                        24) *
+                      left: `${
+                        ((new Date().getHours() +
+                          new Date().getMinutes() / 60) /
+                          24) *
                         100
-                        }%`,
+                      }%`,
                     }}
                   >
                     <div className="absolute -top-1 -left-1 w-2 h-2 bg-red-500 rounded-full"></div>
@@ -1195,8 +1273,9 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                     {/* เวลา - Timeline Bar */}
                     <div className="flex-1 relative flex items-center px-1">
                       <div
-                        className={`absolute ${barColor} rounded h-8 flex items-center justify-between text-white text-xs font-medium shadow-sm ${isMultiDay ? "border border-yellow-400" : ""
-                          }`}
+                        className={`absolute ${barColor} rounded h-8 flex items-center justify-between text-white text-xs font-medium shadow-sm ${
+                          isMultiDay ? "border border-yellow-400" : ""
+                        }`}
                         style={{
                           left: `${startPos}%`,
                           width: `${barWidth}%`,
@@ -1205,16 +1284,18 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                         title={`${item.load_id}: ${item.locat_recive} ${format(
                           receiveTime,
                           "d/M HH:mm"
-                        )} → ${item.locat_deliver} ${format(deliverTime, "d/M HH:mm")}`}
+                        )} → ${item.locat_deliver} ${format(
+                          deliverTime,
+                          "d/M HH:mm"
+                        )}`}
                       >
-                  
-
                         {/* เวลา - กลาง */}
-                        <span className="truncate px-1 text-xs text-center flex-grow font-semibold" title={`ต้นทาง: ${item.locat_recive}\n ปลายทาง: ${item.locat_deliver} \nเวลารับ-ส่ง: ${timeLabel}`}>
+                        <span
+                          className="truncate px-1 text-xs text-center flex-grow font-semibold"
+                          title={`ต้นทาง: ${item.locat_recive}\n ปลายทาง: ${item.locat_deliver} \nเวลารับ-ส่ง: ${timeLabel}`}
+                        >
                           {timeLabel}
                         </span>
-
-                    
                       </div>
 
                       {delayStatus.isDelayed && (
@@ -1257,7 +1338,6 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
         </div>
       )}
 
-
       {viewMode === "grid" && (
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm max-h-[98vh] flex flex-col">
           {/* Header */}
@@ -1274,16 +1354,22 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                   disabled={refreshing}
                   className="hidden lg:flex items-center gap-2 px-[0.75em] py-[0.375em] bg-emerald-600 hover:bg-emerald-800 rounded-md text-[clamp(0.75rem,1vw,0.875rem)] transition-colors font-medium disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
                 >
-                  <FileSpreadsheet size={16} className={refreshing ? 'animate-spin' : ''} />
-                  {refreshing ? 'Excel...' : 'Excel'}
+                  <FileSpreadsheet
+                    size={16}
+                    className={refreshing ? "animate-spin" : ""}
+                  />
+                  {refreshing ? "Excel..." : "Excel"}
                 </button>
                 <button
                   onClick={handleRefresh}
                   disabled={refreshing}
                   className="flex items-center gap-2 px-[0.75em] py-[0.375em] bg-gray-600 hover:bg-gray-500 rounded-md text-[clamp(0.75rem,1vw,0.875rem)] transition-colors font-medium disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
                 >
-                  <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
-                  {refreshing ? 'รีเฟรช...' : 'รีเฟรช'}
+                  <RefreshCw
+                    size={16}
+                    className={refreshing ? "animate-spin" : ""}
+                  />
+                  {refreshing ? "รีเฟรช..." : "รีเฟรช"}
                 </button>
               </div>
             </div>
@@ -1306,7 +1392,7 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                         </button>
                         <FilterDropdown
                           column="load_id"
-                          values={getUniqueValues('load_id')}
+                          values={getUniqueValues("load_id")}
                           selectedValues={columnFilters.load_id}
                           onFilterChange={handleFilterChange}
                           onClearFilter={clearFilter}
@@ -1328,7 +1414,7 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                         </button>
                         <FilterDropdown
                           column="driver_name"
-                          values={getUniqueValues('driver_name')}
+                          values={getUniqueValues("driver_name")}
                           selectedValues={columnFilters.driver_name}
                           onFilterChange={handleFilterChange}
                           onClearFilter={clearFilter}
@@ -1351,7 +1437,7 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                     </th>
 
                     {/* Status Column */}
-                    <th className="px-[0.5em] py-[0.5em] text-center font-semibold text-gray-700 border-r border-gray-200 min-w-[3em] max-w-[8em]">
+                    <th className="px-[0.5em] py-[0.5em] text-center font-semibold text-gray-700 border-r border-gray-200 min-w-[3em] max-w-auto">
                       <div className="space-y-1">
                         <button
                           onClick={() => handleSort("status")}
@@ -1362,7 +1448,7 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                         </button>
                         <FilterDropdown
                           column="status"
-                          values={getUniqueValues('status')}
+                          values={getUniqueValues("status")}
                           selectedValues={columnFilters.status}
                           onFilterChange={handleFilterChange}
                           onClearFilter={clearFilter}
@@ -1384,7 +1470,7 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                         </button>
                         <FilterDropdown
                           column="origin"
-                          values={getUniqueValues('origin')}
+                          values={getUniqueValues("origin")}
                           selectedValues={columnFilters.origin}
                           onFilterChange={handleFilterChange}
                           onClearFilter={clearFilter}
@@ -1400,7 +1486,11 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                         onClick={() => handleSort("date_recive")}
                         className="flex items-center gap-1 text-[clamp(0.65rem,0.85vw,0.75rem)] hover:text-blue-600 mx-auto"
                       >
-                        <span>วันที่และเวลา<br />ขึ้นสินค้า</span>
+                        <span>
+                          วันที่และเวลา
+                          <br />
+                          ขึ้นสินค้า
+                        </span>
                         {getSortIcon("date_recive")}
                       </button>
                     </th>
@@ -1417,7 +1507,7 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                         </button>
                         <FilterDropdown
                           column="destination"
-                          values={getUniqueValues('destination')}
+                          values={getUniqueValues("destination")}
                           selectedValues={columnFilters.destination}
                           onFilterChange={handleFilterChange}
                           onClearFilter={clearFilter}
@@ -1433,7 +1523,11 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                         onClick={() => handleSort("date_deliver")}
                         className="flex items-center gap-1 text-[clamp(0.65rem,0.85vw,0.75rem)] hover:text-blue-600 mx-auto"
                       >
-                        <span>วันที่และเวลา<br />ลงสินค้า</span>
+                        <span>
+                          วันที่และเวลา
+                          <br />
+                          ลงสินค้า
+                        </span>
                         {getSortIcon("date_deliver")}
                       </button>
                     </th>
@@ -1539,7 +1633,7 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                         </div>
                         <FilterDropdown
                           column="risk"
-                          values={getUniqueValues('risk')}
+                          values={getUniqueValues("risk")}
                           selectedValues={columnFilters.risk}
                           onFilterChange={handleFilterChange}
                           onClearFilter={clearFilter}
@@ -1552,7 +1646,9 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                     {/* Map Column */}
                     <th className="px-[0.25em] py-[0.25em] text-center font-semibold text-gray-700 border-r border-gray-200 min-w-[3em] max-w-[5em]">
                       <div className="flex items-center justify-center">
-                        <span className="text-[clamp(0.65rem,0.9vw,0.75rem)]">จัดการ</span>
+                        <span className="text-[clamp(0.65rem,0.9vw,0.75rem)]">
+                          จัดการ
+                        </span>
                       </div>
                     </th>
                   </tr>
@@ -1593,8 +1689,9 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                     return (
                       <tr
                         key={item.load_id}
-                        className={`hover:bg-blue-50 transition-colors ${index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                          }`}
+                        className={`hover:bg-blue-50 transition-colors ${
+                          index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                        }`}
                       >
                         {/* Load ID */}
                         <td className="hidden px-[0.375em] py-[0.25em] border-r border-gray-100">
@@ -1612,19 +1709,23 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                             <div
                               className="text-gray-900 text-[clamp(0.65rem,0.85vw,0.75rem)] cursor-pointer hover:text-blue-600 truncate"
                               title={`${item.driver_name}, ${item.h_plate}`}
-                              onClick={() => Swal.fire({
-                                title: 'Information',
-                                html: `<p>Shipment ID: ${item.load_id}</p>
-                                        <p>Driver: ${item.driver_name}</p>
-                                        <p>Origin: ${item.locat_recive}</p>
-                                        <p>Destination: ${item.locat_deliver}</p>
-                                        <p>Map Driver:<a target="_blank" style="color:blue;" href="https://www.google.com/maps/dir/?api=1&origin=${item.latlng_recive}&destination=${item.latlng_deliver}&waypoints=${item.vehicle_info.current_latlng}
-"> [${item.vehicle_info.current_latlng}]</a> </p>`,
-                                icon: 'info',
-                                confirmButtonText: 'ตกลง'
-                              })}
+                              onClick={() =>
+                                Swal.fire({
+                                  title: "Information",
+                                  html: `<p>รหัสขนส่ง: ${item.load_id}</p>
+                                  <br/>
+                                        <p>${item.locat_recive} - ${item.locat_deliver}</p>
+                                        <p>${item.h_plate}/${item.t_plate}</p>
+                                        <p>${item.driver_name}</p>
+                                        <p>${item.phone}</p>
+                                        <p>แผนที่รถ:<a target="_blank" style="color:blue;" href="https://www.google.com/maps/dir/?api=1&origin=${item.latlng_recive}&destination=${item.latlng_deliver}&waypoints=${item.vehicle_info.current_latlng}
+"> ${item.vehicle_info.current_latlng}</a> </p>`,
+                                  icon: "info",
+                                  confirmButtonText: "ตกลง",
+                                })
+                              }
                             >
-                              {item.driver_name},  {item.h_plate}
+                              {item.driver_name}, {item.h_plate}
                             </div>
                           </div>
                         </td>
@@ -1646,7 +1747,7 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                             className={`inline-flex px-[0.375em] rounded-full text-[clamp(0.7rem,0.95vw,0.8rem)] ${getStatusColor(
                               item.status
                             )} max-w-full`}
-                            title={item.status}
+                            title={item.vehicle_info.status}
                           >
                             <span className="truncate">{item.status}</span>
                           </span>
@@ -1669,7 +1770,8 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                             title={formatDateTime(item.date_recive)}
                           >
                             <div>
-                              {format(parseISO(item.date_recive), "d/M")},  {format(parseISO(item.date_recive), "HH:mm")}
+                              {format(parseISO(item.date_recive), "d/M")},{" "}
+                              {format(parseISO(item.date_recive), "HH:mm")}
                             </div>
                             {/* <div className="text-sm text-gray-500">
                              
@@ -1694,7 +1796,8 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                             title={formatDateTime(item.date_deliver)}
                           >
                             <div>
-                              {format(parseISO(item.date_deliver), "d/M")},  {format(parseISO(item.date_deliver), "HH:mm")}
+                              {format(parseISO(item.date_deliver), "d/M")},{" "}
+                              {format(parseISO(item.date_deliver), "HH:mm")}
                             </div>
                             {/* <div className="text-sm text-gray-500">
                              
@@ -1705,35 +1808,49 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                         {/* Distance & Time Remaining */}
                         {(() => {
                           // ตรวจสอบเวลาอัปเดต GPS (ห่างจากปัจจุบัน 1 ชั่วโมงหรือไม่)
-                          const gpsUpdatedAt = new Date(item.vehicle_info.gps_updated_at).getTime();
+                          const gpsUpdatedAt = new Date(
+                            item.vehicle_info.gps_updated_at
+                          ).getTime();
                           const currentTimeMs = currentTime.getTime();
-                          const oneHourInMs = 60 * 60 * 1000; // 1 ชั่วโมง
-                          const isGpsOutdated = (currentTimeMs - gpsUpdatedAt) > oneHourInMs;
+                          const oneHourInMs = 20 * 60 * 1000; // 20 นาที
+                          const isGpsOutdated =
+                            currentTimeMs - gpsUpdatedAt > oneHourInMs;
 
                           return (
                             <>
                               <td className="px-[0.25em] py-[0.25em] text-center border-r border-gray-100">
                                 {isGpsOutdated ? (
-                                  <span className="text-gray-400 text-[clamp(0.65rem,0.85vw,0.75rem)]">-</span>
+                                  <span className="text-gray-400 text-[clamp(0.65rem,0.85vw,0.75rem)]">
+                                    -
+                                  </span>
                                 ) : item.distanceInfo ? (
                                   <div
                                     className="space-y-0.5"
-                                    title={`${item.distanceInfo.distance.toFixed(2)} กิโลเมตร, ${item.distanceInfo.duration} นาที`}
+                                    title={`${item.distanceInfo.distance.toFixed(
+                                      2
+                                    )} กิโลเมตร, ${
+                                      item.distanceInfo.duration
+                                    } นาที`}
                                   >
                                     <div className="text-gray-900 text-[clamp(0.65rem,0.85vw,0.75rem)] truncate max-w-auto">
-                                     {item.distanceInfo.distance.toFixed(2)} กม.
+                                      {item.distanceInfo.distance.toFixed(2)}{" "}
+                                      กม.
                                     </div>
                                   </div>
                                 ) : (
-                                  <span className="text-gray-400 text-[clamp(0.65rem,0.85vw,0.75rem)]">-</span>
+                                  <span className="text-gray-400 text-[clamp(0.65rem,0.85vw,0.75rem)]">
+                                    -
+                                  </span>
                                 )}
                               </td>
                               {/* Risk Assessment */}
                               <td className="px-[0.25em] py-[0.25em] text-center border-r border-gray-100">
                                 {isGpsOutdated ? (
                                   <div className="flex items-center justify-center">
-                                    <span className="inline-flex items-center px-[0.5em] py-[0.25em] rounded-lg text-[clamp(0.65rem,0.85vw,0.75rem)] bg-red-100 text-red-800 font-semibold "
-                                      title={`ไม่มีสัญญาณ GPS ล่าสุด : ${item.vehicle_info.gps_updated_at}`}>
+                                    <span
+                                      className="inline-flex items-center px-[0.5em] py-[0.25em] rounded-lg text-[clamp(0.65rem,0.85vw,0.75rem)] bg-gray-50 text-red-700 font-medium"
+                                      title={`ไม่มีสัญญาณ GPS ล่าสุด : ${item.vehicle_info.gps_updated_at}`}
+                                    >
                                       ⚠️GPS
                                     </span>
                                   </div>
@@ -1749,14 +1866,20 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                                       <span className="truncate text-[clamp(0.7rem,0.95vw,0.8rem)]">
                                         {item.riskAssessment.level === "low"
                                           ? "ต่ำ"
-                                          : item.riskAssessment.level === "moderate"
-                                            ? "ปานกลาง"
-                                            : "สูง"}
+                                          : item.riskAssessment.level ===
+                                            "moderate"
+                                          ? "ปานกลาง"
+                                          : "สูง"}
                                       </span>
                                     </span>
                                   </div>
                                 ) : (
-                                  <span className="text-gray-400 text-[clamp(0.65rem,0.85vw,0.75rem)]">-</span>
+                                  <span className="text-gray-400 text-[10px]">
+                                    {(item.latlng_recive === "#N/A" ||
+                                    item.latlng_deliver === "#N/A" ) && item.status !== "จัดส่งแล้ว (POD)"
+                                      ? "ไม่มีพิกัดสถานที่"
+                                      : "-"}
+                                  </span>
                                 )}
                               </td>
                             </>
@@ -1805,14 +1928,12 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
         </div>
       )}
 
-
       {showInfoTooltip && (
         <div
           className="fixed inset-0 bg-opacity-30 z-[9998]"
           onClick={() => setShowInfoTooltip(null)}
         />
       )}
-
 
       {showDropdown && (
         <div
@@ -1825,7 +1946,7 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
         <AdminView
           jobView={modalView.job}
           closeModal={handleCloseView}
-          refreshTable={onRefreshData || (() => { })}
+          refreshTable={onRefreshData || (() => {})}
         />
       )}
 
@@ -1833,7 +1954,7 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
         <AdminMap
           jobView={selectedJobForMap}
           closeModal={handleCloseMap}
-          refreshTable={() => { }}
+          refreshTable={() => {}}
         />
       )}
     </div>
