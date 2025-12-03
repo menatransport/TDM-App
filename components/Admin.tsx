@@ -1222,7 +1222,7 @@ export const Admintool = () => {
           /* Data Table */
           <div className="bg-white backdrop-blur-md rounded-2xl shadow-xl border border-white/30 overflow-hidden relative">
           <div className="p-4 bg-gray-800 border-b border-gray-200">
-            <h2 className="text-xl text-white font-semibold text-gray-800">
+            <h2 className="text-xl text-white font-semibold ">
               ข้อมูลงานขนส่ง
             </h2>
             <p className="text-white mt-1">

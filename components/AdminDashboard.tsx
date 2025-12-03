@@ -13,10 +13,8 @@ import {
   Legend,
   ResponsiveContainer,
   ReferenceLine,
-  PieChart,
-  Pie,
-  Cell,
 } from "recharts";
+import { ResponsivePie } from '@nivo/pie';
 
 import { 
   TrendingUp, 
@@ -593,19 +591,26 @@ export const AdminDashboard = ({ transportData }: AdminDashboardProps) => {
       );
     }
 
-    const CustomPieTooltip = ({ active, payload }: any) => {
-      if (active && payload && payload.length) {
-        const data = payload[0];
-        return (
-          <div className="bg-white p-3 border rounded shadow-lg">
-            <p className="font-semibold">{data.name}</p>
-            <p style={{ color: data.color }}>
-              Count: {data.value}
-            </p>
-          </div>
-        );
-      }
-      return null;
+    // Transform data for Nivo Pie
+    const pieData = data.map((item, index) => ({
+      id: item.name,
+      label: item.name,
+      value: item.value,
+      color: PIE_COLORS[index % PIE_COLORS.length]
+    }));
+
+    const CustomPieTooltip = ({ datum }: any) => {
+      return (
+        <div className="bg-white p-3 w-50 border rounded shadow-lg">
+          <p className="font-semibold text-md">{datum.label}</p>
+          <p style={{ color: datum.color }}>
+            Count: {datum.value}
+          </p>
+          <p style={{ color: datum.color }}>
+            percentage: {((datum.value / data.reduce((sum, item) => sum + item.value, 0)) * 100).toFixed(0)}%
+          </p>
+        </div>
+      );
     };
 
     return (
@@ -615,28 +620,59 @@ export const AdminDashboard = ({ transportData }: AdminDashboardProps) => {
           <p className="text-xs text-gray-500">คลิกส่วนของ Pie Chart เพื่อดูรายละเอียด</p>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={400}>
-            <PieChart >
-              <Pie
-                data={data}
-                cx="50%"
-                cy="50%"
-                
-                labelLine={false}
-                label={(entry: any) => `${entry.name}: ${(entry.percent * 100).toFixed(0)}%`}
-                outerRadius={120}
-                fill="#af6528ff"
-                dataKey="value"
-                onClick={(data) => handlePieClick(data, chartType)}
-                cursor="pointer"
-              >
-                {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip content={<CustomPieTooltip />} />
-            </PieChart>
-          </ResponsiveContainer>
+          <div style={{ height: 400 }}>
+            <ResponsivePie
+              data={pieData}
+              margin={{ top: 40, right: 0, bottom: 80, left: 80 }}
+              innerRadius={0}
+              padAngle={0.7}
+              cornerRadius={3}
+              activeOuterRadiusOffset={8}
+              colors={{ datum: 'data.color' }}
+              borderWidth={1}
+              borderColor={{
+                from: 'color',
+                modifiers: [['darker', 0.2]]
+              }}
+              arcLinkLabelsSkipAngle={20}
+              arcLinkLabelsTextColor="#333333"
+              arcLinkLabelsThickness={3}
+              arcLinkLabelsColor={{ from: 'color' }}
+              arcLabelsSkipAngle={20}
+              arcLabelsTextColor={{
+                from: 'color',
+                modifiers: [['brighter', 200]]
+              }}
+              arcLabel={(d) => `${d.value} (${((d.value / data.reduce((sum, item) => sum + item.value, 0)) * 100).toFixed(0)}%)`}
+              tooltip={CustomPieTooltip}
+              onClick={(node) => handlePieClick({ name: node.id }, chartType)}
+              // legends={[
+              //   {
+              //     anchor: 'bottom',
+              //     direction: 'row',
+              //     justify: false,
+              //     translateX: 0,
+              //     translateY: 56,
+              //     itemsSpacing: 0,
+              //     itemWidth: 100,
+              //     itemHeight: 18,
+              //     itemTextColor: '#999',
+              //     itemDirection: 'left-to-right',
+              //     itemOpacity: 1,
+              //     symbolSize: 18,
+              //     symbolShape: 'circle',
+              //     effects: [
+              //       {
+              //         on: 'hover',
+              //         style: {
+              //           itemTextColor: '#000'
+              //         }
+              //       }
+              //     ]
+              //   }
+              // ]}
+            />
+          </div>
         </CardContent>
       </Card>
     );
