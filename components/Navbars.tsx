@@ -299,7 +299,7 @@ export const Navbars = () => {
     }
   }
   return (
-    <nav className="bg-gray-50 border-b border-gray-200 shadow-sm border-b border-gray-100">
+    <nav className="bg-gray-50 border-b border-gray-200 shadow-sm ">
       <div className="mx-4 px-4 md:mx-auto sm:mx-auto">
         <div className="flex justify-between items-center h-18">
 
@@ -320,7 +320,7 @@ export const Navbars = () => {
             </a>
             
             {/* User Management Dropdown */}
-            <div className="relative" ref={dropdownRef}>
+           { role == 'admin' && <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
                 className="flex items-center gap-1 text-gray-600 hover:text-green-600 hover:bg-green-50 px-2 py-2 rounded-lg transition-colors duration-150 text-sm font-medium"
@@ -348,6 +348,7 @@ export const Navbars = () => {
                 </div>
               )}
             </div>
+            }
 
             <a href="#" onClick={(e) => {
           e.preventDefault()

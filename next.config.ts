@@ -67,6 +67,9 @@ const withPWA = nextPWA({
 });
 
 const nextConfig = {
+  experimental: {
+    turbo: false, // ❗ ปิด Turbopack
+  },
   eslint: {
     ignoreDuringBuilds: true,
   },

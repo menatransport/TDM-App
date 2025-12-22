@@ -24,81 +24,6 @@ export const Jobcards = ({ filterStatus, datajobs }: JobcardsProps) => {
 
   const router = useRouter();
 
-  // ฟังก์ชันตรวจสอบและกำหนด highlight สำหรับ Card
-  const getCardHighlight = (job: any) => {
-    const currentTime = new Date();
-    const receiveTime = job.date_recive ? new Date(job.date_recive) : null;
-    const deliverTime = job.date_deliver ? new Date(job.date_deliver) : null;
-    
-
-    const isTargetStatus_origin = job.status === "รับงาน" || job.status === "พร้อมรับงาน";
-    const isTargetStatus_deliver = job.status === "ถึงต้นทาง" || job.status === "เริ่มขึ้นสินค้า" || job.status === "ขึ้นสินค้าเสร็จ" || job.status === "เริ่มขนส่ง";
-
-    if (!isTargetStatus_origin && !isTargetStatus_deliver) {
-      return { 
-        className: "", 
-        message: "", 
-        showAlert: false,
-        alertType: ""
-      };
-    }
-
-    if (receiveTime && isTargetStatus_origin) {
-      const oneHourBeforeReceive = new Date(receiveTime.getTime() - (60 * 60 * 1000));
-      
-      if (currentTime >= receiveTime) {
-        return {
-          className: "border-red-500 bg-red-50 shadow-red-200",
-          message: "ล่าช้า",
-          showAlert: true,
-          alertType: "red"
-        };
-      }
-      
-      // ใกล้เวลารับสินค้า (เหลือ 1 ชั่วโมง) - สีเหลือง
-      if (currentTime >= oneHourBeforeReceive && currentTime < receiveTime) {
-        return {
-          className: "border-yellow-400 bg-yellow-50 shadow-yellow-200",
-          message: "ใกล้ล่าช้า",
-          showAlert: true,
-          alertType: "yellow"
-        };
-      }
-    }
-
-    // ตรวจสอบเวลาส่งสินค้า (date_deliver)
-    if (deliverTime && isTargetStatus_deliver) {
-      const oneHourBeforeDeliver = new Date(deliverTime.getTime() - (60 * 60 * 1000));
-      
-      // เกินเวลาส่งสินค้าแล้ว - สีแดง
-      if (currentTime >= deliverTime) {
-        return {
-          className: "border-red-500 bg-red-50 shadow-red-200",
-          message: "สาย",
-          showAlert: true,
-          alertType: "red"
-        };
-      }
-      
-      // ใกล้เวลาส่งสินค้า (เหลือ 1 ชั่วโมง) - สีเหลือง
-      if (currentTime >= oneHourBeforeDeliver && currentTime < deliverTime) {
-        return {
-          className: "border-yellow-400 bg-yellow-50 shadow-yellow-200",
-          message: "กำลังสาย",
-          showAlert: true,
-          alertType: "yellow"
-        };
-      }
-    }
-
-    return { 
-      className: "", 
-      message: "", 
-      showAlert: false,
-      alertType: ""
-    };
-  };
-
   const getStatusConfig = (job: any) => {
     switch (job.status) {
       case "พร้อมรับงาน":
@@ -168,7 +93,7 @@ export const Jobcards = ({ filterStatus, datajobs }: JobcardsProps) => {
 
   const formatDate = (dateStr: string | undefined) => {
     if (!dateStr || typeof dateStr !== "string") return "-";
-    // Accepts ISO 8601 format: '2025-12-08T13:00:00'
+
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return "-";
     return d.toLocaleDateString("th-TH", {
@@ -178,7 +103,7 @@ export const Jobcards = ({ filterStatus, datajobs }: JobcardsProps) => {
   };
 
   const formatTime = (dateStr: string | undefined) => {
-    // Accepts ISO 8601 format: '2025-12-08T13:00:00'
+ 
     if (!dateStr || typeof dateStr !== "string") return "-";
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return "-";
@@ -197,14 +122,11 @@ export const Jobcards = ({ filterStatus, datajobs }: JobcardsProps) => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {filteredJobs.map((job: any) => {
           const statusConfig = getStatusConfig(job);
-          const highlightConfig = getCardHighlight(job);
           
           return (
             <Card
               key={job.load_id}
-              className={`transition-all duration-300 hover:shadow-lg hover:-translate-y-1 rounded-xl border-2 group overflow-hidden ${
-                highlightConfig.className || "bg-white border-gray-300"
-              } ${highlightConfig.showAlert ? "" : ""}`}
+              className="transition-all duration-300 hover:shadow-lg hover:-translate-y-1 rounded-xl border-2 group overflow-hidden bg-white border-gray-300"
             >
               <CardContent className="p-0">
                
@@ -241,16 +163,6 @@ export const Jobcards = ({ filterStatus, datajobs }: JobcardsProps) => {
                       >
                        {getEstimateTime(job.date_recive)}
                       </Badge> */}
-                       {/* Alert Banner */}
-                {highlightConfig.showAlert && (
-                  <Badge className={`px-2 py-0.5 rounded-full text-center text-xs rounded-full mr-2 ${
-                    highlightConfig.alertType === "red" 
-                      ? "bg-red-500 text-white" 
-                      : "bg-yellow-500 text-white"
-                  }`}>
-                {highlightConfig.message}
-                  </Badge>
-                )}
                     </div>
                   </div>
                 </div>
