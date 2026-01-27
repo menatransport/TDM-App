@@ -3,8 +3,7 @@ import { NextResponse } from 'next/server';
 export async function GET(req: Request) {
 try {
   const Access_token  = req.headers.get('Authorization')?.replace('Bearer ', '');
-  const query = req.headers.get('query')
-  console.log("JOBS_API_URL : ",process.env.JOBS_API_URL! + "?" + query);
+  const query = req.headers.get('query');
   const externalRes = await fetch(process.env.JOBS_API_URL! + "?" + query, {
     method: 'GET',
     headers: {

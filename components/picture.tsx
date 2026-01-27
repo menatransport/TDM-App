@@ -37,6 +37,23 @@ const IMAGE_CATEGORIES = [
   { value: "other", label: "อื่นๆ" },
 ];
 
+// =============== IMAGE COMPRESSION CONFIG ===============
+const COMPRESSION_CONFIG = {
+  // ขนาดไฟล์ขั้นต่ำที่ต้องบีบอัด (bytes)
+  MIN_SIZE_TO_COMPRESS: 500 * 1024, // 500KB
+  // ขนาดภาพสูงสุด (pixels)
+  MAX_WIDTH: 1920,
+  MAX_HEIGHT: 1920,
+  // คุณภาพตามขนาดไฟล์ (MB)
+  QUALITY_TIERS: [
+    { maxSizeMB: 1, quality: 0.85 },
+    { maxSizeMB: 3, quality: 0.75 },
+    { maxSizeMB: 5, quality: 0.65 },
+    { maxSizeMB: Infinity, quality: 0.55 },
+  ],
+  OUTPUT_TYPE: "image/jpeg" as const,
+};
+
 type TicketProps = {
   onLoadingChange: (loading: boolean) => void;
 };
@@ -110,121 +127,94 @@ export const Picture = ({ onLoadingChange }: TicketProps) => {
     }
   }, []);
 
-  const compressImage = (file: File, quality: number = 0.8): Promise<File> => {
+  /**
+   * บีบอัดรูปภาพให้มีขนาดเล็กลง
+   * @param file - ไฟล์รูปภาพที่ต้องการบีบอัด
+   * @returns Promise<File> - ไฟล์ที่บีบอัดแล้ว
+   */
+  const compressImage = (file: File): Promise<File> => {
     return new Promise((resolve) => {
-      if (typeof document === "undefined") {
+      // ข้ามถ้าไม่ใช่ browser หรือไฟล์เล็กเกินไป
+      if (typeof document === "undefined" || file.size < COMPRESSION_CONFIG.MIN_SIZE_TO_COMPRESS) {
         resolve(file);
         return;
       }
 
-      // ปรับเกณฑ์ขนาดไฟล์ที่ต้องบีบอัด
-      if (file.size < 300000) {
-        // 300KB
-        resolve(file);
-        return;
-      }
-
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d", {
-        alpha: false,
-        willReadFrequently: false,
-      })!;
       const img = new Image();
-
-      const timeoutId = setTimeout(() => {
-        img.src = "";
-        resolve(file);
-      }, 10000);
+      const objectUrl = URL.createObjectURL(file);
 
       img.onload = () => {
-        clearTimeout(timeoutId);
+        URL.revokeObjectURL(objectUrl);
 
-        const maxWidth = 1600;
-        const maxHeight = 1200;
-        let { width, height } = img;
+        // คำนวณขนาดใหม่
+        const { width, height } = calculateNewDimensions(img.width, img.height);
 
-        let newWidth = width;
-        let newHeight = height;
+        // สร้าง canvas และวาดภาพ
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
 
-        if (width > maxWidth || height > maxHeight) {
-          const ratio = Math.min(maxWidth / width, maxHeight / height);
-          newWidth = Math.floor(width * ratio);
-          newHeight = Math.floor(height * ratio);
+        const ctx = canvas.getContext("2d", { alpha: false });
+        if (!ctx) {
+          resolve(file);
+          return;
         }
 
-        canvas.width = newWidth;
-        canvas.height = newHeight;
+        ctx.drawImage(img, 0, 0, width, height);
 
-        // ปรับปรุงการ render
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = "high"; // เพิ่มคุณภาพ
+        // คำนวณ quality ตามขนาดไฟล์
+        const quality = getQualityByFileSize(file.size);
 
-        // เพิ่มพื้นหลังสีขาวสำหรับ JPEG
-        ctx.fillStyle = "#FFFFFF";
-        ctx.fillRect(0, 0, newWidth, newHeight);
-
-        ctx.drawImage(img, 0, 0, newWidth, newHeight);
-
-        // ปรับปรุงการเลือก quality ตามขนาดไฟล์
-        let finalQuality = quality;
-        const fileSizeMB = file.size / (1024 * 1024);
-
-        if (fileSizeMB > 8) {
-          finalQuality = 0.5;
-        } else if (fileSizeMB > 5) {
-          finalQuality = 0.6;
-        } else if (fileSizeMB > 3) {
-          finalQuality = 0.7;
-        } else if (fileSizeMB > 1) {
-          finalQuality = 0.75;
-        }
-
-        // ใช้ requestIdleCallback เพื่อไม่ block UI (หากรองรับ)
-        const processBlob = () => {
-          canvas.toBlob(
-            (blob) => {
-              URL.revokeObjectURL(img.src);
-
-              if (blob) {
-                const originalSizeMB = file.size / (1024 * 1024);
-                const newSizeMB = blob.size / (1024 * 1024);
-
-                // ตรวจสอบว่าการบีบอัดได้ผล (ขนาดลดลงอย่างน้อย 10%)
-                if (newSizeMB < originalSizeMB * 0.9) {
-                  const compressedFile = new File([blob], file.name, {
-                    type: "image/jpeg",
-                    lastModified: Date.now(),
-                  });
-                  resolve(compressedFile);
-                } else {
-                  // หากการบีบอัดไม่ได้ผล ใช้ไฟล์เดิม
-                  resolve(file);
-                }
-              } else {
-                resolve(file);
-              }
-            },
-            "image/jpeg",
-            finalQuality
-          );
-        };
-
-        // ใช้ requestIdleCallback หากรองรับ, ไม่งั้นใช้ setTimeout
-        if (typeof requestIdleCallback !== "undefined") {
-          requestIdleCallback(processBlob);
-        } else {
-          setTimeout(processBlob, 0);
-        }
+        // แปลงเป็น blob
+        canvas.toBlob(
+          (blob) => {
+            if (blob && blob.size < file.size) {
+              resolve(new File([blob], file.name, {
+                type: COMPRESSION_CONFIG.OUTPUT_TYPE,
+                lastModified: Date.now(),
+              }));
+            } else {
+              resolve(file);
+            }
+          },
+          COMPRESSION_CONFIG.OUTPUT_TYPE,
+          quality
+        );
       };
 
       img.onerror = () => {
-        clearTimeout(timeoutId);
-        URL.revokeObjectURL(img.src);
+        URL.revokeObjectURL(objectUrl);
         resolve(file);
       };
 
-      img.src = URL.createObjectURL(file);
+      img.src = objectUrl;
     });
+  };
+
+  /**
+   * คำนวณขนาดภาพใหม่ตาม aspect ratio
+   */
+  const calculateNewDimensions = (width: number, height: number) => {
+    const { MAX_WIDTH, MAX_HEIGHT } = COMPRESSION_CONFIG;
+
+    if (width <= MAX_WIDTH && height <= MAX_HEIGHT) {
+      return { width, height };
+    }
+
+    const ratio = Math.min(MAX_WIDTH / width, MAX_HEIGHT / height);
+    return {
+      width: Math.floor(width * ratio),
+      height: Math.floor(height * ratio),
+    };
+  };
+
+  /**
+   * คำนวณ quality ตามขนาดไฟล์
+   */
+  const getQualityByFileSize = (sizeBytes: number): number => {
+    const sizeMB = sizeBytes / (1024 * 1024);
+    const tier = COMPRESSION_CONFIG.QUALITY_TIERS.find((t) => sizeMB <= t.maxSizeMB);
+    return tier?.quality ?? 0.7;
   };
 
   const handleUpload = async () => {
@@ -251,14 +241,7 @@ export const Picture = ({ onLoadingChange }: TicketProps) => {
           batch.map(async (img) => {
             if (!img.file) return null;
 
-            const fileSizeMB = img.file.size / (1024 * 1024);
-            let processedFile = img.file;
-
-            if (fileSizeMB > 0.5) {
-              const quality =
-                fileSizeMB > 3 ? 0.6 : fileSizeMB > 1.5 ? 0.7 : 0.8;
-              processedFile = await compressImage(img.file, quality);
-            }
+            const processedFile = await compressImage(img.file);
 
             return {
               file: new File([processedFile], img.name, {

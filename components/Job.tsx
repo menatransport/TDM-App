@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { Jobcards } from "@/components/Jobcards";
+import { DeliveryStats } from "@/components/DeliveryStats";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -19,6 +20,7 @@ import {
   Briefcase,
   Truck,
   ChartPie,
+  TrendingUp,
 } from "lucide-react";
 import {
   Dialog,
@@ -47,6 +49,7 @@ export const Jobcomponent = ({ onLoadingChange }: TicketProps) => {
   const [isExpanded_3, setIsExpanded_3] = useState(false);
   const [isExpanded_finished, setIsExpanded_finished] = useState(false);
   const [statsDialog, setStatsDialog] = useState(false);
+  const [showStatsModal, setShowStatsModal] = useState(false);
   const [username, setUsername] = useState("");
   useEffect(() => {
     const fetchData = async () => {
@@ -249,7 +252,7 @@ export const Jobcomponent = ({ onLoadingChange }: TicketProps) => {
                     </Badge>
                     <input
                       type="number"
-                      className="w-50 border text-[13px] p-1 text-center border-gray-300 rounded-md bg-white w-20"
+                      className="w-50 border text-[13px] p-1 text-center border-gray-300 rounded-md bg-white"
                       required
                     />
                   </div>
@@ -489,43 +492,21 @@ export const Jobcomponent = ({ onLoadingChange }: TicketProps) => {
 
 
         <hr className="my-4 border-gray-200" />
-        
-        {/* External Statistics Button */}
-        <div className="hidden flex-row items-start gap-2 mx-2">
-          <button 
-            onClick={() => {
-              Swal.fire({ 
-                title:"ขออภัยในความไม่สะดวก ขณะนี้ระบบกำลังอยู่ในระหว่างการปรับปรุงข้อมูลชั่วคราว กรุณาติดต่อผู้ดูแลระบบหากมีข้อสงสัยเพิ่มเติม ขอบคุณค่ะ",
-                icon: "info",
-                confirmButtonText: "ตกลง",
-              });
-              // if (!username) {
-              //   alert("ไม่พบข้อมูลผู้ใช้งาน กรุณาเข้าสู่ระบบใหม่");
-              //   return;
-              // }
-              // const filterValue = `include%EE%80%800%EE%80%80EQ%EE%80%80${encodeURIComponent(username)}`;
-              
-              // const paramObj = {
-              //   "df22": filterValue
-              // };
 
-              // const jsonString = JSON.stringify(paramObj);
-              
-              // const encodedParams = encodeURIComponent(jsonString);
-              
+        {/* Delivery Statistics Button */}
+        <button
+          onClick={() => setShowStatsModal(true)}
+          className="hidden w-full flex items-center justify-center gap-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-4 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200"
+        >
+          <TrendingUp className="w-5 h-5" />
+          <span>ดูสถิติการจัดส่ง</span>
+        </button>
 
-              // const url = `https://lookerstudio.google.com/reporting/0c8e5234-e485-41cb-85a9-45506a773b30/page/p_nhftjp31vd?params=${encodedParams}`;
-              
-              // console.log('Final URL:', url);
-              // window.open(url, "_blank");
-            }}
-            className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-4 py-2 rounded-lg font-medium shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
-          >
-            <ChartPie className="w-4 h-4" /> 
-            ดูรายงาน
-          </button>
-
-        </div>
+        {/* Delivery Stats Modal */}
+        <DeliveryStats
+          isOpen={showStatsModal}
+          onClose={() => setShowStatsModal(false)}
+        />
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mb-6">
           <div
             className="flex flex-row items-center gap-4 p-4 cursor-pointer hover:bg-gray-50 transition-colors"

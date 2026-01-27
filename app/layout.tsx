@@ -4,6 +4,7 @@ import "./globals.css";
 import ErrorBoundary from "../components/ErrorBoundary";
 import GlobalErrorHandler from "../components/GlobalErrorHandler";
 import DebugPanel from "../components/DebugPanel";
+import ServiceWorkerRegister from "../components/ServiceWorkerRegister";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -58,6 +59,7 @@ export default function RootLayout({
           {children}
         </ErrorBoundary>
         <DebugPanel />
+        <ServiceWorkerRegister />
       </body>
     </html>
   );
