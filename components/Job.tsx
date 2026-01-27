@@ -496,7 +496,7 @@ export const Jobcomponent = ({ onLoadingChange }: TicketProps) => {
         {/* Delivery Statistics Button */}
         <button
           onClick={() => setShowStatsModal(true)}
-          className="hidden w-full flex items-center justify-center gap-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-4 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200"
+          className="hidden w-full items-center justify-center gap-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-4 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200"
         >
           <TrendingUp className="w-5 h-5" />
           <span>ดูสถิติการจัดส่ง</span>

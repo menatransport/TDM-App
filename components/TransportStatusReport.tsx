@@ -243,22 +243,22 @@ export const TransportStatusReport = ({
     });
   }, [transportData]);
 
-  const calculateDistanceFromLongdo = async (
+  const calculateDistanceFromLongdo = useCallback(async (
+    plate: string,
     currentLat: number,
     currentLng: number,
     targetLat: number,
     targetLng: number
   ) => {
     try {
-      // เพิ่ม timeout สำหรับ API call (5 วินาที)
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-      const res = await fetch("/api/longdo", {
+      const timestamp = Date.now();
+      
+      const res = await fetch(`/api/longdo?_t=${timestamp}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
           params: JSON.stringify({
+            plate: plate,
             flat: currentLat,
             flon: currentLng,
             tlat: targetLat,
@@ -266,10 +266,8 @@ export const TransportStatusReport = ({
             type: 16,
           }),
         },
-        signal: controller.signal,
+        cache: "no-store",
       });
-
-      clearTimeout(timeoutId);
 
       if (!res.ok) {
         throw new Error(`API error: ${res.status}`);
@@ -277,42 +275,20 @@ export const TransportStatusReport = ({
 
       const dbRes = await res.json();
       const dbResData = dbRes.data[0];
+      const now = Date.now();
 
       if (dbResData) {
         const duration = (dbResData.distance / 1000 / 50) * 60; // นาที (ความเร็วเฉลี่ย 50 km/h)
-        const estimatedArrival = new Date(
-          currentTime.getTime() + duration * 60000
-        );
+        const estimatedArrival = new Date(now + duration * 60000);
         return {
           distance: Math.round(dbResData.distance) / 1000,
           duration: Math.round(duration),
           estimatedArrival,
         };
-      }
+      } 
 
-      // Fallback: ใช้การคำนวณแบบ Haversine
-      const R = 6371;
-      const dLat = ((targetLat - currentLat) * Math.PI) / 180;
-      const dLon = ((targetLng - currentLng) * Math.PI) / 180;
-      const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos((currentLat * Math.PI) / 180) *
-          Math.cos((targetLat * Math.PI) / 180) *
-          Math.sin(dLon / 2) *
-          Math.sin(dLon / 2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      const distance = R * c;
+      return null;
 
-      const duration = (distance / 50) * 60; // นาที (ความเร็วเฉลี่ย 50 km/h)
-      const estimatedArrival = new Date(
-        currentTime.getTime() + duration * 60000
-      );
-
-      return {
-        distance: Math.round(distance * 10) / 10,
-        duration: Math.round(duration),
-        estimatedArrival,
-      };
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
         console.warn("API timeout - using fallback calculation");
@@ -321,6 +297,7 @@ export const TransportStatusReport = ({
       }
 
       // Fallback calculation เมื่อ API ล้มเหลว
+      const now = Date.now();
       const R = 6371;
       const dLat = ((targetLat - currentLat) * Math.PI) / 180;
       const dLon = ((targetLng - currentLng) * Math.PI) / 180;
@@ -334,9 +311,7 @@ export const TransportStatusReport = ({
       const distance = R * c;
 
       const duration = (distance / 50) * 60;
-      const estimatedArrival = new Date(
-        currentTime.getTime() + duration * 60000
-      );
+      const estimatedArrival = new Date(now + duration * 60000);
 
       return {
         distance: Math.round(distance * 10) / 10,
@@ -344,7 +319,7 @@ export const TransportStatusReport = ({
         estimatedArrival,
       };
     }
-  };
+  }, []);
 
   // กำหนดปลายทางตามสถานะ
   const getDestinationByStatus = (item: TransportItem) => {
@@ -730,7 +705,6 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
       if (item.status !== "จัดส่งแล้ว (POD)") {
         distanceInfo = distanceData[item.load_id] || null;
 
-        // คำนวณความเสี่ยงถ้ามีข้อมูลระยะทาง
         if (distanceInfo) {
           riskAssessment = calculateRiskLevel(
             destination.plannedTime,
@@ -751,7 +725,6 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
   const calculateDistanceForAllItems = useCallback(async () => {
     if (filteredData.length === 0) return;
 
-    // กรองข้อมูลที่ต้องคำนวณล่วงหน้า
     const itemsToCalculate = filteredData.filter((item) => {
       if (item.status === "จัดส่งแล้ว (POD)") return false;
       const currentLatLng = item.vehicle_info.current_latlng;
@@ -759,74 +732,51 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
       return currentLatLng && destination.latLng;
     });
 
-    
     if (itemsToCalculate.length === 0) return;
-
-    // แบ่งเป็น chunks เพื่อประมวลผลเป็นกลุ่ม (10 items ต่อ batch)
-    const BATCH_SIZE = 10;
-    const chunks = [];
-    for (let i = 0; i < itemsToCalculate.length; i += BATCH_SIZE) {
-      chunks.push(itemsToCalculate.slice(i, i + BATCH_SIZE));
-    }
 
     const newDistanceData: { [key: string]: LocationDistance } = {};
 
-    // ประมวลผลทีละ batch แบบขนานกัน
-    await Promise.all(
-      chunks.map(async (chunk) => {
-        const chunkPromises = chunk.map(async (item) => {
-          try {
-            const currentLatLng = item.vehicle_info.current_latlng;
-            const destination = getDestinationByStatus(item);
-            const targetLatLng = destination.latLng;
+    for (const item of itemsToCalculate) {
+      try {
+        const currentLatLng = item.vehicle_info.current_latlng;
+        const destination = getDestinationByStatus(item);
+        const targetLatLng = destination.latLng;
 
-            const [currentLat, currentLng] = currentLatLng
-              .split(",")
-              .map(Number);
-            const [targetLat, targetLng] = targetLatLng.split(",").map(Number);
+        const [currentLat, currentLng] = currentLatLng.split(",").map(Number);
+        const [targetLat, targetLng] = targetLatLng.split(",").map(Number);
 
-            // ตรวจสอบความถูกต้องของพิกัด
-            if (
-              !isNaN(currentLat) &&
-              !isNaN(currentLng) &&
-              !isNaN(targetLat) &&
-              !isNaN(targetLng)
-            ) {
-              const distanceInfo = await calculateDistanceFromLongdo(
-                currentLat,
-                currentLng,
-                targetLat,
-                targetLng
-              );
+        if (
+          !isNaN(currentLat) &&
+          !isNaN(currentLng) &&
+          !isNaN(targetLat) &&
+          !isNaN(targetLng)
+        ) {
+          const distanceInfo = await calculateDistanceFromLongdo(
+            item.h_plate,
+            currentLat,
+            currentLng,
+            targetLat,
+            targetLng
+          );
 
-              if (distanceInfo) {
-                return { load_id: item.load_id, distanceInfo };
-              }
-            }
-            return null;
-          } catch (error) {
-            console.error(
-              "Error calculating distance for item:",
-              item.load_id,
-              error
-            );
-            return null;
+          if (distanceInfo) {
+            newDistanceData[item.load_id] = distanceInfo;
           }
-        });
+        }
 
-        const chunkResults = await Promise.all(chunkPromises);
+        await new Promise(resolve => setTimeout(resolve, 10));
 
-        // รวมผลลัพธ์ของ chunk นี้
-        chunkResults.forEach((result) => {
-          if (result) {
-            newDistanceData[result.load_id] = result.distanceInfo;
-          }
-        });
-      })
-    );
+      } catch (error) {
+        console.error(
+          "Error calculating distance for item:",
+          item.load_id,
+          error
+        );
+      }
+    }
 
     setDistanceData(newDistanceData);
-  }, [filteredData, currentTime]);
+  }, [filteredData, calculateDistanceFromLongdo]);
 
   useEffect(() => {
     if (filteredData.length > 0) {

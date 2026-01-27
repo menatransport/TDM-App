@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 
+
 export async function GET(req: Request) {
 
     const bodyStr = req.headers.get('params');
@@ -18,11 +19,14 @@ export async function GET(req: Request) {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                }
+                },
+                cache: 'no-store', 
             }
         );
+        
         const data = await response.json();
         return NextResponse.json(data);
+         
     } catch (error) {
         console.error(error);
         return NextResponse.json({ error: 'Failed to fetch table list' }, { status: 500 });
