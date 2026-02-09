@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback, useMemo, memo } from "react";
+import { useEffect, useState, useCallback, useMemo, memo, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import {
@@ -81,6 +81,478 @@ interface QuickFillData {
   recentDrivers: DriverData[];
 }
 
+// Props for memoized FormCard component
+interface FormCardProps {
+  formData: FormItem;
+  index: number;
+  canCopyFromPrevious: boolean;
+  driverSearchTerm: string;
+  showDriverDropdown: boolean;
+  quickFillRecentDrivers: DriverData[];
+  allDriverNames: string[];
+  onToggleExpanded: (formId: number) => void;
+  onRemoveForm: (formId: number) => void;
+  onCopyFromPrevious: (formId: number) => void;
+  onDriverSearchChange: (formId: number, value: string) => void;
+  onDriverDropdownToggle: (formId: number, show: boolean) => void;
+  onDriverSelect: (formId: number, driverName: string) => void;
+  onFieldChange: (formId: number, field: keyof JobData, value: string | number) => void;
+}
+
+// Memoized FormCard component - placed outside to prevent recreation
+const FormCard = memo(function FormCard({
+  formData,
+  index,
+  canCopyFromPrevious,
+  driverSearchTerm,
+  showDriverDropdown,
+  quickFillRecentDrivers,
+  allDriverNames,
+  onToggleExpanded,
+  onRemoveForm,
+  onCopyFromPrevious,
+  onDriverSearchChange,
+  onDriverDropdownToggle,
+  onDriverSelect,
+  onFieldChange,
+}: FormCardProps) {
+  // Local ref for debouncing
+  const inputRef = useRef<{ [key: string]: string }>({});
+
+  // Get filtered drivers based on search term
+  const filteredDrivers = useMemo(() => {
+    if (driverSearchTerm.length === 0)
+      return allDriverNames.sort((a, b) => a.localeCompare(b));
+
+    return allDriverNames.filter((name) =>
+      name.toLowerCase().includes(driverSearchTerm.toLowerCase())
+    );
+  }, [allDriverNames, driverSearchTerm]);
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-2xl shadow-lg overflow-hidden mb-6">
+      {/* Header */}
+      <div
+        className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 cursor-pointer hover:from-blue-100 hover:to-indigo-100 transition-all"
+        onClick={() => onToggleExpanded(formData.id)}
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold">
+            {index + 1}
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-800">
+              เที่ยวงาน #{index + 1}
+            </h3>
+            <p className="text-sm text-gray-600">
+              {formData.data.driver_name || "ยังไม่ได้เลือกพนักงานขับรถ"}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {canCopyFromPrevious && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onCopyFromPrevious(formData.id);
+              }}
+              className="p-2 rounded-lg bg-green-100 text-green-600 hover:bg-green-200 transition-all"
+              title="คัดลอกจากงานก่อนหน้า"
+            >
+              <Copy className="w-4 h-4" />
+            </button>
+          )}
+
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemoveForm(formData.id);
+            }}
+            className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-all"
+          >
+            <X className="w-4 h-4" />
+          </button>
+
+          <div
+            className={`p-2 rounded-lg bg-gray-100 text-gray-600 transition-all ${formData.isExpanded ? "rotate-180" : ""
+              }`}
+          >
+            <ChevronDown className="w-5 h-5" />
+          </div>
+        </div>
+      </div>
+
+      {/* Form Content */}
+      <div
+        className={`transition-all duration-300 ease-in-out ${formData.isExpanded
+            ? "max-h-none opacity-100"
+            : "max-h-0 opacity-0 overflow-hidden"
+          }`}
+      >
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* วันที่วางแผน */}
+            <div className="lg:col-span-1">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
+                <Calendar className="w-4 h-4 text-blue-500" />
+                วันที่วางแผน <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                defaultValue={formData.data.date_plan}
+                onBlur={(e) =>
+                  onFieldChange(formData.id, "date_plan", e.target.value)
+                }
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              />
+            </div>
+
+            {/* ชื่อพนักงานขับรถ - Dropdown with Search */}
+            <div className="lg:col-span-2 relative">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
+                <User className="w-4 h-4 text-green-500" />
+                ชื่อพนักงานขับรถ <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  defaultValue={formData.data.driver_name}
+                  onChange={(e) => {
+                    onDriverSearchChange(formData.id, e.target.value);
+                    onDriverDropdownToggle(formData.id, true);
+                  }}
+                  onFocus={() => onDriverDropdownToggle(formData.id, true)}
+                  onBlur={(e) => {
+                    // Delay to allow click on dropdown
+                    setTimeout(() => {
+                      onFieldChange(formData.id, "driver_name", e.target.value);
+                    }, 200);
+                  }}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                />
+                <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              </div>
+
+              {/* Dropdown */}
+              {showDriverDropdown && (
+                <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                  {filteredDrivers.map((driverName, idx) => {
+                    const driverData = quickFillRecentDrivers.find(
+                      (d) => d.name === driverName
+                    );
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => onDriverSelect(formData.id, driverName)}
+                        className="w-full px-4 py-3 text-left hover:bg-blue-50 border-b border-gray-100 last:border-b-0 flex items-center justify-between"
+                      >
+                        <div>
+                          <div className="font-medium text-gray-800">
+                            {driverName}
+                          </div>
+                          {driverData && (
+                            <div className="text-sm text-gray-500">
+                              {driverData.h_plate &&
+                                `${driverData.h_plate} - ${driverData.t_plate}`}
+                              {driverData.phone && ` • ${driverData.phone}`}
+                            </div>
+                          )}
+                        </div>
+                        {driverData && (
+                          <div className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                            มีข้อมูลเก่า
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                  {filteredDrivers.length === 0 && (
+                    <div className="px-4 py-3 text-gray-500 text-center">
+                      ไม่พบข้อมูลพนักงาน
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* เบอร์โทร */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
+                <Phone className="w-4 h-4 text-purple-500" />
+                เบอร์โทร
+              </label>
+              <input
+                type="tel"
+                defaultValue={formData.data.phone}
+                onBlur={(e) =>
+                  onFieldChange(formData.id, "phone", e.target.value)
+                }
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              />
+            </div>
+
+            {/* ทะเบียนหัว */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
+                <Truck className="w-4 h-4 text-orange-500" />
+                ทะเบียนหัว <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                defaultValue={formData.data.h_plate}
+                onBlur={(e) =>
+                  onFieldChange(formData.id, "h_plate", e.target.value)
+                }
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              />
+            </div>
+
+            {/* ทะเบียนหาง */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
+                <Truck className="w-4 h-4 text-orange-500" />
+                ทะเบียนหาง <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                defaultValue={formData.data.t_plate}
+                onBlur={(e) =>
+                  onFieldChange(formData.id, "t_plate", e.target.value)
+                }
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              />
+            </div>
+
+            {/* ประเภทเชื้อเพลิง */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
+                <Fuel className="w-4 h-4 text-red-500" />
+                ประเภทเชื้อเพลิง
+              </label>
+              <select
+                defaultValue={formData.data.fuel_type}
+                onChange={(e) =>
+                  onFieldChange(formData.id, "fuel_type", e.target.value)
+                }
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              >
+                <option value="">เลือกประเภทเชื้อเพลิง</option>
+                <option value="ดีเซล">ดีเซล</option>
+                <option value="NGV">NGV</option>
+                <option value="ไฟฟ้า">ไฟฟ้า</option>
+              </select>
+            </div>
+
+            {/* ความสูงรถ */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
+                <Ruler className="w-4 h-4 text-indigo-500" />
+                ความสูงรถ (เมตร)
+              </label>
+              <input
+                type="text"
+                defaultValue={formData.data.height}
+                onBlur={(e) =>
+                  onFieldChange(formData.id, "height", e.target.value)
+                }
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              />
+            </div>
+
+            {/* น้ำหนักรถ */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
+                <Weight className="w-4 h-4 text-pink-500" />
+                น้ำหนักจำกัด (ตัน)
+              </label>
+              <input
+                type="text"
+                defaultValue={formData.data.weight}
+                onBlur={(e) =>
+                  onFieldChange(formData.id, "weight", e.target.value)
+                }
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              />
+            </div>
+
+            {/* ประเภทงาน */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
+                <Package className="w-4 h-4 text-cyan-500" />
+                ประเภทงาน
+              </label>
+              <select
+                defaultValue={formData.data.job_type}
+                onChange={(e) =>
+                  onFieldChange(formData.id, "job_type", e.target.value)
+                }
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              >
+                <option value="">เลือกประเภทงาน</option>
+                <option value="ดรอป">ดรอป</option>
+                <option value="ทอย">ทอย</option>
+              </select>
+            </div>
+
+            {/* ประเภทพาเลท */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
+                <Package className="w-4 h-4 text-yellow-500" />
+                ประเภทพาเลท
+              </label>
+              <select
+                defaultValue={formData.data.pallet_type}
+                onChange={(e) =>
+                  onFieldChange(formData.id, "pallet_type", e.target.value)
+                }
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              >
+                <option value="null">ไม่มี</option>
+                <option value="แลกเปลี่ยน">แลกเปลี่ยน</option>
+                <option value="โอน">โอน</option>
+                <option value="รถเปล่า">รถเปล่า</option>
+              </select>
+            </div>
+
+            {/* จำนวนพาเลท */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
+                <Package className="w-4 h-4 text-teal-500" />
+                จำนวนพาเลท
+              </label>
+              <input
+                type="number"
+                defaultValue={formData.data.pallet_plan}
+                onBlur={(e) =>
+                  onFieldChange(
+                    formData.id,
+                    "pallet_plan",
+                    e.target.value === "" ? 0 : Number(e.target.value)
+                  )
+                }
+                min="0"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              />
+            </div>
+
+            {/* สถานที่ขึ้นสินค้า */}
+            <div className="lg:col-span-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
+                <MapPin className="w-4 h-4 text-green-500" />
+                สถานที่ขึ้นสินค้า <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                defaultValue={formData.data.locat_recive}
+                onBlur={(e) =>
+                  onFieldChange(formData.id, "locat_recive", e.target.value)
+                }
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              />
+            </div>
+
+            {/* วันที่ขึ้นสินค้า */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
+                <Calendar className="w-4 h-4 text-blue-500" />
+                วันที่ขึ้นสินค้า <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="datetime-local"
+                defaultValue={formData.data.date_recive}
+                onBlur={(e) =>
+                  onFieldChange(formData.id, "date_recive", e.target.value)
+                }
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              />
+            </div>
+
+            {/* สถานที่ลงสินค้า */}
+            <div className="lg:col-span-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
+                <MapPin className="w-4 h-4 text-red-500" />
+                สถานที่ลงสินค้า <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                defaultValue={formData.data.locat_deliver}
+                onBlur={(e) =>
+                  onFieldChange(formData.id, "locat_deliver", e.target.value)
+                }
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              />
+            </div>
+
+            {/* วันที่ลงสินค้า */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
+                <Calendar className="w-4 h-4 text-purple-500" />
+                วันที่ลงสินค้า <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="datetime-local"
+                defaultValue={formData.data.date_deliver}
+                onBlur={(e) =>
+                  onFieldChange(formData.id, "date_deliver", e.target.value)
+                }
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              />
+            </div>
+
+            {/* ค่าลงสินค้า */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
+                <DollarSign className="w-4 h-4 text-green-500" />
+                ค่าลงสินค้า (บาท)
+              </label>
+              <input
+                type="text"
+                defaultValue={formData.data.unload_cost}
+                onBlur={(e) =>
+                  onFieldChange(formData.id, "unload_cost", e.target.value)
+                }
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              />
+            </div>
+
+            {/* หมายเหตุ */}
+            <div className="lg:col-span-3">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
+                <FileText className="w-4 h-4 text-gray-500" />
+                หมายเหตุ
+              </label>
+              <textarea
+                rows={3}
+                defaultValue={formData.data.remark}
+                onBlur={(e) =>
+                  onFieldChange(formData.id, "remark", e.target.value)
+                }
+                placeholder="รายละเอียดเพิ่มเติม..."
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}, (prevProps, nextProps) => {
+  // Custom comparison to prevent unnecessary re-renders
+  return (
+    prevProps.formData.id === nextProps.formData.id &&
+    prevProps.formData.isExpanded === nextProps.formData.isExpanded &&
+    prevProps.index === nextProps.index &&
+    prevProps.canCopyFromPrevious === nextProps.canCopyFromPrevious &&
+    prevProps.showDriverDropdown === nextProps.showDriverDropdown &&
+    prevProps.driverSearchTerm === nextProps.driverSearchTerm &&
+    // Deep compare form data only if expanded
+    (!nextProps.formData.isExpanded ||
+      JSON.stringify(prevProps.formData.data) === JSON.stringify(nextProps.formData.data))
+  );
+});
+
 export function AdminCreateNew({
   closeModal,
   refreshTable,
@@ -138,7 +610,7 @@ export function AdminCreateNew({
               if (
                 !existing ||
                 new Date(job.created_at || 0) >
-                  new Date(existing.created_at || 0)
+                new Date(existing.created_at || 0)
               ) {
                 driversMap.set(job.driver_name, {
                   name: job.driver_name,
@@ -223,24 +695,24 @@ export function AdminCreateNew({
           prev.map((form) =>
             form.id === formId
               ? {
-                  ...form,
-                  data: {
-                    ...form.data,
-                    driver_name: driverData.name,
-                    phone: driverData.phone,
-                    h_plate: driverData.h_plate,
-                    t_plate: driverData.t_plate,
-                    fuel_type: driverData.fuel_type,
-                    height: driverData.height,
-                    weight: driverData.weight,
-                    // locat_recive: driverData.locat_recive || form.data.locat_recive,
-                    // locat_deliver: driverData.locat_deliver || form.data.locat_deliver,
-                    // job_type: driverData.job_type || form.data.job_type,
-                    // pallet_type: driverData.pallet_type || form.data.pallet_type,
-                    // pallet_plan: driverData.pallet_plan || form.data.pallet_plan,
-                    // unload_cost: driverData.unload_cost || form.data.unload_cost,
-                  },
-                }
+                ...form,
+                data: {
+                  ...form.data,
+                  driver_name: driverData.name,
+                  phone: driverData.phone,
+                  h_plate: driverData.h_plate,
+                  t_plate: driverData.t_plate,
+                  fuel_type: driverData.fuel_type,
+                  height: driverData.height,
+                  weight: driverData.weight,
+                  // locat_recive: driverData.locat_recive || form.data.locat_recive,
+                  // locat_deliver: driverData.locat_deliver || form.data.locat_deliver,
+                  // job_type: driverData.job_type || form.data.job_type,
+                  // pallet_type: driverData.pallet_type || form.data.pallet_type,
+                  // pallet_plan: driverData.pallet_plan || form.data.pallet_plan,
+                  // unload_cost: driverData.unload_cost || form.data.unload_cost,
+                },
+              }
               : form
           )
         );
@@ -295,14 +767,14 @@ export function AdminCreateNew({
           prev.map((form) =>
             form.id === currentFormId
               ? {
-                  ...form,
-                  data: {
-                    ...previousForm.data,
-                    date_plan: form.data.date_plan,
-                    date_recive: form.data.date_recive,
-                    date_deliver: form.data.date_deliver,
-                  },
-                }
+                ...form,
+                data: {
+                  ...previousForm.data,
+                  date_plan: form.data.date_plan,
+                  date_recive: form.data.date_recive,
+                  date_deliver: form.data.date_deliver,
+                },
+              }
               : form
           )
         );
@@ -442,444 +914,30 @@ export function AdminCreateNew({
     });
   }, []);
 
-  // Form Component
-  const FormCard = ({
-    formData,
-    index,
-  }: {
-    formData: FormItem;
-    index: number;
-  }) => {
-    const canCopyFromPrevious = index > 0;
+  // Memoized list of all driver names
+  const allDriverNames = useMemo(() => {
+    return [
+      ...new Set([
+        ...listname,
+        ...quickFillData.recentDrivers.map((d) => d.name),
+      ]),
+    ];
+  }, [listname, quickFillData.recentDrivers]);
 
-    return (
-      <div className="bg-white border border-gray-200 rounded-2xl shadow-lg overflow-hidden mb-6">
-        {/* Header */}
-        <div
-          className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 cursor-pointer hover:from-blue-100 hover:to-indigo-100 transition-all"
-          onClick={() => toggleExpanded(formData.id)}
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold">
-              {index + 1}
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-800">
-                เที่ยวงาน #{index + 1}
-              </h3>
-              <p className="text-sm text-gray-600">
-                {formData.data.driver_name || "ยังไม่ได้เลือกพนักงานขับรถ"}
-              </p>
-            </div>
-          </div>
+  // Callbacks for FormCard (memoized to prevent re-renders)
+  const handleDriverSearchChange = useCallback((formId: number, value: string) => {
+    setDriverSearchTerm((prev) => ({
+      ...prev,
+      [formId]: value,
+    }));
+  }, []);
 
-          <div className="flex items-center gap-2">
-            {canCopyFromPrevious && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  copyFromPreviousForm(formData.id);
-                }}
-                className="p-2 rounded-lg bg-green-100 text-green-600 hover:bg-green-200 transition-all"
-                title="คัดลอกจากงานก่อนหน้า"
-              >
-                <Copy className="w-4 h-4" />
-              </button>
-            )}
-
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                removeForm(formData.id);
-              }}
-              className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-all"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div
-              className={`p-2 rounded-lg bg-gray-100 text-gray-600 transition-all ${
-                formData.isExpanded ? "rotate-180" : ""
-              }`}
-            >
-              <ChevronDown className="w-5 h-5" />
-            </div>
-          </div>
-        </div>
-
-        {/* Form Content */}
-        <div
-          className={`transition-all duration-300 ease-in-out ${
-            formData.isExpanded
-              ? "max-h-none opacity-100"
-              : "max-h-0 opacity-0 overflow-hidden"
-          }`}
-        >
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* วันที่วางแผน */}
-              <div className="lg:col-span-1">
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                  <Calendar className="w-4 h-4 text-blue-500" />
-                  วันที่วางแผน <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={formData.data.date_plan}
-                  onChange={(e) =>
-                    handleChange(formData.id, "date_plan", e.target.value)
-                  }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                />
-              </div>
-
-              {/* ชื่อพนักงานขับรถ - Dropdown with Search */}
-              <div className="lg:col-span-2 relative">
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                  <User className="w-4 h-4 text-green-500" />
-                  ชื่อพนักงานขับรถ <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={
-                      driverSearchTerm[formData.id] || formData.data.driver_name
-                    }
-                    onChange={(e) => {
-                      setDriverSearchTerm((prev) => ({
-                        ...prev,
-                        [formData.id]: e.target.value,
-                      }));
-                      if (e.target.value !== formData.data.driver_name) {
-                        handleChange(
-                          formData.id,
-                          "driver_name",
-                          e.target.value
-                        );
-                      }
-                      setShowDriverDropdown((prev) => ({
-                        ...prev,
-                        [formData.id]: true,
-                      }));
-                    }}
-                    onFocus={() =>
-                      setShowDriverDropdown((prev) => ({
-                        ...prev,
-                        [formData.id]: true,
-                      }))
-                    }
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                  />
-                  <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                </div>
-
-                {/* Dropdown */}
-                {showDriverDropdown[formData.id] && (
-                  <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-xl shadow-lg max-h-60 overflow-y-auto">
-                    {getFilteredDrivers(formData.id).map((driverName, idx) => {
-                      const driverData = quickFillData.recentDrivers.find(
-                        (d) => d.name === driverName
-                      );
-                      return (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() =>
-                            handleDriverSelect(formData.id, driverName)
-                          }
-                          className="w-full px-4 py-3 text-left hover:bg-blue-50 border-b border-gray-100 last:border-b-0 flex items-center justify-between"
-                        >
-                          <div>
-                            <div className="font-medium text-gray-800">
-                              {driverName}
-                            </div>
-                            {driverData && (
-                              <div className="text-sm text-gray-500">
-                                {driverData.h_plate &&
-                                  `${driverData.h_plate} - ${driverData.t_plate}`}
-                                {driverData.phone && ` • ${driverData.phone}`}
-                              </div>
-                            )}
-                          </div>
-                          {driverData && (
-                            <div className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
-                              มีข้อมูลเก่า
-                            </div>
-                          )}
-                        </button>
-                      );
-                    })}
-                    {getFilteredDrivers(formData.id).length === 0 && (
-                      <div className="px-4 py-3 text-gray-500 text-center">
-                        ไม่พบข้อมูลพนักงาน
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* เบอร์โทร */}
-              <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                  <Phone className="w-4 h-4 text-purple-500" />
-                  เบอร์โทร
-                </label>
-                <input
-                  type="tel"
-                  value={formData.data.phone}
-                  onChange={(e) =>
-                    handleChange(formData.id, "phone", e.target.value)
-                  }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                />
-              </div>
-
-              {/* ทะเบียนหัว */}
-              <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                  <Truck className="w-4 h-4 text-orange-500" />
-                  ทะเบียนหัว <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.data.h_plate}
-                  onChange={(e) =>
-                    handleChange(formData.id, "h_plate", e.target.value)
-                  }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                />
-              </div>
-
-              {/* ทะเบียนหาง */}
-              <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                  <Truck className="w-4 h-4 text-orange-500" />
-                  ทะเบียนหาง <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.data.t_plate}
-                  onChange={(e) =>
-                    handleChange(formData.id, "t_plate", e.target.value)
-                  }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                />
-              </div>
-
-              {/* ประเภทเชื้อเพลิง */}
-              <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                  <Fuel className="w-4 h-4 text-red-500" />
-                  ประเภทเชื้อเพลิง
-                </label>
-                <select
-                  value={formData.data.fuel_type}
-                  onChange={(e) =>
-                    handleChange(formData.id, "fuel_type", e.target.value)
-                  }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                >
-                  <option value="">เลือกประเภทเชื้อเพลิง</option>
-                  <option value="ดีเซล">ดีเซล</option>
-                  <option value="NGV">NGV</option>
-                  <option value="ไฟฟ้า">ไฟฟ้า</option>
-                </select>
-              </div>
-
-              {/* ความสูงรถ */}
-              <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                  <Ruler className="w-4 h-4 text-indigo-500" />
-                  ความสูงรถ (เมตร)
-                </label>
-                <input
-                  type="text"
-                  value={formData.data.height}
-                  onChange={(e) =>
-                    handleChange(formData.id, "height", e.target.value)
-                  }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                />
-              </div>
-
-              {/* น้ำหนักรถ */}
-              <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                  <Weight className="w-4 h-4 text-pink-500" />
-                  น้ำหนักจำกัด (ตัน)
-                </label>
-                <input
-                  type="text"
-                  value={formData.data.weight}
-                  onChange={(e) =>
-                    handleChange(formData.id, "weight", e.target.value)
-                  }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                />
-              </div>
-
-              {/* ประเภทงาน */}
-              <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                  <Package className="w-4 h-4 text-cyan-500" />
-                  ประเภทงาน
-                </label>
-                <select
-                  value={formData.data.job_type}
-                  onChange={(e) =>
-                    handleChange(formData.id, "job_type", e.target.value)
-                  }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                >
-                  <option value="">เลือกประเภทงาน</option>
-                  <option value="ดรอป">ดรอป</option>
-                  <option value="ทอย">ทอย</option>
-                </select>
-              </div>
-
-              {/* ประเภทพาเลท */}
-              <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                  <Package className="w-4 h-4 text-yellow-500" />
-                  ประเภทพาเลท
-                </label>
-                <select
-                  value={formData.data.pallet_type}
-                  onChange={(e) =>
-                    handleChange(formData.id, "pallet_type", e.target.value)
-                  }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                >
-                  <option value="null">ไม่มี</option>
-                  <option value="แลกเปลี่ยน">แลกเปลี่ยน</option>
-                  <option value="โอน">โอน</option>
-                  <option value="รถเปล่า">รถเปล่า</option>
-                </select>
-              </div>
-
-              {/* จำนวนพาเลท */}
-              <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                  <Package className="w-4 h-4 text-teal-500" />
-                  จำนวนพาเลท
-                </label>
-                <input
-                  type="number"
-                  value={formData.data.pallet_plan}
-                  onChange={(e) =>
-                    handleChange(
-                      formData.id,
-                      "pallet_plan",
-                      e.target.value === "" ? 0 : Number(e.target.value)
-                    )
-                  }
-                  min="0"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                />
-              </div>
-
-              {/* สถานที่ขึ้นสินค้า */}
-              <div className="lg:col-span-2">
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                  <MapPin className="w-4 h-4 text-green-500" />
-                  สถานที่ขึ้นสินค้า <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.data.locat_recive}
-                  onChange={(e) =>
-                    handleChange(formData.id, "locat_recive", e.target.value)
-                  }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                />
-              </div>
-
-              {/* วันที่ขึ้นสินค้า */}
-              <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                  <Calendar className="w-4 h-4 text-blue-500" />
-                  วันที่ขึ้นสินค้า <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="datetime-local"
-                  value={formData.data.date_recive}
-                  onChange={(e) =>
-                    handleChange(formData.id, "date_recive", e.target.value)
-                  }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                />
-              </div>
-
-              {/* สถานที่ลงสินค้า */}
-              <div className="lg:col-span-2">
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                  <MapPin className="w-4 h-4 text-red-500" />
-                  สถานที่ลงสินค้า <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.data.locat_deliver}
-                  onChange={(e) =>
-                    handleChange(formData.id, "locat_deliver", e.target.value)
-                  }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                />
-              </div>
-
-              {/* วันที่ลงสินค้า */}
-              <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                  <Calendar className="w-4 h-4 text-purple-500" />
-                  วันที่ลงสินค้า <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="datetime-local"
-                  value={formData.data.date_deliver}
-                  onChange={(e) =>
-                    handleChange(formData.id, "date_deliver", e.target.value)
-                  }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                />
-              </div>
-
-              {/* ค่าลงสินค้า */}
-              <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                  <DollarSign className="w-4 h-4 text-green-500" />
-                  ค่าลงสินค้า (บาท)
-                </label>
-                <input
-                  type="text"
-                  value={formData.data.unload_cost}
-                  onChange={(e) =>
-                    handleChange(formData.id, "unload_cost", e.target.value)
-                  }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                />
-              </div>
-
-              {/* หมายเหตุ */}
-              <div className="lg:col-span-3">
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                  <FileText className="w-4 h-4 text-gray-500" />
-                  หมายเหตุ
-                </label>
-                <textarea
-                  rows={3}
-                  value={formData.data.remark}
-                  onChange={(e) =>
-                    handleChange(formData.id, "remark", e.target.value)
-                  }
-                  placeholder="รายละเอียดเพิ่มเติม..."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
+  const handleDriverDropdownToggle = useCallback((formId: number, show: boolean) => {
+    setShowDriverDropdown((prev) => ({
+      ...prev,
+      [formId]: show,
+    }));
+  }, []);
 
   return (
     <div className="fixed inset-0 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -970,7 +1028,23 @@ export function AdminCreateNew({
           ) : (
             <div className="space-y-6">
               {forms.map((form, index) => (
-                <FormCard key={form.id} formData={form} index={index} />
+                <FormCard
+                  key={form.id}
+                  formData={form}
+                  index={index}
+                  canCopyFromPrevious={index > 0}
+                  driverSearchTerm={driverSearchTerm[form.id] || ""}
+                  showDriverDropdown={showDriverDropdown[form.id] || false}
+                  quickFillRecentDrivers={quickFillData.recentDrivers}
+                  allDriverNames={allDriverNames}
+                  onToggleExpanded={toggleExpanded}
+                  onRemoveForm={removeForm}
+                  onCopyFromPrevious={copyFromPreviousForm}
+                  onDriverSearchChange={handleDriverSearchChange}
+                  onDriverDropdownToggle={handleDriverDropdownToggle}
+                  onDriverSelect={handleDriverSelect}
+                  onFieldChange={handleChange}
+                />
               ))}
             </div>
           )}

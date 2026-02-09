@@ -68,7 +68,7 @@ const withPWA = nextPWA({
 
 const nextConfig = {
   experimental: {
-    turbo: false, // ❗ ปิด Turbopack
+    optimizePackageImports: ['lucide-react', 'date-fns', 'sweetalert2'],
   },
   eslint: {
     ignoreDuringBuilds: true,

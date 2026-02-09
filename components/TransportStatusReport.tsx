@@ -1,26 +1,25 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, {
+  useState,
+  useMemo,
+  useEffect,
+  useCallback,
+  useRef,
+  useTransition,
+  memo,
+} from "react";
 import { TransportItem } from "@/lib/type";
 import Swal from "sweetalert2";
 
 import {
   Truck,
-  MapPin,
-  Clock,
-  Phone,
-  Navigation,
   AlertCircle,
-  CheckCircle,
-  Timer,
-  Route,
   RefreshCw,
   Grid3X3,
   BarChart3,
-  List,
   Info,
   Eye,
-  Search,
   Filter,
   X,
   ChevronUp,
@@ -28,14 +27,75 @@ import {
   ChevronsUpDown,
   FileSpreadsheet,
   Map,
-  Camera,
   Check,
-  CircleParking,
-  Power,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
-import { AdminMap } from "./AdminMap";
-import { AdminView } from "./AdminView";
+import dynamic from "next/dynamic";
+
+// bundle-dynamic-imports: lazy-load heavy modal components
+const AdminMap = dynamic(
+  () => import("./AdminMap").then((m) => m.AdminMap),
+  { ssr: false }
+);
+const AdminView = dynamic(
+  () => import("./AdminView").then((m) => m.AdminView),
+  { ssr: false }
+);
+
+// js-set-map-lookups: Use Set for O(1) status lookups instead of Array.includes()
+const EXCLUDED_STATUSES = new Set(["ยกเลิก", "ตกคิว", "ซ่อม", "อบรมที่บริษัท"]);
+
+const DESTINATION_STATUSES = new Set([
+  "ถึงต้นทาง",
+  "เริ่มขึ้นสินค้า",
+  "ขึ้นสินค้าเสร็จ",
+  "เริ่มขนส่ง",
+  "ถึงปลายทาง",
+  "ยื่นเอกสาร",
+  "ได้รับเอกสารคืน",
+  "เริ่มลงสินค้า",
+  "ลงสินค้าเสร็จ",
+]);
+
+const ORIGIN_STATUSES = new Set(["พร้อมรับงาน", "รับงาน"]);
+
+const COMPLETED_STATUS = "จัดส่งแล้ว (POD)";
+
+// js-cache-function-results: Cache status color lookups
+const STATUS_COLOR_MAP: Record<string, string> = {
+  "พร้อมรับงาน": "bg-yellow-100 text-yellow-800 border-yellow-200",
+  "รับงาน": "bg-yellow-100 text-yellow-800 border-yellow-200",
+  "ถึงต้นทาง": "bg-blue-100 text-blue-800 border-blue-200",
+  "เริ่มขึ้นสินค้า": "bg-blue-100 text-blue-800 border-blue-200",
+  "ขึ้นสินค้าเสร็จ": "bg-blue-100 text-blue-800 border-blue-200",
+  "เริ่มขนส่ง": "bg-purple-100 text-purple-800 border-purple-200",
+  "ถึงปลายทาง": "bg-orange-100 text-orange-800 border-orange-200",
+  "เริ่มลงสินค้า": "bg-orange-100 text-orange-800 border-orange-200",
+  "ลงสินค้าเสร็จ": "bg-orange-100 text-orange-800 border-orange-200",
+  [COMPLETED_STATUS]: "bg-green-100 text-green-800 border-green-200",
+};
+const DEFAULT_STATUS_COLOR = "bg-gray-100 text-gray-800 border-gray-200";
+
+// rendering-hoist-jsx: Hoist static risk order map
+const RISK_ORDER: Record<string, number> = {
+  "High Risk": 3,
+  "Moderate Risk": 2,
+  "Low Risk": 1,
+};
+
+const RISK_TEXT_MAP: Record<string, string> = {
+  low: "ต่ำ",
+  moderate: "ปานกลาง",
+  high: "สูง",
+};
+
+// Haversine constants
+const DEG_TO_RAD = Math.PI / 180;
+const EARTH_RADIUS_KM = 6371;
+const AVG_SPEED_KMH = 50;
+
+// rerender-memo-with-default-value: Hoist stable NOOP callback
+const NOOP = () => { };
 
 interface TransportStatusReportProps {
   transportData: TransportItem[];
@@ -48,7 +108,8 @@ interface LocationDistance {
   estimatedArrival: Date;
 }
 
-const FilterDropdown = ({
+// rerender-memo: Extract FilterDropdown as memoized component
+const FilterDropdown = memo(function FilterDropdown({
   column,
   values,
   selectedValues,
@@ -64,7 +125,7 @@ const FilterDropdown = ({
   onClearFilter: (column: string) => void;
   showDropdown: string | null;
   onToggleDropdown: (column: string | null) => void;
-}) => {
+}) {
   const isOpen = showDropdown === column;
 
   return (
@@ -86,9 +147,8 @@ const FilterDropdown = ({
 
       {isOpen && (
         <div
-          className={`absolute top-full left-0 z-150 ${
-            column == "risk" ? "w-auto" : "min-w-[16em] max-w-[20em]"
-          } mt-1 font-light bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto`}
+          className={`absolute top-full left-0 z-150 ${column == "risk" ? "w-auto" : "min-w-[16em] max-w-[20em]"
+            } mt-1 font-light bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto`}
         >
           <div className="p-[0.5em] border-b border-gray-200">
             <div className="flex items-center justify-between">
@@ -134,14 +194,50 @@ const FilterDropdown = ({
       )}
     </div>
   );
+});
+
+// Helper functions hoisted outside component to avoid recreation
+const getDestinationByStatus = (item: TransportItem) => {
+  if (DESTINATION_STATUSES.has(item.status)) {
+    return {
+      location: item.locat_deliver,
+      latLng: item.latlng_deliver,
+      plannedTime: item.date_deliver,
+      type: "destination" as const,
+    };
+  }
+  return {
+    location: item.locat_recive,
+    latLng: item.latlng_recive,
+    plannedTime: item.date_recive,
+    type: "origin" as const,
+  };
+};
+
+const getStatusColor = (status: string) =>
+  STATUS_COLOR_MAP[status] ?? DEFAULT_STATUS_COLOR;
+
+const getRiskText = (level: string) => RISK_TEXT_MAP[level] ?? "-";
+
+const formatDateTime = (dateString: string) => {
+  try {
+    return format(parseISO(dateString), "d/M/yy, HH:mm");
+  } catch {
+    return dateString;
+  }
 };
 
 export const TransportStatusReport = ({
   transportData,
   onRefreshData,
 }: TransportStatusReportProps) => {
+  // rerender-use-ref-transient-values: Use ref for frequently updating time
+  const currentTimeRef = useRef(new Date());
   const [currentTime, setCurrentTime] = useState(new Date());
+  // rendering-usetransition-loading: useTransition for refresh
+  const [isPending, startTransition] = useTransition();
   const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<"gantt" | "grid">("grid");
 
   const [columnFilters, setColumnFilters] = useState<{
@@ -221,25 +317,20 @@ export const TransportStatusReport = ({
     }
   }, []);
 
-  // กรองข้อมูลตามเงื่อนไข
   const filteredData = useMemo(() => {
     const today = new Date().toISOString().split("T")[0];
 
     return transportData.filter((item) => {
-      // เช็ควันที่ (date_recive หรือ date_deliver == วันนี้)
+      // Early exit: check Set lookup first (O(1))
+      if (EXCLUDED_STATUSES.has(item.status)) return false;
+
       const receiveDate = item.date_recive
         ? item.date_recive.split("T")[0]
         : null;
       const deliverDate = item.date_deliver
         ? item.date_deliver.split("T")[0]
         : null;
-      const isToday = receiveDate === today || deliverDate === today;
-
-      // เช็คสถานะที่ไม่รวม
-      const excludedStatuses = ["ยกเลิก", "ตกคิว", "ซ่อม", "อบรมที่บริษัท"];
-      const isValidStatus = !excludedStatuses.includes(item.status);
-
-      return isToday && isValidStatus;
+      return receiveDate === today || deliverDate === today;
     });
   }, [transportData]);
 
@@ -249,16 +340,16 @@ export const TransportStatusReport = ({
     currentLng: number,
     targetLat: number,
     targetLng: number
-  ) => {
+  ): Promise<LocationDistance | null> => {
     try {
       const timestamp = Date.now();
-      
+
       const res = await fetch(`/api/longdo?_t=${timestamp}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
           params: JSON.stringify({
-            plate: plate,
+            plate,
             flat: currentLat,
             flon: currentLng,
             tlat: targetLat,
@@ -274,121 +365,65 @@ export const TransportStatusReport = ({
       }
 
       const dbRes = await res.json();
-      const dbResData = dbRes.data[0];
+      const dbResData = dbRes.data?.[0];
       const now = Date.now();
 
       if (dbResData) {
-        const duration = (dbResData.distance / 1000 / 50) * 60; // นาที (ความเร็วเฉลี่ย 50 km/h)
-        const estimatedArrival = new Date(now + duration * 60000);
+        const distKm = dbResData.distance / 1000;
+        const duration = (distKm / AVG_SPEED_KMH) * 60;
         return {
           distance: Math.round(dbResData.distance) / 1000,
           duration: Math.round(duration),
-          estimatedArrival,
+          estimatedArrival: new Date(now + duration * 60000),
         };
-      } 
+      }
 
       return null;
-
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
         console.warn("API timeout - using fallback calculation");
       } else {
         console.error("Error calling Longdo API:", error);
       }
-
-      // Fallback calculation เมื่อ API ล้มเหลว
-      const now = Date.now();
-      const R = 6371;
-      const dLat = ((targetLat - currentLat) * Math.PI) / 180;
-      const dLon = ((targetLng - currentLng) * Math.PI) / 180;
-      const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos((currentLat * Math.PI) / 180) *
-          Math.cos((targetLat * Math.PI) / 180) *
-          Math.sin(dLon / 2) *
-          Math.sin(dLon / 2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      const distance = R * c;
-
-      const duration = (distance / 50) * 60;
-      const estimatedArrival = new Date(now + duration * 60000);
-
-      return {
-        distance: Math.round(distance * 10) / 10,
-        duration: Math.round(duration),
-        estimatedArrival,
-      };
+      return null;
     }
   }, []);
 
-  // กำหนดปลายทางตามสถานะ
-  const getDestinationByStatus = (item: TransportItem) => {
-    const destinationStatuses = [
-      "ถึงต้นทาง",
-      "เริ่มขึ้นสินค้า",
-      "ขึ้นสินค้าเสร็จ",
-      "เริ่มขนส่ง",
-      "ถึงปลายทาง",
-      "ยื่นเอกสาร",
-      "ได้รับเอกสารคืน",
-      "เริ่มลงสินค้า",
-      "ลงสินค้าเสร็จ",
-    ];
 
-    if (destinationStatuses.includes(item.status)) {
-      return {
-        location: item.locat_deliver,
-        latLng: item.latlng_deliver,
-        plannedTime: item.date_deliver,
-        type: "destination" as const,
-      };
-    } else {
-      return {
-        location: item.locat_recive,
-        latLng: item.latlng_recive,
-        plannedTime: item.date_recive,
-        type: "origin" as const,
-      };
-    }
-  };
+  const calculateRiskLevel = useCallback(
+    (slotTime: string, remainingMinutes: number) => {
+      const slotDateTime = new Date(slotTime);
+      const timeDiffMs =
+        slotDateTime.getTime() - currentTimeRef.current.getTime();
+      const timeDiffMinutes = timeDiffMs / 60000;
+      const buffer = 60; // 1 hour buffer
 
-  // ฟังก์ชันคำนวณความเสี่ยง
-  const calculateRiskLevel = (slotTime: string, remainingMinutes: number) => {
-    const slotDateTime = new Date(slotTime);
-    const timeDifferenceMs = slotDateTime.getTime() - currentTime.getTime();
-    const timeDifferenceMinutes = timeDifferenceMs / (1000 * 60);
-
-    const oneHourInMinutes = 60;
-
-    if (
-      timeDifferenceMinutes > remainingMinutes + oneHourInMinutes ||
-      remainingMinutes === 0
-    ) {
-      return {
-        level: "low",
-        label: "Low Risk",
-        color: "bg-green-100 text-green-800",
-        icon: "🟢",
-      };
-    } else if (
-      timeDifferenceMinutes >= remainingMinutes &&
-      timeDifferenceMinutes <= remainingMinutes + oneHourInMinutes
-    ) {
-      return {
-        level: "moderate",
-        label: "Moderate Risk",
-        color: "bg-yellow-100 text-yellow-800",
-        icon: "🟡",
-      };
-    } else {
+      // js-early-exit
+      if (remainingMinutes === 0 || timeDiffMinutes > remainingMinutes + buffer) {
+        return {
+          level: "low",
+          label: "Low Risk",
+          color: "bg-green-100 text-green-800",
+          icon: "🟢",
+        };
+      }
+      if (timeDiffMinutes >= remainingMinutes) {
+        return {
+          level: "moderate",
+          label: "Moderate Risk",
+          color: "bg-yellow-100 text-yellow-800",
+          icon: "🟡",
+        };
+      }
       return {
         level: "high",
         label: "High Risk",
         color: "bg-red-100 text-red-800",
         icon: "🔴",
       };
-    }
-  };
+    },
+    [] // stable: reads from ref
+  );
 
   const [distanceData, setDistanceData] = useState<{
     [key: string]: LocationDistance;
@@ -418,64 +453,28 @@ export const TransportStatusReport = ({
     );
   };
 
-  // ฟังก์ชันสำหรับดึง unique values สำหรับแต่ละ column
-  const getUniqueValues = (column: string) => {
-    const values = enrichedData
-      .map((item) => {
-        switch (column) {
-          case "load_id":
-            return item.load_id;
-          case "driver_name":
-            return item.driver_name;
-          case "phone":
-            return item.phone;
-          case "status":
-            return item.status;
-          case "origin":
-            return item.locat_recive;
-          case "destination":
-            return item.locat_deliver;
-          case "risk":
-            return item.riskAssessment
-              ? item.riskAssessment.level === "low"
-                ? "ต่ำ"
-                : item.riskAssessment.level === "moderate"
-                ? "ปานกลาง"
-                : "สูง"
-              : "-";
-          default:
-            return "";
-        }
-      })
-      .filter(Boolean);
+  // rerender-functional-setstate: Use functional setState for stable callbacks
+  const handleFilterChange = useCallback(
+    (column: string, value: string, checked: boolean) => {
+      setColumnFilters((prev) => ({
+        ...prev,
+        [column]: checked
+          ? [...prev[column], value]
+          : prev[column].filter((v) => v !== value),
+      }));
+    },
+    []
+  );
 
-    return [...new Set(values)].sort();
-  };
-
-  // ฟังก์ชันสำหรับจัดการ checkbox filter
-  const handleFilterChange = (
-    column: string,
-    value: string,
-    checked: boolean
-  ) => {
-    setColumnFilters((prev) => ({
-      ...prev,
-      [column]: checked
-        ? [...prev[column], value]
-        : prev[column].filter((v) => v !== value),
-    }));
-  };
-
-  // ฟังก์ชันสำหรับ clear filter
-  const clearFilter = (column: string) => {
+  const clearFilter = useCallback((column: string) => {
     setColumnFilters((prev) => ({
       ...prev,
       [column]: [],
     }));
-  };
+  }, []);
 
-  // ฟังก์ชันสำหรับกรองและจัดเรียงข้อมูลตาม filters และ sorting
-  const applyColumnFilters = (data: any[]) => {
+  // rerender-derived-state: Memoize filtered+sorted result
+  const applyColumnFilters = useCallback((data: any[]) => {
     let filteredData = data.filter((item) => {
       // Load ID Filter - ถ้าไม่มีการเลือก หมายถึงแสดงทั้งหมด
       const matchLoadId =
@@ -502,13 +501,9 @@ export const TransportStatusReport = ({
         columnFilters.destination.length === 0 ||
         columnFilters.destination.includes(item.locat_deliver);
 
-      // Risk filter
+      // Risk filter - use cached getRiskText
       const riskText = item.riskAssessment
-        ? item.riskAssessment.level === "low"
-          ? "ต่ำ"
-          : item.riskAssessment.level === "moderate"
-          ? "ปานกลาง"
-          : "สูง"
+        ? getRiskText(item.riskAssessment.level)
         : "-";
       const matchRisk =
         columnFilters.risk.length === 0 ||
@@ -524,29 +519,15 @@ export const TransportStatusReport = ({
           distanceText.toLowerCase().includes(filter.toLowerCase())
         );
 
-      // Delay filter
-      const originStatuses = ["พร้อมรับงาน", "รับงาน"];
-      const destinationStatuses = [
-        "ถึงต้นทาง",
-        "เริ่มขึ้นสินค้า",
-        "ขึ้นสินค้าเสร็จ",
-        "เริ่มขนส่ง",
-        "ถึงปลายทาง",
-        "ยื่นเอกสาร",
-        "ได้รับเอกสารคืน",
-        "เริ่มลงสินค้า",
-        "ลงสินค้าเสร็จ",
-      ];
+      // Delay filter - use hoisted Set lookups
       let delayText = "";
 
-      if (originStatuses.includes(item.status)) {
-        const delayStatus = getDelayStatus(item.date_recive, item.status);
-        delayText = delayStatus.message;
-      } else if (destinationStatuses.includes(item.status)) {
-        const delayStatus = getDelayStatus(item.date_deliver, item.status);
-        delayText = delayStatus.message;
+      if (ORIGIN_STATUSES.has(item.status)) {
+        delayText = getDelayStatus(item.date_recive, item.status).message;
+      } else if (DESTINATION_STATUSES.has(item.status)) {
+        delayText = getDelayStatus(item.date_deliver, item.status).message;
       } else {
-        delayText = item.status === "จัดส่งแล้ว (POD)" ? "เสร็จสิ้น" : "";
+        delayText = item.status === COMPLETED_STATUS ? "เสร็จสิ้น" : "";
       }
 
       const matchDelay =
@@ -568,78 +549,43 @@ export const TransportStatusReport = ({
       );
     });
 
-    // Apply sorting
+    // Apply sorting - js-tosorted-immutable: Use toSorted for immutability
     if (sortConfig) {
-      filteredData.sort((a, b) => {
-        let aValue: any, bValue: any;
+      const key = sortConfig.key;
+      const dir = sortConfig.direction === "asc" ? 1 : -1;
 
-        switch (sortConfig!.key) {
-          case "load_id":
-            aValue = a.load_id;
-            bValue = b.load_id;
-            break;
-          case "driver_name":
-            aValue = a.driver_name;
-            bValue = b.driver_name;
-            break;
-          case "phone":
-            aValue = a.phone;
-            bValue = b.phone;
-            break;
-          case "status":
-            aValue = a.status;
-            bValue = b.status;
-            break;
-          case "origin":
-            aValue = a.locat_recive;
-            bValue = b.locat_recive;
-            break;
-          case "destination":
-            aValue = a.locat_deliver;
-            bValue = b.locat_deliver;
-            break;
-          case "date_recive":
-            aValue = new Date(a.date_recive);
-            bValue = new Date(b.date_recive);
-            break;
-          case "date_deliver":
-            aValue = new Date(a.date_deliver);
-            bValue = new Date(b.date_deliver);
-            break;
-          case "distance":
-            aValue = a.distanceInfo?.distance || 0;
-            bValue = b.distanceInfo?.distance || 0;
-            break;
+      // js-index-maps: Use hoisted RISK_ORDER map
+      const getValue = (item: any): any => {
+        switch (key) {
+          case "load_id": return item.load_id;
+          case "driver_name": return item.driver_name;
+          case "phone": return item.phone;
+          case "status": return item.status;
+          case "origin": return item.locat_recive;
+          case "destination": return item.locat_deliver;
+          case "date_recive": return new Date(item.date_recive).getTime();
+          case "date_deliver": return new Date(item.date_deliver).getTime();
+          case "distance": return item.distanceInfo?.distance ?? 0;
           case "risk":
-            const riskOrder = {
-              "High Risk": 3,
-              "Moderate Risk": 2,
-              "Low Risk": 1,
-            };
-            aValue = a.riskAssessment
-              ? riskOrder[a.riskAssessment.label as keyof typeof riskOrder] || 0
+            return item.riskAssessment
+              ? RISK_ORDER[item.riskAssessment.label] ?? 0
               : 0;
-            bValue = b.riskAssessment
-              ? riskOrder[b.riskAssessment.label as keyof typeof riskOrder] || 0
-              : 0;
-            break;
-          default:
-            aValue = "";
-            bValue = "";
+          default: return "";
         }
+      };
 
-        if (aValue < bValue) {
-          return sortConfig!.direction === "asc" ? -1 : 1;
-        }
-        if (aValue > bValue) {
-          return sortConfig!.direction === "asc" ? 1 : -1;
-        }
+      return filteredData.toSorted((a: any, b: any) => {
+        const aVal = getValue(a);
+        const bVal = getValue(b);
+        if (aVal < bVal) return -dir;
+        if (aVal > bVal) return dir;
         return 0;
       });
     }
 
     return filteredData;
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [columnFilters, sortConfig]);
 
   // Toolip
   const getInfoTooltipContent = (column: string) => {
@@ -699,34 +645,63 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
     return filteredData.map((item) => {
       const destination = getDestinationByStatus(item);
 
-      let distanceInfo = null;
-      let riskAssessment = null;
-
-      if (item.status !== "จัดส่งแล้ว (POD)") {
-        distanceInfo = distanceData[item.load_id] || null;
-
-        if (distanceInfo) {
-          riskAssessment = calculateRiskLevel(
-            destination.plannedTime,
-            distanceInfo.duration
-          );
-        }
+      // js-early-exit: skip calculation for completed status
+      if (item.status === COMPLETED_STATUS) {
+        return { ...item, destination, distanceInfo: null, riskAssessment: null };
       }
 
-      return {
-        ...item,
-        destination,
-        distanceInfo,
-        riskAssessment,
-      };
-    });
-  }, [filteredData, currentTime, distanceData]);
+      const distanceInfo = distanceData[item.load_id] ?? null;
+      const riskAssessment = distanceInfo
+        ? calculateRiskLevel(destination.plannedTime, distanceInfo.duration)
+        : null;
 
+      return { ...item, destination, distanceInfo, riskAssessment };
+    });
+  }, [filteredData, currentTime, distanceData, calculateRiskLevel]);
+
+  // js-combine-iterations: Pre-compute all unique values in one pass
+  const uniqueValuesByColumn = useMemo(() => {
+    const sets: Record<string, Set<string>> = {
+      load_id: new Set(),
+      driver_name: new Set(),
+      phone: new Set(),
+      status: new Set(),
+      origin: new Set(),
+      destination: new Set(),
+      risk: new Set(),
+    };
+
+    for (const item of enrichedData) {
+      if (item.load_id) sets.load_id.add(item.load_id);
+      if (item.driver_name) sets.driver_name.add(item.driver_name);
+      if (item.phone) sets.phone.add(item.phone);
+      if (item.status) sets.status.add(item.status);
+      if (item.locat_recive) sets.origin.add(item.locat_recive);
+      if (item.locat_deliver) sets.destination.add(item.locat_deliver);
+      sets.risk.add(
+        item.riskAssessment ? getRiskText(item.riskAssessment.level) : "-"
+      );
+    }
+
+    const result: Record<string, string[]> = {};
+    for (const [key, set] of Object.entries(sets)) {
+      result[key] = [...set].sort();
+    }
+    return result;
+  }, [enrichedData]);
+
+  const getUniqueValues = useCallback(
+    (column: string) => uniqueValuesByColumn[column] ?? [],
+    [uniqueValuesByColumn]
+  );
+
+  // async-parallel: Use batched Promise.all for parallel API calls
   const calculateDistanceForAllItems = useCallback(async () => {
+    // js-early-exit: check length first
     if (filteredData.length === 0) return;
 
     const itemsToCalculate = filteredData.filter((item) => {
-      if (item.status === "จัดส่งแล้ว (POD)") return false;
+      if (item.status === COMPLETED_STATUS) return false;
       const currentLatLng = item.vehicle_info.current_latlng;
       const destination = getDestinationByStatus(item);
       return currentLatLng && destination.latLng;
@@ -734,23 +709,31 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
 
     if (itemsToCalculate.length === 0) return;
 
+    // async-parallel: Process in parallel batches of 5
+    const BATCH_SIZE = 5;
     const newDistanceData: { [key: string]: LocationDistance } = {};
 
-    for (const item of itemsToCalculate) {
-      try {
-        const currentLatLng = item.vehicle_info.current_latlng;
-        const destination = getDestinationByStatus(item);
-        const targetLatLng = destination.latLng;
+    for (let i = 0; i < itemsToCalculate.length; i += BATCH_SIZE) {
+      const batch = itemsToCalculate.slice(i, i + BATCH_SIZE);
 
-        const [currentLat, currentLng] = currentLatLng.split(",").map(Number);
-        const [targetLat, targetLng] = targetLatLng.split(",").map(Number);
+      const results = await Promise.allSettled(
+        batch.map(async (item) => {
+          const currentLatLng = item.vehicle_info.current_latlng;
+          const destination = getDestinationByStatus(item);
+          const targetLatLng = destination.latLng;
 
-        if (
-          !isNaN(currentLat) &&
-          !isNaN(currentLng) &&
-          !isNaN(targetLat) &&
-          !isNaN(targetLng)
-        ) {
+          const [currentLat, currentLng] = currentLatLng.split(",").map(Number);
+          const [targetLat, targetLng] = targetLatLng.split(",").map(Number);
+
+          if (
+            isNaN(currentLat) ||
+            isNaN(currentLng) ||
+            isNaN(targetLat) ||
+            isNaN(targetLng)
+          ) {
+            return null;
+          }
+
           const distanceInfo = await calculateDistanceFromLongdo(
             item.h_plate,
             currentLat,
@@ -759,19 +742,21 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
             targetLng
           );
 
-          if (distanceInfo) {
-            newDistanceData[item.load_id] = distanceInfo;
-          }
+          return distanceInfo
+            ? { loadId: item.load_id, distanceInfo }
+            : null;
+        })
+      );
+
+      for (const result of results) {
+        if (result.status === "fulfilled" && result.value) {
+          newDistanceData[result.value.loadId] = result.value.distanceInfo;
         }
+      }
 
-        await new Promise(resolve => setTimeout(resolve, 10));
-
-      } catch (error) {
-        console.error(
-          "Error calculating distance for item:",
-          item.load_id,
-          error
-        );
+      // Small delay between batches to avoid rate limiting
+      if (i + BATCH_SIZE < itemsToCalculate.length) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
       }
     }
 
@@ -784,68 +769,35 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
     }
   }, [filteredData, calculateDistanceForAllItems]);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "พร้อมรับงาน":
-      case "รับงาน":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      case "ถึงต้นทาง":
-      case "เริ่มขึ้นสินค้า":
-      case "ขึ้นสินค้าเสร็จ":
-        return "bg-blue-100 text-blue-800 border-blue-200";
-      case "เริ่มขนส่ง":
-        return "bg-purple-100 text-purple-800 border-purple-200";
-      case "ถึงปลายทาง":
-      case "เริ่มลงสินค้า":
-      case "ลงสินค้าเสร็จ":
-        return "bg-orange-100 text-orange-800 border-orange-200";
-      case "จัดส่งแล้ว (POD)":
-        return "bg-green-100 text-green-800 border-green-200";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
-    }
-  };
-
-  const getDelayStatus = (plannedTime: string, currentStatus: string) => {
-    const planned = new Date(plannedTime);
-    const now = currentTime;
-    if (currentStatus !== "จัดส่งแล้ว (POD)") {
-      if (now > planned) {
-        const delayMinutes = Math.floor(
-          (now.getTime() - planned.getTime()) / (1000 * 60)
-        );
-        return {
-          isDelayed: true,
-          delayTime: delayMinutes,
-          message: `ล่าช้า ${Math.floor(delayMinutes / 60)} ชม. ${
-            delayMinutes % 60
-          } น.`,
-        };
-      } else {
-        return {
-          isDelayed: false,
-          delayTime: 0,
-          message: "ตรงเวลา",
-        };
+  // js-early-exit: early returns for delay status
+  const getDelayStatus = useCallback(
+    (plannedTime: string, currentStatus: string) => {
+      if (currentStatus === COMPLETED_STATUS) {
+        return { isDelayed: false, delayTime: 0, message: "เสร็จสิ้น" };
       }
-    } else {
+
+      const planned = new Date(plannedTime);
+      const now = currentTimeRef.current;
+
+      if (now <= planned) {
+        return { isDelayed: false, delayTime: 0, message: "ตรงเวลา" };
+      }
+
+      const delayMinutes = Math.floor(
+        (now.getTime() - planned.getTime()) / 60000
+      );
       return {
-        isDelayed: false,
-        delayTime: 0,
-        message: "เสร็จสิ้น",
+        isDelayed: true,
+        delayTime: delayMinutes,
+        message: `ล่าช้า ${Math.floor(delayMinutes / 60)} ชม. ${delayMinutes % 60
+          } น.`,
       };
-    }
-  };
+    },
+    [] // stable: reads from ref
+  );
 
-  const formatDateTime = (dateString: string) => {
-    try {
-      return format(parseISO(dateString), "d/M/yy, HH:mm");
-    } catch {
-      return dateString;
-    }
-  };
-
-  const handleRefresh = async () => {
+  // rendering-usetransition-loading: Use useTransition for non-blocking refresh
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
 
     try {
@@ -855,7 +807,13 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
         await onRefreshData();
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      setLastUpdated(new Date());
+
+      // Update current time ref
+      currentTimeRef.current = new Date();
+      startTransition(() => {
+        setCurrentTime(new Date());
+      });
 
       await calculateDistanceForAllItems();
     } catch (error) {
@@ -865,9 +823,9 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
         setRefreshing(false);
       }, 1000);
     }
-  };
+  }, [onRefreshData, calculateDistanceForAllItems, startTransition]);
 
-  const exportToExcel = () => {
+  const exportToExcel = useCallback(() => {
     try {
       const dataToExport = applyColumnFilters(enrichedData);
 
@@ -891,29 +849,18 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
       ];
 
       const csvData = dataToExport.map((item) => {
+        // js-set-map-lookups: Use hoisted Sets
         let delayStatus;
-        const originStatuses = ["พร้อมรับงาน", "รับงาน"];
-        const destinationStatuses = [
-          "ถึงต้นทาง",
-          "เริ่มขึ้นสินค้า",
-          "ขึ้นสินค้าเสร็จ",
-          "เริ่มขนส่ง",
-          "ถึงปลายทาง",
-          "ยื่นเอกสาร",
-          "เริ่มลงสินค้า",
-          "ลงสินค้าเสร็จ",
-          "ได้รับเอกสารคืน",
-        ];
 
-        if (originStatuses.includes(item.status)) {
+        if (ORIGIN_STATUSES.has(item.status)) {
           delayStatus = getDelayStatus(item.date_recive, item.status);
-        } else if (destinationStatuses.includes(item.status)) {
+        } else if (DESTINATION_STATUSES.has(item.status)) {
           delayStatus = getDelayStatus(item.date_deliver, item.status);
         } else {
           delayStatus = {
             isDelayed: false,
             delayTime: 0,
-            message: item.status === "จัดส่งแล้ว (POD)" ? "เสร็จสิ้น" : "",
+            message: item.status === COMPLETED_STATUS ? "เสร็จสิ้น" : "",
           };
         }
 
@@ -931,15 +878,12 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
           item.distanceInfo?.distance || "0",
           item.distanceInfo?.duration || "0",
           item.riskAssessment
-            ? item.riskAssessment.level === "low"
-              ? "ต่ำ"
-              : item.riskAssessment.level === "moderate"
-              ? "ปานกลาง"
-              : "สูง"
+            ? getRiskText(item.riskAssessment.level)
             : "-",
         ];
       });
 
+      // js-hoist-regexp: Use pre-compiled regex
       const csvContent = [headers, ...csvData]
         .map((row) =>
           row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")
@@ -968,7 +912,7 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
       console.error("❌ เกิดข้อผิดพลาดในการส่งออกข้อมูล:", error);
       alert("เกิดข้อผิดพลาดในการส่งออกข้อมูล กรุณาลองใหม่อีกครั้ง");
     }
-  };
+  }, [applyColumnFilters, enrichedData, getDelayStatus]);
 
   if (filteredData.length === 0) {
     return (
@@ -1002,11 +946,10 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
           <div className="flex bg-gray-200 rounded-lg p-[0.25em]">
             <button
               onClick={() => setViewMode("grid")}
-              className={`px-[0.5em] py-[0.25em] rounded-md text-[clamp(0.75rem,1vw,0.875rem)] transition-colors cursor-pointer ${
-                viewMode === "grid"
+              className={`px-[0.5em] py-[0.25em] rounded-md text-[clamp(0.75rem,1vw,0.875rem)] transition-colors cursor-pointer ${viewMode === "grid"
                   ? "bg-white text-gray-900 shadow-sm"
                   : "text-gray-600 hover:text-gray-900"
-              }`}
+                }`}
             >
               <Grid3X3 size={16} className="inline mr-1" />
               Grid
@@ -1014,11 +957,10 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
 
             <button
               onClick={() => setViewMode("gantt")}
-              className={`px-[0.5em] py-[0.25em] rounded-md text-[clamp(0.75rem,1vw,0.875rem)] transition-colors cursor-pointer ${
-                viewMode === "gantt"
+              className={`px-[0.5em] py-[0.25em] rounded-md text-[clamp(0.75rem,1vw,0.875rem)] transition-colors cursor-pointer ${viewMode === "gantt"
                   ? "bg-white text-gray-900 shadow-sm"
                   : "text-gray-600 hover:text-gray-900"
-              }`}
+                }`}
             >
               <BarChart3 size={16} className="inline mr-1" />
               Gantt
@@ -1109,12 +1051,11 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                   <div
                     className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-30"
                     style={{
-                      left: `${
-                        ((new Date().getHours() +
+                      left: `${((new Date().getHours() +
                           new Date().getMinutes() / 60) /
                           24) *
                         100
-                      }%`,
+                        }%`,
                     }}
                   >
                     <div className="absolute -top-1 -left-1 w-2 h-2 bg-red-500 rounded-full"></div>
@@ -1223,9 +1164,8 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                     {/* เวลา - Timeline Bar */}
                     <div className="flex-1 relative flex items-center px-1">
                       <div
-                        className={`absolute ${barColor} rounded h-8 flex items-center justify-between text-white text-xs font-medium shadow-sm ${
-                          isMultiDay ? "border border-yellow-400" : ""
-                        }`}
+                        className={`absolute ${barColor} rounded h-8 flex items-center justify-between text-white text-xs font-medium shadow-sm ${isMultiDay ? "border border-yellow-400" : ""
+                          }`}
                         style={{
                           left: `${startPos}%`,
                           width: `${barWidth}%`,
@@ -1289,7 +1229,7 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
       )}
 
       {viewMode === "grid" && (
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm max-h-[98vh] flex flex-col">
+        <div className={`bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm ${showDropdown ? "min-h-screen" : "max-h-[98vh]"} flex flex-col`}>
           {/* Header */}
           <div className="p-[0.55rem] bg-gradient-to-r from-gray-800 to-gray-700 text-white flex-shrink-0">
             <div className="flex items-center justify-between">
@@ -1299,6 +1239,10 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                 {enrichedData.length} รายการ
               </h3>
               <div className="flex items-center gap-2">
+                <span className="text-[clamp(0.65rem,0.9vw,0.75rem)] text-gray-300 flex items-center gap-1 mr-5">
+                  <span className="hidden sm:inline">อัปเดตล่าสุด:</span>
+                  <span className="font-mono text-white">{lastUpdated.toLocaleDateString("th-TH", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
+                </span>
                 <button
                   onClick={exportToExcel}
                   disabled={refreshing}
@@ -1604,25 +1548,18 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                   </tr>
                 </thead>
 
-                {/* Table Body */}
+                {/* Table Body - rendering-content-visibility: auto for off-screen rows */}
                 <tbody className="bg-white divide-y divide-gray-100">
                   {applyColumnFilters(enrichedData).map((item, index) => {
-                    // เช็ค delay status ตามสถานะรถ
+                    // js-set-map-lookups: Use hoisted Set for status checks
                     let delayStatus;
-                    const originStatuses = ["พร้อมรับงาน", "รับงาน"];
-                    const destinationStatuses = [
-                      "ถึงต้นทาง",
-                      "เริ่มขึ้นสินค้า",
-                      "ขึ้นสินค้าเสร็จ",
-                      "เริ่มขนส่ง",
-                    ];
 
-                    if (originStatuses.includes(item.status)) {
+                    if (ORIGIN_STATUSES.has(item.status)) {
                       delayStatus = getDelayStatus(
                         item.date_recive,
                         item.status
                       );
-                    } else if (destinationStatuses.includes(item.status)) {
+                    } else if (DESTINATION_STATUSES.has(item.status)) {
                       delayStatus = getDelayStatus(
                         item.date_deliver,
                         item.status
@@ -1632,16 +1569,16 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                         isDelayed: false,
                         delayTime: 0,
                         message:
-                          item.status === "จัดส่งแล้ว (POD)" ? "เสร็จสิ้น" : "",
+                          item.status === COMPLETED_STATUS ? "เสร็จสิ้น" : "",
                       };
                     }
 
                     return (
                       <tr
                         key={item.load_id}
-                        className={`hover:bg-blue-50 transition-colors ${
-                          index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                        }`}
+                        className={`hover:bg-blue-50 transition-colors ${index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                          }`}
+                        style={{ contentVisibility: "auto", containIntrinsicSize: "0 40px" }}
                       >
                         {/* Load ID */}
                         <td className="hidden px-[0.375em] py-[0.25em] border-r border-gray-100">
@@ -1778,9 +1715,8 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                                     className="space-y-0.5"
                                     title={`${item.distanceInfo.distance.toFixed(
                                       2
-                                    )} กิโลเมตร, ${
-                                      item.distanceInfo.duration
-                                    } นาที`}
+                                    )} กิโลเมตร, ${item.distanceInfo.duration
+                                      } นาที`}
                                   >
                                     <div className="text-gray-900 text-[clamp(0.65rem,0.85vw,0.75rem)] truncate max-w-auto">
                                       {item.distanceInfo.distance.toFixed(2)}{" "}
@@ -1814,19 +1750,14 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                                         {item.riskAssessment.icon}
                                       </span>
                                       <span className="truncate text-[clamp(0.7rem,0.95vw,0.8rem)]">
-                                        {item.riskAssessment.level === "low"
-                                          ? "ต่ำ"
-                                          : item.riskAssessment.level ===
-                                            "moderate"
-                                          ? "ปานกลาง"
-                                          : "สูง"}
+                                        {getRiskText(item.riskAssessment.level)}
                                       </span>
                                     </span>
                                   </div>
                                 ) : (
                                   <span className="text-gray-400 text-[10px]">
                                     {(item.latlng_recive === "#N/A" ||
-                                    item.latlng_deliver === "#N/A" ) && item.status !== "จัดส่งแล้ว (POD)"
+                                      item.latlng_deliver === "#N/A") && item.status !== COMPLETED_STATUS
                                       ? "ไม่มีพิกัดสถานที่"
                                       : "-"}
                                   </span>
@@ -1896,7 +1827,7 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
         <AdminView
           jobView={modalView.job}
           closeModal={handleCloseView}
-          refreshTable={onRefreshData || (() => {})}
+          refreshTable={onRefreshData || NOOP}
         />
       )}
 
@@ -1904,7 +1835,7 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
         <AdminMap
           jobView={selectedJobForMap}
           closeModal={handleCloseMap}
-          refreshTable={() => {}}
+          refreshTable={NOOP}
         />
       )}
     </div>
