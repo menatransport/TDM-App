@@ -1,66 +1,34 @@
 import { NextResponse } from 'next/server';
 
-// js-cache-property-access: Cache API key at module level
-const LONGDO_API_KEY = process.env.LONGDO_API_KEY;
-const LONGDO_BASE_URL = 'https://api.longdo.com/RouteService/json/route/guide';
 
 export async function GET(req: Request) {
-    // js-early-exit: Validate inputs early
+
     const bodyStr = req.headers.get('params');
-    if (!bodyStr) {
-        return NextResponse.json(
-            { error: 'Missing params header' },
-            { status: 400 }
-        );
-    }
+    if (!bodyStr) throw new Error("No params in headers");
 
-    if (!LONGDO_API_KEY) {
-        return NextResponse.json(
-            { error: 'LONGDO_API_KEY not configured' },
-            { status: 500 }
-        );
-    }
-
-    let bodyObj: Record<string, unknown>;
-    try {
-        bodyObj = JSON.parse(bodyStr);
-    } catch {
-        return NextResponse.json(
-            { error: 'Invalid JSON in params header' },
-            { status: 400 }
-        );
-    }
+    const bodyObj = JSON.parse(bodyStr);
 
     const queryString = Object.entries(bodyObj)
-        .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
-        .join('&');
-
+        .map(([key, value]) => `${key}=${value}`)
+        .join("&");
+        // console.log("queryString :", "https://api.longdo.com/RouteService/json/route/guide?" + queryString + "&key=" + process.env.LONGDO_API_KEY);
     try {
-        const response = await fetch(
-            `${LONGDO_BASE_URL}?${queryString}&key=${LONGDO_API_KEY}`,
+        const response = await fetch("https://api.longdo.com/RouteService/json/route/guide?" + queryString + "&key=" + process.env.LONGDO_API_KEY,
             {
                 method: 'GET',
-                headers: { 'Content-Type': 'application/json' },
-                cache: 'no-store',
-                signal: AbortSignal.timeout(10000), // 10s timeout
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                cache: 'no-store', 
             }
         );
-
-        if (!response.ok) {
-            return NextResponse.json(
-                { error: `Longdo API returned ${response.status}` },
-                { status: response.status }
-            );
-        }
-
+        
         const data = await response.json();
         return NextResponse.json(data);
+         
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unknown error';
-        console.error('Longdo API error:', message);
-        return NextResponse.json(
-            { error: 'Failed to fetch route data' },
-            { status: 500 }
-        );
+        console.error(error);
+        return NextResponse.json({ error: 'Failed to fetch table list' }, { status: 500 });
     }
+
 }
