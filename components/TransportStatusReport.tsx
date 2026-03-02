@@ -86,9 +86,8 @@ const FilterDropdown = ({
 
       {isOpen && (
         <div
-          className={`absolute top-full left-0 z-150 ${
-            column == "risk" ? "w-auto" : "min-w-[16em] max-w-[20em]"
-          } mt-1 font-light bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto`}
+          className={`absolute top-full left-0 z-150 ${column == "risk" ? "w-auto" : "min-w-[16em] max-w-[20em]"
+            } mt-1 font-light bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto`}
         >
           <div className="p-[0.5em] border-b border-gray-200">
             <div className="flex items-center justify-between">
@@ -199,6 +198,7 @@ export const TransportStatusReport = ({
   // Adjust viewport for mobile devices
   useEffect(() => {
     const isMobile = window.innerWidth <= 640; // sm breakpoint
+    handleRefresh();
     if (isMobile) {
       // Store original viewport
       const originalViewport = document.querySelector('meta[name="viewport"]');
@@ -248,22 +248,23 @@ export const TransportStatusReport = ({
     currentLat: number,
     currentLng: number,
     targetLat: number,
-    targetLng: number
-  ) => {
+    targetLng: number,
+    signal?: AbortSignal
+  ): Promise<LocationDistance | null> => {
     try {
-      const res = await fetch(`/api/longdo`, {
+      // ใช้ query params แทน headers (RESTful best practice)
+      const params = new URLSearchParams({
+        plate,
+        flat: String(currentLat),
+        flon: String(currentLng),
+        tlat: String(targetLat),
+        tlon: String(targetLng),
+        type: "16",
+      });
+
+      const res = await fetch(`/api/longdo?${params}`, {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          params: JSON.stringify({
-            plate: plate,
-            flat: currentLat,
-            flon: currentLng,
-            tlat: targetLat,
-            tlon: targetLng,
-            type: 16,
-          }),
-        },
+        signal,
         cache: "no-store",
       });
 
@@ -272,25 +273,19 @@ export const TransportStatusReport = ({
       }
 
       const dbRes = await res.json();
-      const dbResData = dbRes.data[0];
-      // console.log("🚚 PLATE : ", [plate,(dbResData.distance)/1000]); //พบว่ามีค่าที่เข้ามาเป็นข้อมูลทะเบียนซ้ำ
-      const now = Date.now();
+      const dbResData = dbRes.data?.[0];
 
       if (dbResData) {
-        const duration = (dbResData.distance / 1000 / 50) * 60; // นาที (ความเร็วเฉลี่ย 50 km/h)
-        const estimatedArrival = new Date(now + duration * 60000);
-        return {
-          distance: Math.round(dbResData.distance) / 1000,
-          duration: Math.round(duration),
-          estimatedArrival,
-        };
-      } 
+        const distanceKm = Math.round(dbResData.distance) / 1000;
+        const duration = Math.round((distanceKm / 50) * 60); // นาที (ความเร็วเฉลี่ย 50 km/h)
+        const estimatedArrival = new Date(Date.now() + duration * 60_000);
+        return { distance: distanceKm, duration, estimatedArrival };
+      }
 
       return null;
-
     } catch (error) {
+      if ((error as Error).name === "AbortError") return null;
       console.error("Error fetching distance from Longdo API:", error);
-      alert(error)
       return null;
     }
   }, []);
@@ -412,8 +407,8 @@ export const TransportStatusReport = ({
               ? item.riskAssessment.level === "low"
                 ? "ต่ำ"
                 : item.riskAssessment.level === "moderate"
-                ? "ปานกลาง"
-                : "สูง"
+                  ? "ปานกลาง"
+                  : "สูง"
               : "-";
           default:
             return "";
@@ -477,8 +472,8 @@ export const TransportStatusReport = ({
         ? item.riskAssessment.level === "low"
           ? "ต่ำ"
           : item.riskAssessment.level === "moderate"
-          ? "ปานกลาง"
-          : "สูง"
+            ? "ปานกลาง"
+            : "สูง"
         : "-";
       const matchRisk =
         columnFilters.risk.length === 0 ||
@@ -695,15 +690,23 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
   // Guards: ป้องกันเรียก API ซ้ำ และเช็คว่า data เปลี่ยนจริง
   const isCalculatingRef = useRef(false);
   const lastFingerprintRef = useRef("");
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const calculateDistanceForAllItems = useCallback(async () => {
     if (filteredData.length === 0 || isCalculatingRef.current) return;
 
-    // สร้าง fingerprint เช็คว่า data เปลี่ยนจริงหรือไม่
+    // สร้าง fingerprint เช็คว่า data เปลี่ยนจริงหรือไม่ (รวมพิกัดปลายทางด้วย)
     const fingerprint = filteredData
-      .map((i) => `${i.load_id}:${i.status}:${i.vehicle_info.current_latlng}`)
+      .map((i) =>
+        `${i.load_id}:${i.status}:${i.vehicle_info.current_latlng}:${i.latlng_recive}:${i.latlng_deliver}`
+      )
       .join("|");
     if (fingerprint === lastFingerprintRef.current) return;
+
+    // ยกเลิก request เก่าที่ยังค้างอยู่
+    abortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
 
     isCalculatingRef.current = true;
     lastFingerprintRef.current = fingerprint;
@@ -718,7 +721,7 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
 
       if (itemsToCalculate.length === 0) return;
 
-      // กรองทะเบียนซ้ำ — เรียก API ต่อ plate เพียงครั้งเดียว
+      // กรองทะเบียนซ้ำ — เรียก API ต่อ plate+destination type เพียงครั้งเดียว
       const plateMap: Record<string, TransportItem[]> = {};
       for (const item of itemsToCalculate) {
         const key = `${item.h_plate}:${getDestinationByStatus(item).type}`;
@@ -726,37 +729,98 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
         plateMap[key].push(item);
       }
 
-      const newDistanceData: { [key: string]: LocationDistance } = {};
+      const newDistanceData: Record<string, LocationDistance> = {};
+      const CONCURRENCY = 5; // จำนวน request พร้อมกันสูงสุด
+      const MAX_RETRIES = 2;
+      const keys = Object.keys(plateMap);
 
-      for (const key of Object.keys(plateMap)) {
-        const items = plateMap[key];
-        const item = items[0];
-        try {
-          const [currentLat, currentLng] = item.vehicle_info.current_latlng.split(",").map(Number);
-          const [targetLat, targetLng] = getDestinationByStatus(item).latLng.split(",").map(Number);
+      // Batch processing with concurrency control (async-parallel best practice)
+      for (let i = 0; i < keys.length; i += CONCURRENCY) {
+        if (abortController.signal.aborted) break;
 
-          if ([currentLat, currentLng, targetLat, targetLng].some(isNaN)) continue;
+        const batch = keys.slice(i, i + CONCURRENCY);
 
-          const distanceInfo = await calculateDistanceFromLongdo(
-            item.h_plate, currentLat, currentLng, targetLat, targetLng
-          );
+        const results = await Promise.allSettled(
+          batch.map(async (key) => {
+            const items = plateMap[key];
+            const item = items[0];
 
-          if (distanceInfo) {
-            // ใส่ผลลัพธ์ให้ทุก load_id ที่ใช้ทะเบียนเดียวกัน
-            for (const i of items) newDistanceData[i.load_id] = distanceInfo;
+            const [currentLat, currentLng] = item.vehicle_info.current_latlng
+              .split(",")
+              .map(Number);
+            const [targetLat, targetLng] = getDestinationByStatus(item)
+              .latLng.split(",")
+              .map(Number);
+
+            if ([currentLat, currentLng, targetLat, targetLng].some(isNaN)) {
+              return null;
+            }
+
+            // Retry logic
+            let lastError: Error | null = null;
+            for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+              try {
+                const distanceInfo = await calculateDistanceFromLongdo(
+                  item.h_plate,
+                  currentLat,
+                  currentLng,
+                  targetLat,
+                  targetLng,
+                  abortController.signal
+                );
+
+                if (distanceInfo) {
+                  // ใส่ผลลัพธ์ให้ทุก load_id ที่ใช้ทะเบียนเดียวกัน
+                  for (const it of items) {
+                    newDistanceData[it.load_id] = distanceInfo;
+                  }
+                }
+                return distanceInfo;
+              } catch (err) {
+                lastError = err as Error;
+                if (attempt < MAX_RETRIES) {
+                  await new Promise((r) => setTimeout(r, 200 * (attempt + 1)));
+                }
+              }
+            }
+
+            console.error(
+              `Failed after ${MAX_RETRIES + 1} attempts for plate:`,
+              item.h_plate,
+              lastError
+            );
+            return null;
+          })
+        );
+
+        // Log errors from rejected promises
+        results.forEach((result, idx) => {
+          if (result.status === "rejected") {
+            console.error(`Batch item ${batch[idx]} rejected:`, result.reason);
           }
+        });
 
-          await new Promise((r) => setTimeout(r, 100));
-        } catch (error) {
-          console.error("Error calculating distance for plate:", item.h_plate, error);
+        // Delay ระหว่าง batch เพื่อไม่ให้ API overload
+        if (i + CONCURRENCY < keys.length) {
+          await new Promise((r) => setTimeout(r, 150));
         }
       }
 
-      setDistanceData(newDistanceData);
+      // Merge กับข้อมูลเดิม (ไม่ overwrite ทั้งหมด)
+      if (!abortController.signal.aborted) {
+        setDistanceData((prev) => ({ ...prev, ...newDistanceData }));
+      }
     } finally {
       isCalculatingRef.current = false;
     }
   }, [filteredData, calculateDistanceFromLongdo]);
+
+  // Cleanup abort controller on unmount
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
 
   useEffect(() => {
     if (filteredData.length > 0) {
@@ -797,9 +861,8 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
         return {
           isDelayed: true,
           delayTime: delayMinutes,
-          message: `ล่าช้า ${Math.floor(delayMinutes / 60)} ชม. ${
-            delayMinutes % 60
-          } น.`,
+          message: `ล่าช้า ${Math.floor(delayMinutes / 60)} ชม. ${delayMinutes % 60
+            } น.`,
         };
       } else {
         return {
@@ -829,6 +892,9 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
     setRefreshing(true);
 
     try {
+      // ยกเลิก request เก่าที่ยังค้างอยู่
+      abortControllerRef.current?.abort();
+
       // ล้างข้อมูลเก่า + reset fingerprint เพื่อให้คำนวณใหม่ได้
       setDistanceData({});
       lastFingerprintRef.current = "";
@@ -920,8 +986,8 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
             ? item.riskAssessment.level === "low"
               ? "ต่ำ"
               : item.riskAssessment.level === "moderate"
-              ? "ปานกลาง"
-              : "สูง"
+                ? "ปานกลาง"
+                : "สูง"
             : "-",
         ];
       });
@@ -984,384 +1050,383 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
         </div>
       </div>
 
-        <div className={`bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm ${showDropdown ? "min-h-screen" : "max-h-[98vh]"} flex flex-col`}>
-          {/* Header */}
-          <div className="p-[0.55rem] bg-gradient-to-r from-gray-800 to-gray-700 text-white flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-[clamp(0.9rem,1.5vw,1.125rem)] flex items-center gap-2">
-                <Grid3X3 size={20} />
-                ตารางสถานะ • {applyColumnFilters(enrichedData).length} จาก{" "}
-                {enrichedData.length} รายการ
-              </h3>
-              <div className="flex items-center gap-2">
-                <span className="text-[clamp(0.65rem,0.9vw,0.75rem)] text-gray-300 flex items-center gap-1 mr-5">
-                  <span className="hidden sm:inline">อัปเดตล่าสุด:</span>
-                  <span className="font-mono text-white">{lastUpdated.toLocaleDateString("th-TH", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
-                </span>
-                <button
-                  onClick={exportToExcel}
-                  disabled={refreshing}
-                  className="hidden lg:flex items-center gap-2 px-[0.75em] py-[0.375em] bg-emerald-600 hover:bg-emerald-800 rounded-md text-[clamp(0.75rem,1vw,0.875rem)] transition-colors font-medium disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
-                >
-                  <FileSpreadsheet
-                    size={16}
-                    className={refreshing ? "animate-spin" : ""}
-                  />
-                  {refreshing ? "Excel..." : "Excel"}
-                </button>
-                <button
-                  onClick={handleRefresh}
-                  disabled={refreshing}
-                  className="flex items-center gap-2 px-[0.75em] py-[0.375em] bg-gray-600 hover:bg-gray-500 rounded-md text-[clamp(0.75rem,1vw,0.875rem)] transition-colors font-medium disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
-                >
-                  <RefreshCw
-                    size={16}
-                    className={refreshing ? "animate-spin" : ""}
-                  />
-                  {refreshing ? "รีเฟรช..." : "รีเฟรช"}
-                </button>
-              </div>
+      <div className={`bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm ${showDropdown ? "min-h-screen" : "max-h-[98vh]"} flex flex-col`}>
+        {/* Header */}
+        <div className="p-[0.55rem] bg-gradient-to-r from-gray-800 to-gray-700 text-white flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-[clamp(0.9rem,1.5vw,1.125rem)] flex items-center gap-2">
+              <Grid3X3 size={20} />
+              ตารางสถานะ • {applyColumnFilters(enrichedData).length} จาก{" "}
+              {enrichedData.length} รายการ
+            </h3>
+            <div className="flex items-center gap-2">
+              <span className="text-[clamp(0.65rem,0.9vw,0.75rem)] text-gray-300 flex items-center gap-1 mr-5">
+                <span className="hidden sm:inline">อัปเดตล่าสุด:</span>
+                <span className="font-mono text-white">{lastUpdated.toLocaleDateString("th-TH", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
+              </span>
+              <button
+                onClick={exportToExcel}
+                disabled={refreshing}
+                className="hidden lg:flex items-center gap-2 px-[0.75em] py-[0.375em] bg-emerald-600 hover:bg-emerald-800 rounded-md text-[clamp(0.75rem,1vw,0.875rem)] transition-colors font-medium disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+              >
+                <FileSpreadsheet
+                  size={16}
+                  className={refreshing ? "animate-spin" : ""}
+                />
+                {refreshing ? "Excel..." : "Excel"}
+              </button>
+              <button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="flex items-center gap-2 px-[0.75em] py-[0.375em] bg-gray-600 hover:bg-gray-500 rounded-md text-[clamp(0.75rem,1vw,0.875rem)] transition-colors font-medium disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+              >
+                <RefreshCw
+                  size={16}
+                  className={refreshing ? "animate-spin" : ""}
+                />
+                {refreshing ? "รีเฟรช..." : "รีเฟรช"}
+              </button>
             </div>
           </div>
+        </div>
 
-          {/* DataTable Container */}
-          <div className="flex-1 overflow-auto">
-            <div className="h-full">
-              <table className="w-full text-[clamp(0.65rem,0.85vw,0.75rem)] border-collapse">
-                <thead className="bg-gray-50 border-b-2 border-gray-200 sticky top-0 z-50 shadow-sm backdrop-blur-sm bg-opacity-95">
-                  <tr>
-                    <th className="hidden px-[0.375em] py-[0.375em] text-left font-semibold text-gray-700 border-r border-gray-200 min-w-[7em] max-w-[10em]">
-                      <div className="space-y-1">
-                        <button
-                          onClick={() => handleSort("load_id")}
-                          className="flex items-center gap-1 text-[clamp(0.65rem,0.85vw,0.75rem)] hover:text-blue-600 font-medium"
-                        >
-                          <span>รายการ</span>
-                          {getSortIcon("load_id")}
-                        </button>
-                        <FilterDropdown
-                          column="load_id"
-                          values={getUniqueValues("load_id")}
-                          selectedValues={columnFilters.load_id}
-                          onFilterChange={handleFilterChange}
-                          onClearFilter={clearFilter}
-                          showDropdown={showDropdown}
-                          onToggleDropdown={setShowDropdown}
-                        />
-                      </div>
-                    </th>
-
-                    {/* Driver Column */}
-                    <th className="px-[0.25em] py-[0.25em] text-left font-semibold text-gray-700 border-r border-gray-200 min-w-[4em] max-w-[8em]">
-                      <div className="space-y-0.5">
-                        <button
-                          onClick={() => handleSort("driver_name")}
-                          className="flex items-center gap-1 text-[clamp(0.65rem,0.85vw,0.75rem)] hover:text-blue-600"
-                        >
-                          <span>พจส.</span>
-                          {getSortIcon("driver_name")}
-                        </button>
-                        <FilterDropdown
-                          column="driver_name"
-                          values={getUniqueValues("driver_name")}
-                          selectedValues={columnFilters.driver_name}
-                          onFilterChange={handleFilterChange}
-                          onClearFilter={clearFilter}
-                          showDropdown={showDropdown}
-                          onToggleDropdown={setShowDropdown}
-                        />
-                      </div>
-                    </th>
-
-                    <th className="px-[0.5em] py-[0.5em] text-center font-semibold text-gray-700 border-r border-gray-200 min-w-[5em] max-w-[7em]">
-                      <div className="space-y-1">
-                        <button
-                          onClick={() => handleSort("phone")}
-                          className="flex items-center gap-1 text-[clamp(0.65rem,0.85vw,0.75rem)] hover:text-blue-600 mx-auto"
-                        >
-                          <span>เบอร์</span>
-                          {getSortIcon("phone")}
-                        </button>
-                      </div>
-                    </th>
-
-                    {/* Status Column */}
-                    <th className="px-[0.5em] py-[0.5em] text-center font-semibold text-gray-700 border-r border-gray-200 min-w-[3em] max-w-auto">
-                      <div className="space-y-1">
-                        <button
-                          onClick={() => handleSort("status")}
-                          className="flex items-center gap-1 text-[clamp(0.65rem,0.85vw,0.75rem)] hover:text-blue-600 mx-auto"
-                        >
-                          <span>สถานะ</span>
-                          {getSortIcon("status")}
-                        </button>
-                        <FilterDropdown
-                          column="status"
-                          values={getUniqueValues("status")}
-                          selectedValues={columnFilters.status}
-                          onFilterChange={handleFilterChange}
-                          onClearFilter={clearFilter}
-                          showDropdown={showDropdown}
-                          onToggleDropdown={setShowDropdown}
-                        />
-                      </div>
-                    </th>
-
-                    {/* Origin Column */}
-                    <th className="px-[0.25em] py-[0.25em] text-left font-semibold text-gray-700 border-r border-gray-200 min-w-[8em] max-w-[15em]">
-                      <div className="space-y-0.5">
-                        <button
-                          onClick={() => handleSort("origin")}
-                          className="flex items-center gap-1 text-[clamp(0.65rem,0.85vw,0.75rem)] hover:text-blue-600"
-                        >
-                          <span>ต้นทาง</span>
-                          {getSortIcon("origin")}
-                        </button>
-                        <FilterDropdown
-                          column="origin"
-                          values={getUniqueValues("origin")}
-                          selectedValues={columnFilters.origin}
-                          onFilterChange={handleFilterChange}
-                          onClearFilter={clearFilter}
-                          showDropdown={showDropdown}
-                          onToggleDropdown={setShowDropdown}
-                        />
-                      </div>
-                    </th>
-
-                    {/* Receive Time Column */}
-                    <th className="px-[0.5em] py-[0.5em] text-center font-semibold text-gray-700 border-r border-gray-200 min-w-[5em] max-w-[8em]">
+        {/* DataTable Container */}
+        <div className="flex-1 overflow-auto">
+          <div className="h-full">
+            <table className="w-full text-[clamp(0.65rem,0.85vw,0.75rem)] border-collapse">
+              <thead className="bg-gray-50 border-b-2 border-gray-200 sticky top-0 z-50 shadow-sm backdrop-blur-sm bg-opacity-95">
+                <tr>
+                  <th className="hidden px-[0.375em] py-[0.375em] text-left font-semibold text-gray-700 border-r border-gray-200 min-w-[7em] max-w-[10em]">
+                    <div className="space-y-1">
                       <button
-                        onClick={() => handleSort("date_recive")}
+                        onClick={() => handleSort("load_id")}
+                        className="flex items-center gap-1 text-[clamp(0.65rem,0.85vw,0.75rem)] hover:text-blue-600 font-medium"
+                      >
+                        <span>รายการ</span>
+                        {getSortIcon("load_id")}
+                      </button>
+                      <FilterDropdown
+                        column="load_id"
+                        values={getUniqueValues("load_id")}
+                        selectedValues={columnFilters.load_id}
+                        onFilterChange={handleFilterChange}
+                        onClearFilter={clearFilter}
+                        showDropdown={showDropdown}
+                        onToggleDropdown={setShowDropdown}
+                      />
+                    </div>
+                  </th>
+
+                  {/* Driver Column */}
+                  <th className="px-[0.25em] py-[0.25em] text-left font-semibold text-gray-700 border-r border-gray-200 min-w-[4em] max-w-[8em]">
+                    <div className="space-y-0.5">
+                      <button
+                        onClick={() => handleSort("driver_name")}
+                        className="flex items-center gap-1 text-[clamp(0.65rem,0.85vw,0.75rem)] hover:text-blue-600"
+                      >
+                        <span>พจส.</span>
+                        {getSortIcon("driver_name")}
+                      </button>
+                      <FilterDropdown
+                        column="driver_name"
+                        values={getUniqueValues("driver_name")}
+                        selectedValues={columnFilters.driver_name}
+                        onFilterChange={handleFilterChange}
+                        onClearFilter={clearFilter}
+                        showDropdown={showDropdown}
+                        onToggleDropdown={setShowDropdown}
+                      />
+                    </div>
+                  </th>
+
+                  <th className="px-[0.5em] py-[0.5em] text-center font-semibold text-gray-700 border-r border-gray-200 min-w-[5em] max-w-[7em]">
+                    <div className="space-y-1">
+                      <button
+                        onClick={() => handleSort("phone")}
                         className="flex items-center gap-1 text-[clamp(0.65rem,0.85vw,0.75rem)] hover:text-blue-600 mx-auto"
                       >
-                        <span>
-                          วันที่และเวลา
-                          <br />
-                          ขึ้นสินค้า
-                        </span>
-                        {getSortIcon("date_recive")}
+                        <span>เบอร์</span>
+                        {getSortIcon("phone")}
                       </button>
-                    </th>
+                    </div>
+                  </th>
 
-                    {/* Destination Column */}
-                    <th className="px-[0.25em] py-[0.25em] text-left font-semibold text-gray-700 border-r border-gray-200 min-w-[8em] max-w-[15em]">
-                      <div className="space-y-0.5">
-                        <button
-                          onClick={() => handleSort("destination")}
-                          className="flex items-center gap-1 text-[clamp(0.65rem,0.85vw,0.75rem)] hover:text-blue-600"
-                        >
-                          <span>ปลายทาง</span>
-                          {getSortIcon("destination")}
-                        </button>
-                        <FilterDropdown
-                          column="destination"
-                          values={getUniqueValues("destination")}
-                          selectedValues={columnFilters.destination}
-                          onFilterChange={handleFilterChange}
-                          onClearFilter={clearFilter}
-                          showDropdown={showDropdown}
-                          onToggleDropdown={setShowDropdown}
-                        />
-                      </div>
-                    </th>
-
-                    {/* Deliver Time Column */}
-                    <th className="px-[0.5em] py-[0.5em] text-center font-semibold text-gray-700 border-r border-gray-200 min-w-[5em] max-w-[8em]">
+                  {/* Status Column */}
+                  <th className="px-[0.5em] py-[0.5em] text-center font-semibold text-gray-700 border-r border-gray-200 min-w-[3em] max-w-auto">
+                    <div className="space-y-1">
                       <button
-                        onClick={() => handleSort("date_deliver")}
+                        onClick={() => handleSort("status")}
                         className="flex items-center gap-1 text-[clamp(0.65rem,0.85vw,0.75rem)] hover:text-blue-600 mx-auto"
                       >
-                        <span>
-                          วันที่และเวลา
-                          <br />
-                          ลงสินค้า
-                        </span>
-                        {getSortIcon("date_deliver")}
+                        <span>สถานะ</span>
+                        {getSortIcon("status")}
                       </button>
-                    </th>
+                      <FilterDropdown
+                        column="status"
+                        values={getUniqueValues("status")}
+                        selectedValues={columnFilters.status}
+                        onFilterChange={handleFilterChange}
+                        onClearFilter={clearFilter}
+                        showDropdown={showDropdown}
+                        onToggleDropdown={setShowDropdown}
+                      />
+                    </div>
+                  </th>
 
-                    {/* Distance Column with Info */}
-                    <th className="px-[0.25em] py-[0.25em] text-center font-semibold text-gray-700 border-r border-gray-200 min-w-[4em] max-w-[6em]">
-                      <div className="space-y-0.5">
-                        <div className="flex items-center justify-center gap-1">
-                          <button
-                            onClick={() => handleSort("distance")}
-                            className="flex items-center gap-1 text-[clamp(0.65rem,0.85vw,0.75rem)] hover:text-blue-600"
-                          >
-                            <span>ระยะทางที่เหลือ</span>
-                            {getSortIcon("distance")}
-                          </button>
-                          <div className="relative">
-                            <button
-                              onClick={() =>
-                                setShowInfoTooltip(
-                                  showInfoTooltip === "distance"
-                                    ? null
-                                    : "distance"
-                                )
-                              }
-                              className="cursor-pointer text-blue-500 hover:text-blue-700 transition-colors"
-                            >
-                              <Info size={12} />
-                            </button>
-                            {showInfoTooltip === "distance" && (
-                              <div
-                                className="fixed bg-gray-900 text-white text-[clamp(0.75rem,1vw,0.875rem)] rounded-lg p-[1em] shadow-2xl z-[9999] max-w-[90vw] sm:max-w-md border border-gray-700"
-                                style={{
-                                  top: "50%",
-                                  left: "50%",
-                                  transform: "translate(0%, 0%)",
-                                }}
-                              >
-                                <h4 className="font-semibold mb-3 text-base text-yellow-300">
-                                  {getInfoTooltipContent("distance")?.title}
-                                </h4>
-                                <div className="whitespace-pre-line text-[clamp(0.75rem,1vw,0.875rem)] leading-relaxed text-gray-100 text-left">
-                                  {getInfoTooltipContent("distance")?.content}
-                                </div>
-                                <button
-                                  onClick={() => setShowInfoTooltip(null)}
-                                  className="absolute cursor-pointer top-3 right-3 text-gray-400 hover:text-white transition-colors"
-                                >
-                                  <X size={18} />
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </th>
-
-                    {/* Risk Column with Info */}
-                    <th className="px-[0.25em] py-[0.25em] text-center font-semibold text-gray-700 border-r border-gray-200 min-w-[4em] max-w-[6em]">
-                      <div className="space-y-0.5">
-                        <div className="flex items-center justify-center gap-1">
-                          <button
-                            onClick={() => handleSort("risk")}
-                            className="flex items-center gap-1 text-[clamp(0.65rem,0.85vw,0.75rem)] hover:text-blue-600"
-                          >
-                            <span>ความเสี่ยง</span>
-                            {getSortIcon("risk")}
-                          </button>
-                          <div className="relative">
-                            <button
-                              onClick={() =>
-                                setShowInfoTooltip(
-                                  showInfoTooltip === "risk" ? null : "risk"
-                                )
-                              }
-                              className="cursor-pointer text-blue-500 hover:text-blue-700 transition-colors"
-                            >
-                              <Info size={12} />
-                            </button>
-                            {showInfoTooltip === "risk" && (
-                              <div
-                                className="fixed bg-gray-900 text-white text-[clamp(0.65rem,0.85vw,0.75rem)] rounded-lg p-[1em] shadow-2xl z-[9999] max-w-[90vw] sm:max-w-md border border-gray-700"
-                                style={{
-                                  top: "50%",
-                                  left: "50%",
-                                  transform: "translate(0%, 0%)",
-                                }}
-                              >
-                                <h4 className="font-semibold mb-3 text-base text-yellow-300">
-                                  {getInfoTooltipContent("risk")?.title}
-                                </h4>
-                                <div className="whitespace-pre-line text-md leading-relaxed text-gray-100 text-left">
-                                  {getInfoTooltipContent("risk")?.content}
-                                </div>
-                                <button
-                                  onClick={() => setShowInfoTooltip(null)}
-                                  className="absolute cursor-pointer top-3 right-3 text-gray-400 hover:text-white transition-colors"
-                                >
-                                  <X size={18} />
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <FilterDropdown
-                          column="risk"
-                          values={getUniqueValues("risk")}
-                          selectedValues={columnFilters.risk}
-                          onFilterChange={handleFilterChange}
-                          onClearFilter={clearFilter}
-                          showDropdown={showDropdown}
-                          onToggleDropdown={setShowDropdown}
-                        />
-                      </div>
-                    </th>
-
-                    {/* Map Column */}
-                    <th className="px-[0.25em] py-[0.25em] text-center font-semibold text-gray-700 border-r border-gray-200 min-w-[3em] max-w-[5em]">
-                      <div className="flex items-center justify-center">
-                        <span className="text-[clamp(0.65rem,0.9vw,0.75rem)]">
-                          จัดการ
-                        </span>
-                      </div>
-                    </th>
-                  </tr>
-                </thead>
-
-                {/* Table Body */}
-                <tbody className="bg-white divide-y divide-gray-100">
-                  {applyColumnFilters(enrichedData).map((item, index) => {
-                    // เช็ค delay status ตามสถานะรถ
-                    let delayStatus;
-                    const originStatuses = ["พร้อมรับงาน", "รับงาน"];
-                    const destinationStatuses = [
-                      "ถึงต้นทาง",
-                      "เริ่มขึ้นสินค้า",
-                      "ขึ้นสินค้าเสร็จ",
-                      "เริ่มขนส่ง",
-                    ];
-
-                    if (originStatuses.includes(item.status)) {
-                      delayStatus = getDelayStatus(
-                        item.date_recive,
-                        item.status
-                      );
-                    } else if (destinationStatuses.includes(item.status)) {
-                      delayStatus = getDelayStatus(
-                        item.date_deliver,
-                        item.status
-                      );
-                    } else {
-                      delayStatus = {
-                        isDelayed: false,
-                        delayTime: 0,
-                        message:
-                          item.status === "จัดส่งแล้ว (POD)" ? "เสร็จสิ้น" : "",
-                      };
-                    }
-
-                    return (
-                      <tr
-                        key={item.load_id}
-                        className={`hover:bg-blue-50 transition-colors ${
-                          index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                        }`}
+                  {/* Origin Column */}
+                  <th className="px-[0.25em] py-[0.25em] text-left font-semibold text-gray-700 border-r border-gray-200 min-w-[8em] max-w-[15em]">
+                    <div className="space-y-0.5">
+                      <button
+                        onClick={() => handleSort("origin")}
+                        className="flex items-center gap-1 text-[clamp(0.65rem,0.85vw,0.75rem)] hover:text-blue-600"
                       >
-                        {/* Load ID */}
-                        <td className="hidden px-[0.375em] py-[0.25em] border-r border-gray-100">
-                          <div
-                            className="font-semibold text-gray-900 text-[clamp(0.65rem,0.85vw,0.75rem)] truncate"
-                            title={item.load_id}
-                          >
-                            {item.load_id}
-                          </div>
-                        </td>
+                        <span>ต้นทาง</span>
+                        {getSortIcon("origin")}
+                      </button>
+                      <FilterDropdown
+                        column="origin"
+                        values={getUniqueValues("origin")}
+                        selectedValues={columnFilters.origin}
+                        onFilterChange={handleFilterChange}
+                        onClearFilter={clearFilter}
+                        showDropdown={showDropdown}
+                        onToggleDropdown={setShowDropdown}
+                      />
+                    </div>
+                  </th>
 
-                        {/* Driver & Plate */}
-                        <td className="px-[0.25em] py-[0.25em] border-r border-gray-100">
-                          <div className="space-y-0.25">
+                  {/* Receive Time Column */}
+                  <th className="px-[0.5em] py-[0.5em] text-center font-semibold text-gray-700 border-r border-gray-200 min-w-[5em] max-w-[8em]">
+                    <button
+                      onClick={() => handleSort("date_recive")}
+                      className="flex items-center gap-1 text-[clamp(0.65rem,0.85vw,0.75rem)] hover:text-blue-600 mx-auto"
+                    >
+                      <span>
+                        วันที่และเวลา
+                        <br />
+                        ขึ้นสินค้า
+                      </span>
+                      {getSortIcon("date_recive")}
+                    </button>
+                  </th>
+
+                  {/* Destination Column */}
+                  <th className="px-[0.25em] py-[0.25em] text-left font-semibold text-gray-700 border-r border-gray-200 min-w-[8em] max-w-[15em]">
+                    <div className="space-y-0.5">
+                      <button
+                        onClick={() => handleSort("destination")}
+                        className="flex items-center gap-1 text-[clamp(0.65rem,0.85vw,0.75rem)] hover:text-blue-600"
+                      >
+                        <span>ปลายทาง</span>
+                        {getSortIcon("destination")}
+                      </button>
+                      <FilterDropdown
+                        column="destination"
+                        values={getUniqueValues("destination")}
+                        selectedValues={columnFilters.destination}
+                        onFilterChange={handleFilterChange}
+                        onClearFilter={clearFilter}
+                        showDropdown={showDropdown}
+                        onToggleDropdown={setShowDropdown}
+                      />
+                    </div>
+                  </th>
+
+                  {/* Deliver Time Column */}
+                  <th className="px-[0.5em] py-[0.5em] text-center font-semibold text-gray-700 border-r border-gray-200 min-w-[5em] max-w-[8em]">
+                    <button
+                      onClick={() => handleSort("date_deliver")}
+                      className="flex items-center gap-1 text-[clamp(0.65rem,0.85vw,0.75rem)] hover:text-blue-600 mx-auto"
+                    >
+                      <span>
+                        วันที่และเวลา
+                        <br />
+                        ลงสินค้า
+                      </span>
+                      {getSortIcon("date_deliver")}
+                    </button>
+                  </th>
+
+                  {/* Distance Column with Info */}
+                  <th className="px-[0.25em] py-[0.25em] text-center font-semibold text-gray-700 border-r border-gray-200 min-w-[4em] max-w-[6em]">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={() => handleSort("distance")}
+                          className="flex items-center gap-1 text-[clamp(0.65rem,0.85vw,0.75rem)] hover:text-blue-600"
+                        >
+                          <span>ระยะทางที่เหลือ</span>
+                          {getSortIcon("distance")}
+                        </button>
+                        <div className="relative">
+                          <button
+                            onClick={() =>
+                              setShowInfoTooltip(
+                                showInfoTooltip === "distance"
+                                  ? null
+                                  : "distance"
+                              )
+                            }
+                            className="cursor-pointer text-blue-500 hover:text-blue-700 transition-colors"
+                          >
+                            <Info size={12} />
+                          </button>
+                          {showInfoTooltip === "distance" && (
                             <div
-                              className="text-gray-900 text-[clamp(0.65rem,0.85vw,0.75rem)] cursor-pointer hover:text-blue-600 truncate"
-                              title={`${item.driver_name}, ${item.h_plate}`}
-                              onClick={() =>
-                                Swal.fire({
-                                  title: "Information",
-                                  html: `<p>รหัสขนส่ง: ${item.load_id}</p>
+                              className="fixed bg-gray-900 text-white text-[clamp(0.75rem,1vw,0.875rem)] rounded-lg p-[1em] shadow-2xl z-[9999] max-w-[90vw] sm:max-w-md border border-gray-700"
+                              style={{
+                                top: "50%",
+                                left: "50%",
+                                transform: "translate(0%, 0%)",
+                              }}
+                            >
+                              <h4 className="font-semibold mb-3 text-base text-yellow-300">
+                                {getInfoTooltipContent("distance")?.title}
+                              </h4>
+                              <div className="whitespace-pre-line text-[clamp(0.75rem,1vw,0.875rem)] leading-relaxed text-gray-100 text-left">
+                                {getInfoTooltipContent("distance")?.content}
+                              </div>
+                              <button
+                                onClick={() => setShowInfoTooltip(null)}
+                                className="absolute cursor-pointer top-3 right-3 text-gray-400 hover:text-white transition-colors"
+                              >
+                                <X size={18} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </th>
+
+                  {/* Risk Column with Info */}
+                  <th className="px-[0.25em] py-[0.25em] text-center font-semibold text-gray-700 border-r border-gray-200 min-w-[4em] max-w-[6em]">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={() => handleSort("risk")}
+                          className="flex items-center gap-1 text-[clamp(0.65rem,0.85vw,0.75rem)] hover:text-blue-600"
+                        >
+                          <span>ความเสี่ยง</span>
+                          {getSortIcon("risk")}
+                        </button>
+                        <div className="relative">
+                          <button
+                            onClick={() =>
+                              setShowInfoTooltip(
+                                showInfoTooltip === "risk" ? null : "risk"
+                              )
+                            }
+                            className="cursor-pointer text-blue-500 hover:text-blue-700 transition-colors"
+                          >
+                            <Info size={12} />
+                          </button>
+                          {showInfoTooltip === "risk" && (
+                            <div
+                              className="fixed bg-gray-900 text-white text-[clamp(0.65rem,0.85vw,0.75rem)] rounded-lg p-[1em] shadow-2xl z-[9999] max-w-[90vw] sm:max-w-md border border-gray-700"
+                              style={{
+                                top: "50%",
+                                left: "50%",
+                                transform: "translate(0%, 0%)",
+                              }}
+                            >
+                              <h4 className="font-semibold mb-3 text-base text-yellow-300">
+                                {getInfoTooltipContent("risk")?.title}
+                              </h4>
+                              <div className="whitespace-pre-line text-md leading-relaxed text-gray-100 text-left">
+                                {getInfoTooltipContent("risk")?.content}
+                              </div>
+                              <button
+                                onClick={() => setShowInfoTooltip(null)}
+                                className="absolute cursor-pointer top-3 right-3 text-gray-400 hover:text-white transition-colors"
+                              >
+                                <X size={18} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <FilterDropdown
+                        column="risk"
+                        values={getUniqueValues("risk")}
+                        selectedValues={columnFilters.risk}
+                        onFilterChange={handleFilterChange}
+                        onClearFilter={clearFilter}
+                        showDropdown={showDropdown}
+                        onToggleDropdown={setShowDropdown}
+                      />
+                    </div>
+                  </th>
+
+                  {/* Map Column */}
+                  <th className="px-[0.25em] py-[0.25em] text-center font-semibold text-gray-700 border-r border-gray-200 min-w-[3em] max-w-[5em]">
+                    <div className="flex items-center justify-center">
+                      <span className="text-[clamp(0.65rem,0.9vw,0.75rem)]">
+                        จัดการ
+                      </span>
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+
+              {/* Table Body */}
+              <tbody className="bg-white divide-y divide-gray-100">
+                {applyColumnFilters(enrichedData).map((item, index) => {
+                  // เช็ค delay status ตามสถานะรถ
+                  let delayStatus;
+                  const originStatuses = ["พร้อมรับงาน", "รับงาน"];
+                  const destinationStatuses = [
+                    "ถึงต้นทาง",
+                    "เริ่มขึ้นสินค้า",
+                    "ขึ้นสินค้าเสร็จ",
+                    "เริ่มขนส่ง",
+                  ];
+
+                  if (originStatuses.includes(item.status)) {
+                    delayStatus = getDelayStatus(
+                      item.date_recive,
+                      item.status
+                    );
+                  } else if (destinationStatuses.includes(item.status)) {
+                    delayStatus = getDelayStatus(
+                      item.date_deliver,
+                      item.status
+                    );
+                  } else {
+                    delayStatus = {
+                      isDelayed: false,
+                      delayTime: 0,
+                      message:
+                        item.status === "จัดส่งแล้ว (POD)" ? "เสร็จสิ้น" : "",
+                    };
+                  }
+
+                  return (
+                    <tr
+                      key={item.load_id}
+                      className={`hover:bg-blue-50 transition-colors ${index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                        }`}
+                    >
+                      {/* Load ID */}
+                      <td className="hidden px-[0.375em] py-[0.25em] border-r border-gray-100">
+                        <div
+                          className="font-semibold text-gray-900 text-[clamp(0.65rem,0.85vw,0.75rem)] truncate"
+                          title={item.load_id}
+                        >
+                          {item.load_id}
+                        </div>
+                      </td>
+
+                      {/* Driver & Plate */}
+                      <td className="px-[0.25em] py-[0.25em] border-r border-gray-100">
+                        <div className="space-y-0.25">
+                          <div
+                            className="text-gray-900 text-[clamp(0.65rem,0.85vw,0.75rem)] cursor-pointer hover:text-blue-600 truncate"
+                            title={`${item.driver_name}, ${item.h_plate}`}
+                            onClick={() =>
+                              Swal.fire({
+                                title: "Information",
+                                html: `<p>รหัสขนส่ง: ${item.load_id}</p>
                                   <br/>
                                         <p>${item.locat_recive} - ${item.locat_deliver}</p>
                                         <p>${item.h_plate}/${item.t_plate}</p>
@@ -1369,213 +1434,212 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                                         <p>${item.phone}</p>
                                         <p>แผนที่รถ:<a target="_blank" style="color:blue;" href="https://www.google.com/maps/dir/?api=1&origin=${item.latlng_recive}&destination=${item.latlng_deliver}&waypoints=${item.vehicle_info.current_latlng}
 "> ${item.vehicle_info.current_latlng}</a> </p>`,
-                                  icon: "info",
-                                  confirmButtonText: "ตกลง",
-                                })
-                              }
-                            >
-                              {item.driver_name}, {item.h_plate}
-                            </div>
+                                icon: "info",
+                                confirmButtonText: "ตกลง",
+                              })
+                            }
+                          >
+                            {item.driver_name}, {item.h_plate}
                           </div>
-                        </td>
+                        </div>
+                      </td>
 
-                        {/* Phone */}
-                        <td className="px-[0.25em] py-[0.25em] text-center border-r border-gray-100">
-                          <a
-                            href={`tel:${item.phone}`}
-                            className="text-blue-600 hover:text-blue-800 hover:underline text-[clamp(0.65rem,0.85vw,0.75rem)] transition-colors truncate block"
-                            title={item.phone}
-                          >
-                            {item.phone}
-                          </a>
-                        </td>
+                      {/* Phone */}
+                      <td className="px-[0.25em] py-[0.25em] text-center border-r border-gray-100">
+                        <a
+                          href={`tel:${item.phone}`}
+                          className="text-blue-600 hover:text-blue-800 hover:underline text-[clamp(0.65rem,0.85vw,0.75rem)] transition-colors truncate block"
+                          title={item.phone}
+                        >
+                          {item.phone}
+                        </a>
+                      </td>
 
-                        {/* Status */}
-                        <td className="px-[0.25em] py-[0.25em] text-center border-r border-gray-100">
-                          <span
-                            className={`inline-flex px-[0.375em] rounded-full text-[clamp(0.7rem,0.95vw,0.8rem)] ${getStatusColor(
-                              item.status
-                            )} max-w-full`}
-                            title={item.vehicle_info.status}
-                          >
-                            <span className="truncate">{item.status}</span>
-                          </span>
-                        </td>
+                      {/* Status */}
+                      <td className="px-[0.25em] py-[0.25em] text-center border-r border-gray-100">
+                        <span
+                          className={`inline-flex px-[0.375em] rounded-full text-[clamp(0.7rem,0.95vw,0.8rem)] ${getStatusColor(
+                            item.status
+                          )} max-w-full`}
+                          title={item.vehicle_info.status}
+                        >
+                          <span className="truncate">{item.status}</span>
+                        </span>
+                      </td>
 
-                        {/* Origin */}
-                        <td className="px-[0.25em] py-[0.25em] border-r border-gray-100">
-                          <div
-                            className="text-gray-900 text-[clamp(0.65rem,0.85vw,0.75rem)] truncate w-40"
-                            title={item.locat_recive}
-                          >
-                            {item.locat_recive}
+                      {/* Origin */}
+                      <td className="px-[0.25em] py-[0.25em] border-r border-gray-100">
+                        <div
+                          className="text-gray-900 text-[clamp(0.65rem,0.85vw,0.75rem)] truncate w-40"
+                          title={item.locat_recive}
+                        >
+                          {item.locat_recive}
+                        </div>
+                      </td>
+
+                      {/* Origin Time */}
+                      <td className="px-[0.25em] py-[0.25em] text-center border-r border-gray-100">
+                        <div
+                          className="text-gray-600 text-[clamp(0.65rem,0.85vw,0.75rem)]"
+                          title={formatDateTime(item.date_recive)}
+                        >
+                          <div>
+                            {format(parseISO(item.date_recive), "d/M")},{" "}
+                            {format(parseISO(item.date_recive), "HH:mm")}
                           </div>
-                        </td>
-
-                        {/* Origin Time */}
-                        <td className="px-[0.25em] py-[0.25em] text-center border-r border-gray-100">
-                          <div
-                            className="text-gray-600 text-[clamp(0.65rem,0.85vw,0.75rem)]"
-                            title={formatDateTime(item.date_recive)}
-                          >
-                            <div>
-                              {format(parseISO(item.date_recive), "d/M")},{" "}
-                              {format(parseISO(item.date_recive), "HH:mm")}
-                            </div>
-                            {/* <div className="text-sm text-gray-500">
+                          {/* <div className="text-sm text-gray-500">
                              
                             </div> */}
-                          </div>
-                        </td>
+                        </div>
+                      </td>
 
-                        {/* Destination */}
-                        <td className="px-[0.25em] py-[0.25em] border-r border-gray-100">
-                          <div
-                            className="text-gray-900 text-[clamp(0.65rem,0.85vw,0.75rem)] truncate w-40"
-                            title={item.locat_deliver}
-                          >
-                            {item.locat_deliver}
-                          </div>
-                        </td>
+                      {/* Destination */}
+                      <td className="px-[0.25em] py-[0.25em] border-r border-gray-100">
+                        <div
+                          className="text-gray-900 text-[clamp(0.65rem,0.85vw,0.75rem)] truncate w-40"
+                          title={item.locat_deliver}
+                        >
+                          {item.locat_deliver}
+                        </div>
+                      </td>
 
-                        {/* Destination Time */}
-                        <td className="px-[0.25em] py-[0.25em] text-center border-r border-gray-100">
-                          <div
-                            className="text-gray-600 text-[clamp(0.65rem,0.85vw,0.75rem)]"
-                            title={formatDateTime(item.date_deliver)}
-                          >
-                            <div>
-                              {format(parseISO(item.date_deliver), "d/M")},{" "}
-                              {format(parseISO(item.date_deliver), "HH:mm")}
-                            </div>
-                            {/* <div className="text-sm text-gray-500">
+                      {/* Destination Time */}
+                      <td className="px-[0.25em] py-[0.25em] text-center border-r border-gray-100">
+                        <div
+                          className="text-gray-600 text-[clamp(0.65rem,0.85vw,0.75rem)]"
+                          title={formatDateTime(item.date_deliver)}
+                        >
+                          <div>
+                            {format(parseISO(item.date_deliver), "d/M")},{" "}
+                            {format(parseISO(item.date_deliver), "HH:mm")}
+                          </div>
+                          {/* <div className="text-sm text-gray-500">
                              
                             </div> */}
-                          </div>
-                        </td>
+                        </div>
+                      </td>
 
-                        {/* Distance & Time Remaining */}
-                        {(() => {
-                          // ตรวจสอบเวลาอัปเดต GPS (ห่างจากปัจจุบัน 1 ชั่วโมงหรือไม่)
-                          const gpsUpdatedAt = new Date(
-                            item.vehicle_info.gps_updated_at
-                          ).getTime();
-                          const currentTimeMs = currentTime.getTime();
-                          const oneHourInMs = 20 * 60 * 1000; // 20 นาที
-                          const isGpsOutdated =
-                            currentTimeMs - gpsUpdatedAt > oneHourInMs;
+                      {/* Distance & Time Remaining */}
+                      {(() => {
+                        // ตรวจสอบเวลาอัปเดต GPS (ห่างจากปัจจุบัน 1 ชั่วโมงหรือไม่)
+                        const gpsUpdatedAt = new Date(
+                          item.vehicle_info.gps_updated_at
+                        ).getTime();
+                        const currentTimeMs = currentTime.getTime();
+                        const oneHourInMs = 20 * 60 * 1000; // 20 นาที
+                        const isGpsOutdated =
+                          currentTimeMs - gpsUpdatedAt > oneHourInMs;
 
-                          return (
-                            <>
-                              <td className="px-[0.25em] py-[0.25em] text-center border-r border-gray-100">
-                                {isGpsOutdated ? (
-                                  <span className="text-gray-400 text-[clamp(0.65rem,0.85vw,0.75rem)]">
-                                    -
-                                  </span>
-                                ) : item.distanceInfo ? (
-                                  <div
-                                    className="space-y-0.5"
-                                    title={`${item.distanceInfo.distance.toFixed(
-                                      2
-                                    )} กิโลเมตร, ${
-                                      item.distanceInfo.duration
+                        return (
+                          <>
+                            <td className="px-[0.25em] py-[0.25em] text-center border-r border-gray-100">
+                              {isGpsOutdated ? (
+                                <span className="text-gray-400 text-[clamp(0.65rem,0.85vw,0.75rem)]">
+                                  -
+                                </span>
+                              ) : item.distanceInfo ? (
+                                <div
+                                  className="space-y-0.5"
+                                  title={`${item.distanceInfo.distance.toFixed(
+                                    2
+                                  )} กิโลเมตร, ${item.distanceInfo.duration
                                     } นาที`}
+                                >
+                                  <div className="text-gray-900 text-[clamp(0.65rem,0.85vw,0.75rem)] truncate max-w-auto">
+                                    {item.distanceInfo.distance.toFixed(2)}{" "}
+                                    กม.
+                                  </div>
+                                </div>
+                              ) : (
+                                <span className="text-gray-400 text-[clamp(0.65rem,0.85vw,0.75rem)]">
+                                  -
+                                </span>
+                              )}
+                            </td>
+                            {/* Risk Assessment */}
+                            <td className="px-[0.25em] py-[0.25em] text-center border-r border-gray-100">
+                              {isGpsOutdated ? (
+                                <div className="flex items-center justify-center">
+                                  <span
+                                    className="inline-flex items-center px-[0.5em] py-[0.25em] rounded-lg text-[clamp(0.65rem,0.85vw,0.75rem)] bg-gray-50 text-red-700 font-medium"
+                                    title={`ไม่มีสัญญาณ GPS ล่าสุด : ${item.vehicle_info.gps_updated_at}`}
                                   >
-                                    <div className="text-gray-900 text-[clamp(0.65rem,0.85vw,0.75rem)] truncate max-w-auto">
-                                      {item.distanceInfo.distance.toFixed(2)}{" "}
-                                      กม.
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <span className="text-gray-400 text-[clamp(0.65rem,0.85vw,0.75rem)]">
-                                    -
+                                    ⚠️GPS
                                   </span>
-                                )}
-                              </td>
-                              {/* Risk Assessment */}
-                              <td className="px-[0.25em] py-[0.25em] text-center border-r border-gray-100">
-                                {isGpsOutdated ? (
-                                  <div className="flex items-center justify-center">
-                                    <span
-                                      className="inline-flex items-center px-[0.5em] py-[0.25em] rounded-lg text-[clamp(0.65rem,0.85vw,0.75rem)] bg-gray-50 text-red-700 font-medium"
-                                      title={`ไม่มีสัญญาณ GPS ล่าสุด : ${item.vehicle_info.gps_updated_at}`}
-                                    >
-                                      ⚠️GPS
+                                </div>
+                              ) : item.riskAssessment ? (
+                                <div className="flex items-center justify-center">
+                                  <span
+                                    className={`inline-flex items-center px-[0.25em] rounded-lg text-[clamp(0.65rem,0.85vw,0.75rem)] ${item.riskAssessment.color} w-auto`}
+                                    title={item.riskAssessment.label}
+                                  >
+                                    <span className="mr-0.5">
+                                      {item.riskAssessment.icon}
                                     </span>
-                                  </div>
-                                ) : item.riskAssessment ? (
-                                  <div className="flex items-center justify-center">
-                                    <span
-                                      className={`inline-flex items-center px-[0.25em] rounded-lg text-[clamp(0.65rem,0.85vw,0.75rem)] ${item.riskAssessment.color} w-auto`}
-                                      title={item.riskAssessment.label}
-                                    >
-                                      <span className="mr-0.5">
-                                        {item.riskAssessment.icon}
-                                      </span>
-                                      <span className="truncate text-[clamp(0.7rem,0.95vw,0.8rem)]">
-                                        {item.riskAssessment.level === "low"
-                                          ? "ต่ำ"
-                                          : item.riskAssessment.level ===
-                                            "moderate"
+                                    <span className="truncate text-[clamp(0.7rem,0.95vw,0.8rem)]">
+                                      {item.riskAssessment.level === "low"
+                                        ? "ต่ำ"
+                                        : item.riskAssessment.level ===
+                                          "moderate"
                                           ? "ปานกลาง"
                                           : "สูง"}
-                                      </span>
                                     </span>
-                                  </div>
-                                ) : (
-                                  <span className="text-gray-400 text-[10px]">
-                                    {(item.latlng_recive === "#N/A" ||
-                                    item.latlng_deliver === "#N/A" ) && item.status !== "จัดส่งแล้ว (POD)"
-                                      ? "ไม่มีพิกัดสถานที่"
-                                      : "-"}
                                   </span>
-                                )}
-                              </td>
-                            </>
-                          );
-                        })()}
+                                </div>
+                              ) : (
+                                <span className="text-gray-400 text-[10px]">
+                                  {(item.latlng_recive === "#N/A" ||
+                                    item.latlng_deliver === "#N/A") && item.status !== "จัดส่งแล้ว (POD)"
+                                    ? "ไม่มีพิกัดสถานที่"
+                                    : "-"}
+                                </span>
+                              )}
+                            </td>
+                          </>
+                        );
+                      })()}
 
-                        {/* Map Column */}
-                        <td className="px-[0.25em] py-[0.25em] text-center border-r border-gray-100">
-                          <div className="flex gap-1 justify-center items-center">
-                            <button
-                              onClick={() => handleView(item)}
-                              className="inline-flex items-center cursor-pointer justify-center p-[0.25em] text-blue-600 hover:text-blue-800 hover:bg-blue-50 hover:scale-110 rounded transition-colors"
-                              title="ดูรายละเอียด"
-                            >
-                              <Eye size={16} />
-                            </button>
-                            <button
-                              onClick={() => handleOpenMap(item)}
-                              className="inline-flex items-center cursor-pointer justify-center p-[0.25em] text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 hover:scale-110 rounded transition-colors"
-                              title="เปิดแผนที่"
-                            >
-                              <Map size={16} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                      {/* Map Column */}
+                      <td className="px-[0.25em] py-[0.25em] text-center border-r border-gray-100">
+                        <div className="flex gap-1 justify-center items-center">
+                          <button
+                            onClick={() => handleView(item)}
+                            className="inline-flex items-center cursor-pointer justify-center p-[0.25em] text-blue-600 hover:text-blue-800 hover:bg-blue-50 hover:scale-110 rounded transition-colors"
+                            title="ดูรายละเอียด"
+                          >
+                            <Eye size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleOpenMap(item)}
+                            className="inline-flex items-center cursor-pointer justify-center p-[0.25em] text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 hover:scale-110 rounded transition-colors"
+                            title="เปิดแผนที่"
+                          >
+                            <Map size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
 
-              {/* No Results */}
-              {applyColumnFilters(enrichedData).length === 0 && (
-                <div className="text-center py-[4rem] border-t border-gray-200">
-                  <Filter size={64} className="mx-auto text-gray-300 mb-6" />
-                  <h3 className="text-[clamp(1rem,1.8vw,1.25rem)] font-medium text-gray-700 mb-3">
-                    ไม่พบข้อมูลที่ตรงกับการค้นหา
-                  </h3>
-                  <p className="text-gray-500 text-[clamp(0.9rem,1.3vw,1.125rem)]">
-                    ลองเปลี่ยนเงื่อนไขการกรองข้อมูล
-                  </p>
-                </div>
-              )}
-            </div>
+            {/* No Results */}
+            {applyColumnFilters(enrichedData).length === 0 && (
+              <div className="text-center py-[4rem] border-t border-gray-200">
+                <Filter size={64} className="mx-auto text-gray-300 mb-6" />
+                <h3 className="text-[clamp(1rem,1.8vw,1.25rem)] font-medium text-gray-700 mb-3">
+                  ไม่พบข้อมูลที่ตรงกับการค้นหา
+                </h3>
+                <p className="text-gray-500 text-[clamp(0.9rem,1.3vw,1.125rem)]">
+                  ลองเปลี่ยนเงื่อนไขการกรองข้อมูล
+                </p>
+              </div>
+            )}
           </div>
         </div>
-      
+      </div>
+
 
       {showInfoTooltip && (
         <div
@@ -1595,7 +1659,7 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
         <AdminView
           jobView={modalView.job}
           closeModal={handleCloseView}
-          refreshTable={onRefreshData || (() => {})}
+          refreshTable={onRefreshData || (() => { })}
         />
       )}
 
@@ -1603,7 +1667,7 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
         <AdminMap
           jobView={selectedJobForMap}
           closeModal={handleCloseMap}
-          refreshTable={() => {}}
+          refreshTable={() => { }}
         />
       )}
     </div>
