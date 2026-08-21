@@ -36,6 +36,7 @@ import {
 import { format, parseISO } from "date-fns";
 import { AdminMap } from "./AdminMap";
 import { AdminView } from "./AdminView";
+import { AllMap } from "./AllMap";
 
 interface TransportStatusReportProps {
   transportData: TransportItem[];
@@ -47,6 +48,53 @@ interface LocationDistance {
   duration: number;
   estimatedArrival: Date;
 }
+
+// สถานะอ้างอิงจุดหมาย/เวลานัดหมาย — ประกาศที่เดียว ใช้ร่วมกันทุกจุด
+// (เดิมมี list ซ้ำ 4 ที่ และไม่ตรงกัน ทำให้ตาราง/ตัวกรอง/CSV ให้ผลต่างกัน)
+const ORIGIN_STATUSES: string[] = ["พร้อมรับงาน", "รับงาน"];
+
+const DESTINATION_STATUSES: string[] = [
+  "ถึงต้นทาง",
+  "เริ่มขึ้นสินค้า",
+  "ขึ้นสินค้าเสร็จ",
+  "เริ่มขนส่ง",
+  "ถึงปลายทาง",
+  "ยื่นเอกสาร",
+  "ได้รับเอกสารคืน",
+  "เริ่มลงสินค้า",
+  "ลงสินค้าเสร็จ",
+];
+
+const POD_STATUS = "จัดส่งแล้ว (POD)";
+
+const AVERAGE_SPEED_KMH = 50;
+
+const RISK_BUFFER_MINUTES = 60;
+
+const RISK_LEVELS = {
+  low: {
+    level: "low",
+    label: "Low Risk",
+    color: "bg-green-100 text-green-800",
+    icon: "🟢",
+  },
+  moderate: {
+    level: "moderate",
+    label: "Moderate Risk",
+    color: "bg-yellow-100 text-yellow-800",
+    icon: "🟡",
+  },
+  high: {
+    level: "high",
+    label: "High Risk",
+    color: "bg-red-100 text-red-800",
+    icon: "🔴",
+  },
+} as const;
+
+// วันที่ตามเวลาไทย (UTC+7) — convention เดียวกับ toThaiDate ใน Admin.tsx
+const getThaiDateString = (date: Date) =>
+  new Date(date.getTime() + 7 * 60 * 60 * 1000).toISOString().split("T")[0];
 
 const FilterDropdown = ({
   column,
@@ -142,6 +190,7 @@ export const TransportStatusReport = ({
   const [currentTime, setCurrentTime] = useState(new Date());
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [viewMode, setViewMode] = useState<"table" | "map">("table");
 
   const [columnFilters, setColumnFilters] = useState<{
     [key: string]: string[];
@@ -221,9 +270,18 @@ export const TransportStatusReport = ({
     }
   }, []);
 
+  // เดินเวลาปัจจุบันทุก 1 นาที เพื่อให้คอลัมน์ "ความเสี่ยง" และ "ล่าช้า" เป็นค่าปัจจุบันจริง
+  // (เดิม currentTime อัปเดตเฉพาะตอนกด Refresh ทำให้ตัวเลขค้าง)
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
+
   // กรองข้อมูลตามเงื่อนไข
   const filteredData = useMemo(() => {
-    const today = new Date().toISOString().split("T")[0];
+    // วันที่ไทย ให้ตรงกับ date_recive/date_deliver ที่ API ส่งมาเป็นวันที่ไทย
+    // (เดิมใช้ UTC ทำให้ช่วง 00:00-07:00 ดึงงานผิดวัน)
+    const today = getThaiDateString(new Date());
 
     return transportData.filter((item) => {
       // เช็ควันที่ (date_recive หรือ date_deliver == วันนี้)
@@ -277,7 +335,7 @@ export const TransportStatusReport = ({
 
       if (dbResData) {
         const distanceKm = Math.round(dbResData.distance) / 1000;
-        const duration = Math.round((distanceKm / 50) * 60); // นาที (ความเร็วเฉลี่ย 50 km/h)
+        const duration = Math.round((distanceKm / AVERAGE_SPEED_KMH) * 60); // นาที
         const estimatedArrival = new Date(Date.now() + duration * 60_000);
         return { distance: distanceKm, duration, estimatedArrival };
       }
@@ -292,19 +350,7 @@ export const TransportStatusReport = ({
 
   // กำหนดปลายทางตามสถานะ
   const getDestinationByStatus = (item: TransportItem) => {
-    const destinationStatuses = [
-      "ถึงต้นทาง",
-      "เริ่มขึ้นสินค้า",
-      "ขึ้นสินค้าเสร็จ",
-      "เริ่มขนส่ง",
-      "ถึงปลายทาง",
-      "ยื่นเอกสาร",
-      "ได้รับเอกสารคืน",
-      "เริ่มลงสินค้า",
-      "ลงสินค้าเสร็จ",
-    ];
-
-    if (destinationStatuses.includes(item.status)) {
+    if (DESTINATION_STATUSES.includes(item.status)) {
       return {
         location: item.locat_deliver,
         latLng: item.latlng_deliver,
@@ -327,36 +373,25 @@ export const TransportStatusReport = ({
     const timeDifferenceMs = slotDateTime.getTime() - currentTime.getTime();
     const timeDifferenceMinutes = timeDifferenceMs / (1000 * 60);
 
-    const oneHourInMinutes = 60;
-
-    if (
-      timeDifferenceMinutes > remainingMinutes + oneHourInMinutes ||
-      remainingMinutes === 0
-    ) {
-      return {
-        level: "low",
-        label: "Low Risk",
-        color: "bg-green-100 text-green-800",
-        icon: "🟢",
-      };
-    } else if (
-      timeDifferenceMinutes >= remainingMinutes &&
-      timeDifferenceMinutes <= remainingMinutes + oneHourInMinutes
-    ) {
-      return {
-        level: "moderate",
-        label: "Moderate Risk",
-        color: "bg-yellow-100 text-yellow-800",
-        icon: "🟡",
-      };
-    } else {
-      return {
-        level: "high",
-        label: "High Risk",
-        color: "bg-red-100 text-red-800",
-        icon: "🔴",
-      };
+    // รถอยู่ที่จุดหมายแล้ว (ระยะทางเหลือ ~0) ตัดสินจากเวลานัดอย่างเดียว
+    // เดิม remainingMinutes === 0 ถูกตีเป็น Low เสมอ ทำให้งานที่ถึงแล้วแต่
+    // เลยเวลานัดโชว์ 🟢 เขียว ทีม dispatch จึงมองข้ามงานที่ล่าช้าจริง
+    if (remainingMinutes === 0) {
+      return timeDifferenceMinutes >= 0 ? RISK_LEVELS.low : RISK_LEVELS.high;
     }
+
+    // เวลาที่เหลือมากกว่าเวลาที่ต้องใช้เกิน 1 ชม. -> ทันแน่นอน
+    if (timeDifferenceMinutes > remainingMinutes + RISK_BUFFER_MINUTES) {
+      return RISK_LEVELS.low;
+    }
+
+    // เวลาที่เหลือพอดี ถึง +1 ชม. -> ทันแบบไม่มี buffer
+    if (timeDifferenceMinutes >= remainingMinutes) {
+      return RISK_LEVELS.moderate;
+    }
+
+    // เวลาที่เหลือน้อยกว่าเวลาที่ต้องใช้ -> ไปไม่ทัน
+    return RISK_LEVELS.high;
   };
 
   const [distanceData, setDistanceData] = useState<{
@@ -490,29 +525,7 @@ export const TransportStatusReport = ({
         );
 
       // Delay filter
-      const originStatuses = ["พร้อมรับงาน", "รับงาน"];
-      const destinationStatuses = [
-        "ถึงต้นทาง",
-        "เริ่มขึ้นสินค้า",
-        "ขึ้นสินค้าเสร็จ",
-        "เริ่มขนส่ง",
-        "ถึงปลายทาง",
-        "ยื่นเอกสาร",
-        "ได้รับเอกสารคืน",
-        "เริ่มลงสินค้า",
-        "ลงสินค้าเสร็จ",
-      ];
-      let delayText = "";
-
-      if (originStatuses.includes(item.status)) {
-        const delayStatus = getDelayStatus(item.date_recive, item.status);
-        delayText = delayStatus.message;
-      } else if (destinationStatuses.includes(item.status)) {
-        const delayStatus = getDelayStatus(item.date_deliver, item.status);
-        delayText = delayStatus.message;
-      } else {
-        delayText = item.status === "จัดส่งแล้ว (POD)" ? "เสร็จสิ้น" : "";
-      }
+      const delayText = getDelayInfo(item).message;
 
       const matchDelay =
         columnFilters.delay.length === 0 ||
@@ -721,18 +734,21 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
 
       if (itemsToCalculate.length === 0) return;
 
-      // กรองทะเบียนซ้ำ — เรียก API ต่อ plate+destination type เพียงครั้งเดียว
-      const plateMap: Record<string, TransportItem[]> = {};
+      // รวมเฉพาะงานที่ "เส้นทางเดียวกันจริง" — ทะเบียน + พิกัดปัจจุบัน + พิกัดปลายทาง
+      // (เดิมใช้ plate + type ซึ่งมีแค่ origin/destination ทำให้รถคันเดียวที่มีหลายงาน
+      //  คนละปลายทาง ถูกยัดระยะทางของงานแรกให้เหมือนกันหมด)
+      const routeMap: Record<string, TransportItem[]> = {};
       for (const item of itemsToCalculate) {
-        const key = `${item.h_plate}:${getDestinationByStatus(item).type}`;
-        if (!plateMap[key]) plateMap[key] = [];
-        plateMap[key].push(item);
+        const destination = getDestinationByStatus(item);
+        const key = `${item.h_plate}|${item.vehicle_info.current_latlng}|${destination.latLng}`;
+        if (!routeMap[key]) routeMap[key] = [];
+        routeMap[key].push(item);
       }
 
       const newDistanceData: Record<string, LocationDistance> = {};
       const CONCURRENCY = 5; // จำนวน request พร้อมกันสูงสุด
       const MAX_RETRIES = 2;
-      const keys = Object.keys(plateMap);
+      const keys = Object.keys(routeMap);
 
       // Batch processing with concurrency control (async-parallel best practice)
       for (let i = 0; i < keys.length; i += CONCURRENCY) {
@@ -742,7 +758,7 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
 
         const results = await Promise.allSettled(
           batch.map(async (key) => {
-            const items = plateMap[key];
+            const items = routeMap[key];
             const item = items[0];
 
             const [currentLat, currentLng] = item.vehicle_info.current_latlng
@@ -806,9 +822,17 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
         }
       }
 
-      // Merge กับข้อมูลเดิม (ไม่ overwrite ทั้งหมด)
+      // Merge กับข้อมูลเดิม แต่ตัดงานที่ไม่อยู่ในรายการปัจจุบันทิ้ง
+      // เพื่อไม่ให้ค่าระยะทางเก่าค้างแสดงเมื่องาน/ปลายทางเปลี่ยนไปแล้ว
       if (!abortController.signal.aborted) {
-        setDistanceData((prev) => ({ ...prev, ...newDistanceData }));
+        const activeIds = new Set(filteredData.map((i) => i.load_id));
+        setDistanceData((prev) => {
+          const kept: Record<string, LocationDistance> = {};
+          for (const [id, value] of Object.entries(prev)) {
+            if (activeIds.has(id)) kept[id] = value;
+          }
+          return { ...kept, ...newDistanceData };
+        });
       }
     } finally {
       isCalculatingRef.current = false;
@@ -880,6 +904,29 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
     }
   };
 
+  // สรุปสถานะเวลาของงาน 1 รายการ — ใช้ร่วมกันทั้งตาราง ตัวกรอง และ CSV
+  const getDelayInfo = (item: TransportItem) => {
+    if (ORIGIN_STATUSES.includes(item.status)) {
+      return getDelayStatus(item.date_recive, item.status);
+    }
+    if (DESTINATION_STATUSES.includes(item.status)) {
+      return getDelayStatus(item.date_deliver, item.status);
+    }
+    return {
+      isDelayed: false,
+      delayTime: 0,
+      message: item.status === POD_STATUS ? "เสร็จสิ้น" : "",
+    };
+  };
+
+  // กรอง + เรียงครั้งเดียวต่อ render (เดิมเรียก applyColumnFilters 5 ครั้งต่อ render)
+  const displayData = useMemo(
+    () => applyColumnFilters(enrichedData),
+    // applyColumnFilters ถูกสร้างใหม่ทุก render จึงระบุเฉพาะ input จริงที่มีผลต่อผลลัพธ์
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [enrichedData, columnFilters, sortConfig, currentTime]
+  );
+
   const formatDateTime = (dateString: string) => {
     try {
       return format(parseISO(dateString), "d/M/yy, HH:mm");
@@ -921,7 +968,7 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
 
   const exportToExcel = () => {
     try {
-      const dataToExport = applyColumnFilters(enrichedData);
+      const dataToExport = displayData;
 
       const now = new Date();
       const fileName = `${format(now, "yyyy-MM-dd_HH-mm")}_updatestatus.csv`;
@@ -940,34 +987,11 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
         "ระยะทาง (กม.)",
         "เวลาที่ใช้ (นาที)",
         "ความเสี่ยง",
+        "สถานะเวลา",
       ];
 
       const csvData = dataToExport.map((item) => {
-        let delayStatus;
-        const originStatuses = ["พร้อมรับงาน", "รับงาน"];
-        const destinationStatuses = [
-          "ถึงต้นทาง",
-          "เริ่มขึ้นสินค้า",
-          "ขึ้นสินค้าเสร็จ",
-          "เริ่มขนส่ง",
-          "ถึงปลายทาง",
-          "ยื่นเอกสาร",
-          "เริ่มลงสินค้า",
-          "ลงสินค้าเสร็จ",
-          "ได้รับเอกสารคืน",
-        ];
-
-        if (originStatuses.includes(item.status)) {
-          delayStatus = getDelayStatus(item.date_recive, item.status);
-        } else if (destinationStatuses.includes(item.status)) {
-          delayStatus = getDelayStatus(item.date_deliver, item.status);
-        } else {
-          delayStatus = {
-            isDelayed: false,
-            delayTime: 0,
-            message: item.status === "จัดส่งแล้ว (POD)" ? "เสร็จสิ้น" : "",
-          };
-        }
+        const delayStatus = getDelayInfo(item);
 
         return [
           item.load_id,
@@ -989,6 +1013,7 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                 ? "ปานกลาง"
                 : "สูง"
             : "-",
+          delayStatus.message || "-",
         ];
       });
 
@@ -1048,6 +1073,30 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
             งานขนส่งวันนี้ • พบ {enrichedData.length} รายการ
           </p>
         </div>
+
+        {/* View Toggle: Table / AllMap */}
+        <div className="flex items-center bg-gray-100 border border-gray-200 rounded-lg p-1 gap-1">
+          <button
+            onClick={() => setViewMode("table")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[clamp(0.7rem,0.95vw,0.8rem)] font-medium transition-colors cursor-pointer ${viewMode === "table"
+              ? "bg-white text-blue-600 shadow-sm"
+              : "text-gray-500 hover:text-gray-700"
+              }`}
+          >
+            <List size={15} />
+            ตาราง
+          </button>
+          <button
+            onClick={() => setViewMode("map")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[clamp(0.7rem,0.95vw,0.8rem)] font-medium transition-colors cursor-pointer ${viewMode === "map"
+              ? "bg-white text-blue-600 shadow-sm"
+              : "text-gray-500 hover:text-gray-700"
+              }`}
+          >
+            <Map size={15} />
+            แผนที่รวม
+          </button>
+        </div>
       </div>
 
       <div className={`bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm ${showDropdown ? "min-h-screen" : "max-h-[98vh]"} flex flex-col`}>
@@ -1055,8 +1104,9 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
         <div className="p-[0.55rem] bg-gradient-to-r from-gray-800 to-gray-700 text-white flex-shrink-0">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-[clamp(0.9rem,1.5vw,1.125rem)] flex items-center gap-2">
-              <Grid3X3 size={20} />
-              ตารางสถานะ • {applyColumnFilters(enrichedData).length} จาก{" "}
+              {viewMode === "table" ? <Grid3X3 size={20} /> : <Map size={20} />}
+              {viewMode === "table" ? "ตารางสถานะ" : "แผนที่รวม"} •{" "}
+              {displayData.length} จาก{" "}
               {enrichedData.length} รายการ
             </h3>
             <div className="flex items-center gap-2">
@@ -1090,7 +1140,15 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
           </div>
         </div>
 
+        {/* AllMap Container */}
+        {viewMode === "map" && (
+          <div className="flex-1">
+            <AllMap data={displayData} />
+          </div>
+        )}
+
         {/* DataTable Container */}
+        {viewMode === "table" && (
         <div className="flex-1 overflow-auto">
           <div className="h-full">
             <table className="w-full text-[clamp(0.65rem,0.85vw,0.75rem)] border-collapse">
@@ -1371,35 +1429,7 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
 
               {/* Table Body */}
               <tbody className="bg-white divide-y divide-gray-100">
-                {applyColumnFilters(enrichedData).map((item, index) => {
-                  // เช็ค delay status ตามสถานะรถ
-                  let delayStatus;
-                  const originStatuses = ["พร้อมรับงาน", "รับงาน"];
-                  const destinationStatuses = [
-                    "ถึงต้นทาง",
-                    "เริ่มขึ้นสินค้า",
-                    "ขึ้นสินค้าเสร็จ",
-                    "เริ่มขนส่ง",
-                  ];
-
-                  if (originStatuses.includes(item.status)) {
-                    delayStatus = getDelayStatus(
-                      item.date_recive,
-                      item.status
-                    );
-                  } else if (destinationStatuses.includes(item.status)) {
-                    delayStatus = getDelayStatus(
-                      item.date_deliver,
-                      item.status
-                    );
-                  } else {
-                    delayStatus = {
-                      isDelayed: false,
-                      delayTime: 0,
-                      message:
-                        item.status === "จัดส่งแล้ว (POD)" ? "เสร็จสิ้น" : "",
-                    };
-                  }
+                {displayData.map((item, index) => {
 
                   return (
                     <tr
@@ -1526,9 +1556,9 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
                           item.vehicle_info.gps_updated_at
                         ).getTime();
                         const currentTimeMs = currentTime.getTime();
-                        const oneHourInMs = 20 * 60 * 1000; // 20 นาที
+                        const gpsStaleThresholdMs = 20 * 60 * 1000; // 20 นาที
                         const isGpsOutdated =
-                          currentTimeMs - gpsUpdatedAt > oneHourInMs;
+                          currentTimeMs - gpsUpdatedAt > gpsStaleThresholdMs;
 
                         return (
                           <>
@@ -1625,7 +1655,7 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
             </table>
 
             {/* No Results */}
-            {applyColumnFilters(enrichedData).length === 0 && (
+            {displayData.length === 0 && (
               <div className="text-center py-[4rem] border-t border-gray-200">
                 <Filter size={64} className="mx-auto text-gray-300 mb-6" />
                 <h3 className="text-[clamp(1rem,1.8vw,1.25rem)] font-medium text-gray-700 mb-3">
@@ -1638,6 +1668,7 @@ logic: เวลาที่เหลือ < เวลาคาดการณ�
             )}
           </div>
         </div>
+        )}
       </div>
 
 
