@@ -275,6 +275,7 @@ useEffect(() => {
         // Redirect ตาม role
         if(data.role === 'user') return router.push("/job");
         if(data.role === 'admin') return router.push("/admin");
+        if(data.role === 'external') return router.push("/external-tracking");
       } else {
         setError(data.error || "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
         setIsLoading(false);
@@ -373,30 +374,21 @@ return (
 
             
               {/* Suggestions Dropdown */}
-              {showSuggestions && (
+              {showSuggestions && filteredNames.length > 0 && (
                 <div className="absolute m-4 top-28 left-0 right-0 mt-2 bg-white border-2 border-gray-200 rounded-xl shadow-xl z-10 max-h-40 overflow-y-auto">
-                  {filteredNames.length > 0 ? (
-                    <>
-                      <div className="px-4 py-2 text-sm text-gray-500 border-b border-gray-100 bg-gray-50 rounded-t-xl">
-                        พบ {filteredNames.length} รายการ
-                      </div>
-                      {filteredNames.map((name, index) => (
-                        <div
-                          key={index}
-                          onClick={() => handleNameSelect(name)}
-                          className="px-4 py-3 hover:bg-green-50 cursor-pointer transition-colors duration-150 flex items-center space-x-3 border-b border-gray-50 last:border-b-0"
-                        >
-                          <User className="h-4 w-4 text-green-500" />
-                          <span className="text-gray-800">{name}</span>
-                        </div>
-                      ))}
-                    </>
-                  ) : (
-                    <div className="px-4 py-6 text-center text-gray-500">
-                      <p>ไม่พบชื่อที่ตรงกับการค้นหา</p>
-                      <p className="text-sm text-gray-400 mt-1">"{username}"</p>
+                  <div className="px-4 py-2 text-sm text-gray-500 border-b border-gray-100 bg-gray-50 rounded-t-xl">
+                    พบ {filteredNames.length} รายการ
+                  </div>
+                  {filteredNames.map((name, index) => (
+                    <div
+                      key={index}
+                      onClick={() => handleNameSelect(name)}
+                      className="px-4 py-3 hover:bg-green-50 cursor-pointer transition-colors duration-150 flex items-center space-x-3 border-b border-gray-50 last:border-b-0"
+                    >
+                      <User className="h-4 w-4 text-green-500" />
+                      <span className="text-gray-800">{name}</span>
                     </div>
-                  )}
+                  ))}
                 </div>
               )}
 
