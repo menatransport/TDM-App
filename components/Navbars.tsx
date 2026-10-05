@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { Menu, X, Bell, User, Edit, Save, Eye, EyeOff, UserPlus, UserMinus, ChevronDown } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useUserStore } from '@/lib/userStore'
-import Swal from 'sweetalert2';
+import { Swal } from '@/lib/swal';
 
 export const Navbars = () => {
   const { username, password , role, logout, updateProfile } = useUserStore()
@@ -305,7 +305,7 @@ export const Navbars = () => {
 
           <div className="flex items-center space-x-3">
             
-              <img src="/mena.png" alt="Logo" className="w-15 h-10" />
+              <img src="/mena.webp" alt="Logo" className="w-15 h-10" />
    
             <div>
               <h1 className="hidden text-lg font-semibold text-gray-900">Mena FastTrack</h1>

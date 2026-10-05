@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import {
   ChevronDown,
   Calendar,
@@ -10,13 +10,25 @@ import {
   Package,
   X,
   Loader2,
+  Clock,
+  ArrowRight,
+  MapPin,
+  PiggyBank
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 // =============== TYPES ===============
 interface Job {
   load_id: string;
   status: string;
   date_plan?: string;
+  h_plate?: string;
+  t_plate?: string;
+  locat_recive?: string;
+  locat_deliver?: string;
+  date_recive?: string;
+  date_deliver?: string;
+  job_type?: string;
   ticket_info?: {
     end_unload_datetime?: string;
   };
@@ -57,30 +69,65 @@ const PERIODS = [
 ];
 
 // =============== HELPER FUNCTIONS ===============
-const getDateFromJob = (job: Job): Date | null => {
-  // ใช้ end_unload_datetime ก่อน ถ้าไม่มีใช้ date_plan
-  const dateString = job.ticket_info?.end_unload_datetime || job.date_plan;
-  if (!dateString) return null;
-
-  const date = new Date(dateString);
-  return isNaN(date.getTime()) ? null : date;
-};
-
-const isInDateRange = (date: Date, filter: DateFilter): boolean => {
-  const jobMonth = date.getMonth();
-  const jobYear = date.getFullYear();
-  const jobDay = date.getDate();
-
-  if (jobMonth !== filter.month || jobYear !== filter.year) return false;
-
-  if (filter.period === "first") return jobDay >= 1 && jobDay <= 15;
-  if (filter.period === "second") return jobDay >= 16;
-  return true; // "all"
-};
-
 const getYearOptions = (): number[] => {
   const currentYear = new Date().getFullYear();
   return [currentYear - 1, currentYear, currentYear + 1];
+};
+
+const getLastDayOfMonth = (year: number, month: number): number => {
+  return new Date(year, month + 1, 0).getDate();
+};
+
+const buildDateRange = (filter: DateFilter): { start: string; end: string } => {
+  const { year, month, period } = filter;
+  const lastDay = getLastDayOfMonth(year, month);
+  const mm = String(month + 1).padStart(2, "0");
+
+  let startDay = "01";
+  let endDay = String(lastDay).padStart(2, "0");
+
+  if (period === "first") {
+    endDay = "15";
+  } else if (period === "second") {
+    startDay = "16";
+  }
+
+  return {
+    start: `${year}-${mm}-${startDay}`,
+    end: `${year}-${mm}-${endDay}`,
+  };
+};
+
+const formatDate = (dateStr?: string): string => {
+  if (!dateStr || typeof dateStr !== "string") return "-";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "-";
+  return d.toLocaleDateString("th-TH", { day: "2-digit", month: "short" });
+};
+
+const formatTime = (dateStr?: string): string => {
+  if (!dateStr || typeof dateStr !== "string") return "-";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "-";
+  return d.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
+};
+
+const getStatusStyle = (status: string) => {
+  switch (status) {
+    case "จัดส่งแล้ว (POD)":
+      return { badge: "bg-green-100 text-green-800", accent: "from-green-400 to-emerald-500" };
+    case "พร้อมรับงาน":
+      return { badge: "bg-emerald-100 text-emerald-800", accent: "from-emerald-400 to-green-500" };
+    case "รับงาน":
+    case "ถึงต้นทาง":
+    case "เริ่มขึ้นสินค้า":
+    case "ขึ้นสินค้าเสร็จ":
+      return { badge: "bg-blue-100 text-blue-800", accent: "from-blue-400 to-blue-500" };
+    case "เริ่มขนส่ง":
+      return { badge: "bg-orange-100 text-orange-800", accent: "from-orange-400 to-orange-500" };
+    default:
+      return { badge: "bg-gray-100 text-gray-700", accent: "from-gray-400 to-gray-500" };
+  }
 };
 
 // =============== COMPONENT ===============
@@ -97,77 +144,69 @@ export const DeliveryStats = ({ isOpen, onClose }: DeliveryStatsProps) => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasFetched, setHasFetched] = useState(false);
 
-    const fetchJobs = async () => {
-      setIsLoading(true);
-      setError(null);
+  const fetchJobs = async () => {
+    setIsLoading(true);
+    setError(null);
+    setHasFetched(true);
 
-      try {
-        const access_token = localStorage.getItem("access_token");
-        const res = await fetch("/api/jobs", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${access_token}`,
-          },
-        });
+    try {
+      const access_token = localStorage.getItem("access_token");
+      const driver_name = localStorage.getItem("user") || "";
 
-        if (!res.ok) throw new Error("Failed to fetch jobs");
+      const { start, end } = buildDateRange(filter);
+      const params = new URLSearchParams({
+        driver_name,
+        date_plan_start: start,
+        date_plan_end: end,
+      });
 
-        const data = await res.json();
-        setJobs(data.jobs || []);
-      } catch (err) {
-        console.error("Error fetching jobs:", err);
-        setError("ไม่สามารถโหลดข้อมูลได้");
-      } finally {
-        setIsLoading(false);
-      }
-    };
+      const res = await fetch(`/api/history_driver?${params.toString()}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${access_token}`,
+        },
+      });
 
-  // กรองเฉพาะงานที่จัดส่งแล้ว
+      if (!res.ok) throw new Error("Failed to fetch jobs");
+
+      const data = await res.json();
+      setJobs(data.jobs || []);
+    } catch (err) {
+      console.error("Error fetching jobs:", err);
+      setError("ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // กรองเฉพาะงานจัดส่งแล้ว
   const completedJobs = useMemo(() => {
     return jobs.filter((job) => job.status === "จัดส่งแล้ว (POD)");
   }, [jobs]);
 
-  // กรองตามวันที่ที่เลือก
-  const filteredJobs = useMemo(() => {
-    return completedJobs.filter((job) => {
-      const date = getDateFromJob(job);
-      if (!date) return false;
-      return isInDateRange(date, filter);
-    });
-  }, [completedJobs, filter]);
-
-  // คำนวณสถิติ
+  // สถิติรายวัน
   const stats = useMemo(() => {
-    const total = filteredJobs.length;
-
-    // นับตามวันในช่วงที่เลือก
+    const total = completedJobs.length;
     const dailyCount: Record<number, number> = {};
-    filteredJobs.forEach((job) => {
-      const date = getDateFromJob(job);
-      if (date) {
-        const day = date.getDate();
+
+    completedJobs.forEach((job) => {
+      const dateStr = job.ticket_info?.end_unload_datetime || job.date_plan;
+      if (!dateStr) return;
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime())) {
+        const day = d.getDate();
         dailyCount[day] = (dailyCount[day] || 0) + 1;
       }
     });
 
     const daysWithDelivery = Object.keys(dailyCount).length;
-    const avgPerDay = daysWithDelivery > 0 ? total / daysWithDelivery : 0;
-    const maxDay = Object.entries(dailyCount).reduce(
-      (max, [day, count]) =>
-        count > max.count ? { day: Number(day), count } : max,
-      { day: 0, count: 0 }
-    );
+    const avgPerDay = daysWithDelivery > 0 ? (total / daysWithDelivery).toFixed(1) : "0";
 
-    return {
-      total,
-      daysWithDelivery,
-      avgPerDay: avgPerDay.toFixed(1),
-      maxDay,
-      dailyCount,
-    };
-  }, [filteredJobs]);
+    return { total, daysWithDelivery, avgPerDay, dailyCount };
+  }, [completedJobs]);
 
   const handleFilterChange = (key: keyof DateFilter, value: number | string) => {
     setFilter((prev) => ({ ...prev, [key]: value }));
@@ -179,29 +218,25 @@ export const DeliveryStats = ({ isOpen, onClose }: DeliveryStatsProps) => {
     return `${monthName} ${filter.year + 543} (${periodText})`;
   };
 
-  // ไม่แสดงอะไรถ้า Modal ปิดอยู่
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Modal Content */}
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden animate-in fade-in zoom-in duration-200">
+      {/* Modal */}
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[92vh] overflow-hidden">
         {/* Header */}
         <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-white/20 rounded-xl">
-                <TrendingUp className="w-5 h-5 text-white" />
+                <TrendingUp className="w-6 h-6 text-white" />
               </div>
               <div>
                 <h3 className="text-lg font-bold text-white">สถิติการจัดส่ง</h3>
-                <p className="text-emerald-100 text-xs">{getPeriodLabel()}</p>
+                <p className="text-emerald-100 text-sm">{getPeriodLabel()}</p>
               </div>
             </div>
             <button
@@ -216,209 +251,197 @@ export const DeliveryStats = ({ isOpen, onClose }: DeliveryStatsProps) => {
         {/* Filter Toggle */}
         <div className="px-4 pt-3">
           <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 w-full bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg transition-all text-sm text-gray-700"
+            onClick={() => setShowFilters(true)}
+            className="flex items-center gap-2 w-full bg-gray-100 hover:bg-gray-200 px-4 py-2.5 rounded-xl transition-all text-sm font-medium text-gray-700"
           >
             <Calendar className="w-4 h-4" />
             <span>เลือกช่วงเวลา</span>
             <ChevronDown
-              className={`w-4 h-4 ml-auto transition-transform ${
-                showFilters ? "rotate-180" : ""
-              }`}
+              className={`w-4 h-4 ml-auto transition-transform ${showFilters ? "rotate-180" : ""}`}
             />
           </button>
-          
         </div>
 
         {/* Filter Section */}
         <div
-          className={`transition-all duration-300 ease-in-out overflow-hidden ${
-            showFilters ? "max-h-48 opacity-100" : "max-h-0 opacity-0"
-          }`}
+          className={`transition-all duration-300 ease-in-out overflow-hidden ${showFilters ? "max-h-56 opacity-100" : "max-h-0 opacity-0"
+            }`}
         >
           <div className="px-4 py-3">
             <div className="grid grid-cols-3 gap-2">
-              {/* Year */}
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  ปี
-                </label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">ปี</label>
                 <select
                   value={filter.year}
-                  onChange={(e) =>
-                    handleFilterChange("year", Number(e.target.value))
-                  }
-                  className="w-full px-2 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  onChange={(e) => handleFilterChange("year", Number(e.target.value))}
+                  className="w-full px-2 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 >
                   {getYearOptions().map((year) => (
-                    <option key={year} value={year}>
-                      {year + 543}
-                    </option>
+                    <option key={year} value={year}>{year + 543}</option>
                   ))}
                 </select>
               </div>
-
-              {/* Month */}
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  เดือน
-                </label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">เดือน</label>
                 <select
                   value={filter.month}
-                  onChange={(e) =>
-                    handleFilterChange("month", Number(e.target.value))
-                  }
-                  className="w-full px-2 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  onChange={(e) => handleFilterChange("month", Number(e.target.value))}
+                  className="w-full px-2 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 >
-                  {MONTHS.map((month) => (
-                    <option key={month.value} value={month.value}>
-                      {month.label}
-                    </option>
+                  {MONTHS.map((m) => (
+                    <option key={m.value} value={m.value}>{m.label}</option>
                   ))}
                 </select>
               </div>
-
-              {/* Period */}
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  ช่วงวัน
-                </label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">ช่วงวัน</label>
                 <select
                   value={filter.period}
-                  onChange={(e) =>
-                    handleFilterChange("period", e.target.value)
-                  }
-                  className="w-full px-2 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  onChange={(e) => handleFilterChange("period", e.target.value)}
+                  className="w-full px-2 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 >
-                  {PERIODS.map((period) => (
-                    <option key={period.value} value={period.value}>
-                      {period.label}
-                    </option>
+                  {PERIODS.map((p) => (
+                    <option key={p.value} value={p.value}>{p.label}</option>
                   ))}
                 </select>
               </div>
             </div>
           </div>
         </div>
-    
-        <div className="px-4">    
-            <button onClick={fetchJobs} className="mt-2.5 p-2.5 w-full bg-gray-600 hover:bg-gray-900 text-white rounded-lg transition-all">
-                ค้นหาข้อมูล
-            </button>
-        </div>     
+
+        {/* Search Button */}
+        <div className="px-2 pb-3">
+          <button
+            onClick={fetchJobs}
+            disabled={isLoading}
+            className="w-full py-3 bg-emerald-600 text-white text-base font-bold rounded-xl shadow-sm transition-all active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2"
+          >
+            {isLoading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              null
+            )}
+            <span>{isLoading ? "กำลังค้นหา..." : "ค้นหาข้อมูล"}</span>
+          </button>
+        </div>
 
         {/* Scrollable Content */}
-        <div className="overflow-y-auto max-h-[60vh] p-4">
+        <div className="overflow-y-auto max-h-[55vh] px-4 pb-4">
           {/* Loading State */}
           {isLoading && (
             <div className="flex flex-col items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 text-emerald-500 animate-spin mb-3" />
-              <p className="text-gray-500 text-sm">กำลังโหลดข้อมูล...</p>
+              <Loader2 className="w-10 h-10 text-emerald-500 animate-spin mb-3" />
+              <p className="text-gray-500 text-base">กำลังโหลดข้อมูล...</p>
             </div>
           )}
 
           {/* Error State */}
           {error && !isLoading && (
-            <div className="text-center py-12">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <X className="w-6 h-6 text-red-500" />
+            <div className="text-center py-10">
+              <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <X className="w-7 h-7 text-red-500" />
               </div>
-              <p className="text-red-500 text-sm">{error}</p>
+              <p className="text-red-500 text-base font-medium">{error}</p>
             </div>
           )}
 
-          {/* Stats Content */}
-          {!isLoading && !error && (
+          {/* Results */}
+          {!isLoading && !error && hasFetched && (
             <>
-              {/* Stats Grid */}
-              <div className="grid grid-cols-2 gap-3">
-                {/* Total Deliveries */}
-                <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-100">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Truck className="w-4 h-4 text-emerald-600" />
-                    <span className="text-xs text-gray-600">จำนวนเที่ยว</span>
-                  </div>
-                  <p className="text-2xl font-bold text-emerald-700">
-                    {stats.total}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">เที่ยว</p>
-                </div>
-
-                {/* Days with Delivery */}
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Calendar className="w-4 h-4 text-blue-600" />
-                    <span className="text-xs text-gray-600">จำนวนวันที่ส่ง</span>
-                  </div>
-                  <p className="text-2xl font-bold text-blue-700">
-                    {stats.daysWithDelivery}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">วัน</p>
-                </div>
-
-                {/* Average per Day */}
-                <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-4 border border-purple-100">
-                  <div className="flex items-center gap-2 mb-2">
-                    <TrendingUp className="w-4 h-4 text-purple-600" />
-                    <span className="text-xs text-gray-600">เฉลี่ยต่อวัน</span>
-                  </div>
-                  <p className="text-2xl font-bold text-purple-700">
-                    {stats.avgPerDay}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">เที่ยว/วัน</p>
-                </div>
-
-                {/* Best Day */}
-                <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-4 border border-amber-100">
-                  <div className="flex items-center gap-2 mb-2">
-                    <CheckCircle className="w-4 h-4 text-amber-600" />
-                    <span className="text-xs text-gray-600">วันที่ส่งมากสุด</span>
-                  </div>
-                  <p className="text-2xl font-bold text-amber-700">
-                    {stats.maxDay.count > 0 ? `วันที่ ${stats.maxDay.day}` : "-"}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {stats.maxDay.count > 0 ? `${stats.maxDay.count} เที่ยว` : "ไม่มีข้อมูล"}
-                  </p>
-                </div>
-              </div>
-
-              {/* Daily Breakdown - Mini Chart */}
+              {/* Daily Breakdown */}
               {stats.total > 0 && (
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Package className="w-4 h-4 text-gray-500" />
-                    <span className="text-sm font-medium text-gray-700">
-                      รายละเอียดรายวัน
-                    </span>
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Package className="w-6 h-6 text-gray-500" />
+                    <span className="text-lg font-semibold text-gray-700">จำนวนเที่ยว : {stats.total} เที่ยว</span>
                   </div>
-                  <div className="flex flex-wrap gap-1">
-                    {Object.entries(stats.dailyCount)
-                      .sort(([a], [b]) => Number(a) - Number(b))
-                      .map(([day, count]) => (
+                  {/* <div className="flex items-center gap-2 mb-2">
+                    <PiggyBank className="w-6 h-6 text-gray-500" />
+                    <span className="text-lg font-semibold text-gray-700">ค่าเที่ยว ≈ 5,000 บาท</span>
+                  </div> */}
+                </div>
+              )}
+
+              {/* Job Cards List */}
+              {completedJobs.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-gray-500" />
+                      <span className="text-sm font-semibold text-gray-700">รายการงานจัดส่งแล้ว</span>
+                    </div>
+                    <span className="text-xs text-gray-400">{completedJobs.length} รายการ</span>
+                  </div>
+                  <div className="space-y-2">
+                    {completedJobs.map((job) => {
+                      const style = getStatusStyle(job.status);
+                      return (
                         <div
-                          key={day}
-                          className="flex flex-col items-center px-2 py-1 bg-emerald-50 rounded-lg min-w-[40px]"
-                          title={`วันที่ ${day}: ${count} เที่ยว`}
+                          key={job.load_id}
+                          className="bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm"
                         >
-                          <span className="text-xs text-gray-500">{day}</span>
-                          <span className="text-sm font-semibold text-emerald-700">
-                            {count}
-                          </span>
+                          <div className={`h-0.5 bg-gradient-to-r ${style.accent}`} />
+                          <div className="px-3 py-2.5 space-y-1.5">
+                            {/* ID + Status */}
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <p className="text-sm font-bold text-gray-900 truncate">{job.load_id}</p>
+                                {job.h_plate && (
+                                  <div className="flex items-center gap-1 text-xs text-gray-400 flex-shrink-0">
+                                    <Truck className="w-3.5 h-3.5" />
+                                    <span>{job.h_plate}</span>
+                                  </div>
+                                )}
+                              </div>
+                              <Badge className={`${style.badge} text-[11px] px-2 py-0 rounded-full font-semibold border-0`}>
+                                {job.status}
+                              </Badge>
+                            </div>
+                            {/* Route */}
+                            {(job.locat_recive || job.locat_deliver) && (
+                              <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                                <span className="truncate max-w-[40%]">🏠 {job.locat_recive || "-"}</span>
+                                <ArrowRight className="w-3 h-3 text-gray-300 flex-shrink-0" />
+                                <span className="truncate max-w-[40%]">🏁 {job.locat_deliver || "-"}</span>
+                              </div>
+                            )}
+                            {/* Dates */}
+                            <div className="flex items-center justify-between text-xs text-gray-500">
+                              <div className="flex items-center gap-1">
+                                <Clock className="w-3 h-3 text-gray-400" />
+                                <span>รับ {formatDate(job.date_recive)} {formatTime(job.date_recive)}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Clock className="w-3 h-3 text-gray-400" />
+                                <span>ส่ง {formatDate(job.date_deliver)} {formatTime(job.date_deliver)}</span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
 
               {/* Empty State */}
               {stats.total === 0 && (
-                <div className="mt-4 text-center py-6 bg-gray-50 rounded-xl">
-                  <Truck className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                  <p className="text-gray-500 text-sm">ไม่มีข้อมูลในช่วงเวลาที่เลือก</p>
+                <div className="text-center py-8 bg-gray-50 rounded-xl">
+                  <Truck className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                  <p className="text-base font-medium text-gray-500">ไม่มีข้อมูลในช่วงเวลาที่เลือก</p>
+                  <p className="text-sm text-gray-400 mt-1">ลองเปลี่ยนเดือนหรือช่วงวันแล้วค้นหาใหม่</p>
                 </div>
               )}
             </>
+          )}
+
+          {/* Initial State - before first search */}
+          {!isLoading && !error && !hasFetched && (
+            <div className="text-center py-8 bg-gray-50 rounded-xl">
+              <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+              <p className="text-base font-medium text-gray-500">เลือกช่วงเวลาแล้วกดค้นหา</p>
+              <p className="text-sm text-gray-400 mt-1">ระบบจะแสดงสถิติงานจัดส่งของคุณ</p>
+            </div>
           )}
         </div>
       </div>

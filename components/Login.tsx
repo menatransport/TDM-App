@@ -321,7 +321,7 @@ return (
               isVisible ? "scale-100 rotate-0" : "scale-0 rotate-45"
             }`}
           >
-            <img src="/mena.png" alt="Logo" className="w-40 h-25" />
+            <img src="/mena.webp" alt="Logo" className="w-40 h-25" />
           </div>
           <h1
             className={`text-2xl font-bold text-gray-800 mb-1 transform transition-all duration-700 ease-out delay-200 ${

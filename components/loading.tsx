@@ -1,53 +1,84 @@
 import React from 'react'
-import { Truck,  Package } from 'lucide-react'
 
-export const Loading = () => {
+// Skeleton แบบเบา: ใช้ animation เดียว (pulse) ไม่มีรูป/ไอคอน ไม่กิน GPU บนมือถือรุ่นเล็ก
+type LoadingProps = {
+  variant?: 'list' | 'detail' | 'grid'
+}
+
+const Bar = ({ className = '' }: { className?: string }) => (
+  <div className={`rounded-lg bg-gray-200 ${className}`} />
+)
+
+const ListSkeleton = () => (
+  <div className="mx-auto max-w-2xl space-y-4 px-4 pt-4">
+    <div className="grid grid-cols-2 gap-3">
+      <Bar className="h-20 rounded-2xl bg-white" />
+      <Bar className="h-20 rounded-2xl bg-white" />
+    </div>
+    <Bar className="h-14 rounded-2xl" />
+    {[0, 1, 2, 3].map((i) => (
+      <div key={i} className="space-y-3 rounded-xl bg-white p-4">
+        <div className="flex justify-between">
+          <Bar className="h-5 w-1/3" />
+          <Bar className="h-5 w-1/4 rounded-full" />
+        </div>
+        <Bar className="h-4 w-2/3" />
+        <Bar className="h-4 w-full" />
+      </div>
+    ))}
+  </div>
+)
+
+const DetailSkeleton = () => (
+  <div className="mx-auto max-w-2xl space-y-4 p-5">
+    <div className="flex items-center justify-between">
+      <Bar className="h-10 w-24 bg-white" />
+      <Bar className="h-14 w-14 rounded-full" />
+    </div>
+    <div className="space-y-3 rounded-xl bg-white p-5">
+      <Bar className="h-6 w-1/2" />
+      <Bar className="h-4 w-1/3" />
+      <Bar className="h-4 w-full" />
+      <Bar className="h-4 w-5/6" />
+    </div>
+    {[0, 1, 2, 3, 4].map((i) => (
+      <div key={i} className="flex items-center gap-3 rounded-xl bg-white p-4">
+        <Bar className="h-10 w-10 shrink-0 rounded-full" />
+        <div className="flex-1 space-y-2">
+          <Bar className="h-4 w-1/2" />
+          <Bar className="h-3 w-1/3" />
+        </div>
+      </div>
+    ))}
+  </div>
+)
+
+const GridSkeleton = () => (
+  <div className="mx-auto max-w-2xl space-y-4 p-5">
+    <Bar className="h-10 w-32 bg-white" />
+    <div className="space-y-4 rounded-2xl bg-white p-6">
+      <Bar className="h-6 w-1/3" />
+      <Bar className="h-32 w-full rounded-xl" />
+    </div>
+    <div className="grid grid-cols-2 gap-4 rounded-2xl bg-white p-6">
+      {[0, 1, 2, 3].map((i) => (
+        <Bar key={i} className="aspect-square w-full rounded-xl" />
+      ))}
+    </div>
+  </div>
+)
+
+export const Loading = ({ variant = 'list' }: LoadingProps) => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center relative overflow-hidden">
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-20 -left-20 w-40 h-40 bg-green-200 bg-opacity-30 rounded-full animate-pulse"></div>
-        <div className="absolute top-1/4 -right-16 w-32 h-32 bg-emerald-200 bg-opacity-20 rounded-full animate-bounce"></div>
-        <div className="absolute bottom-1/4 -left-12 w-24 h-24 bg-green-300 bg-opacity-25 rounded-full animate-pulse"></div>
-        <div className="absolute bottom-20 right-1/4 w-16 h-16 bg-emerald-300 bg-opacity-30 rounded-full animate-bounce"></div>
-      </div>
-
-      <div className="flex flex-col items-center space-y-8 z-10">
-        <div className="relative">
-          <div className="w-32 h-32 border-4 border-emerald-200 rounded-full animate-spin">
-            <div className="absolute top-0 left-1/2 w-4 h-4 bg-emerald-500 rounded-full transform -translate-x-1/2 -translate-y-2"></div>
-          </div>
-
-          <div className="absolute inset-4 bg-gradient-to-br from-emerald-400 to-green-500 rounded-full animate-pulse flex items-center justify-center">
-            <Truck className="w-12 h-12 text-white animate-bounce" />
-          </div>
-        </div>
-
-        <div className="text-center space-y-4">
-          <h2 className="text-2xl font-bold text-gray-800 animate-pulse">
-            กำลังโหลดข้อมูล
-          </h2>
-
-          <div className="flex justify-center space-x-2">
-            <div className="w-3 h-3 bg-emerald-500 rounded-full animate-bounce"></div>
-            <div className="w-3 h-3 bg-emerald-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-            <div className="w-3 h-3 bg-emerald-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-          </div>
-        </div>
-
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/20">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <Package className="w-5 h-5 text-emerald-600 animate-pulse" />
-              <span className="text-sm text-gray-600">โหลดข้อมูลงาน</span>
-            </div>
-            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-ping"></div>
-          </div>
-        </div>
-
-        <div className="w-64 bg-gray-200 rounded-full h-2 overflow-hidden">
-          <div className="h-full bg-gradient-to-r from-emerald-500 to-green-500 rounded-full animate-pulse"></div>
-        </div>
-      </div>
+    <div
+      role="status"
+      aria-busy="true"
+      aria-label="กำลังโหลดข้อมูล"
+      className="min-h-screen animate-pulse bg-gradient-to-br from-green-50 to-emerald-100 pb-28"
+    >
+      {variant === 'list' && <ListSkeleton />}
+      {variant === 'detail' && <DetailSkeleton />}
+      {variant === 'grid' && <GridSkeleton />}
     </div>
   )
 }

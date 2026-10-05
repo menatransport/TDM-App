@@ -95,7 +95,9 @@ export const ImagesFn: React.FC<ImagesFnProps> = ({ onImagesChange, jobId, image
               {existingImages.map((img, i) => (
                 <div key={`exist-${i}`} className="relative group overflow-hidden rounded-lg">
                   <img 
-                    src={img.url} 
+                    src={img.url}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-32 object-cover rounded-lg shadow-md transition-all duration-300 group-hover:scale-105 group-hover:brightness-75" 
                     alt={`Existing image ${i + 1}`}
                   />

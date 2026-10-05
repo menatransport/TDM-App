@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useUserRole } from "@/lib/userStore"
-import Swal from "sweetalert2";
+import { Swal } from "@/lib/swal";
 
 interface Typedata {
   load_id: string;
@@ -326,7 +326,7 @@ export const TimelineStep = ({
   };
 
   const fetchImages = async (id: string) => {
-    const res = await fetch("/api/upload", {
+    const res = await fetch(`/api/upload?id=${encodeURIComponent(id ?? "")}`, {
       method: "GET",
       headers: {
         id: id ?? "",

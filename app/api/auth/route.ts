@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { generateToken } from '@/lib/auth';
+import { jsonWithEtag } from '@/lib/etagJson';
 
 export async function POST(req: Request) {
   const { username, password } = await req.json();
@@ -24,7 +25,6 @@ export async function POST(req: Request) {
 
 
 export async function GET(req: Request) {
-  console.log('req : ',req)
 try {
     const externalRes = await fetch(process.env.LOGIN_API_GET!, {
     method: 'GET',
@@ -34,8 +34,11 @@ try {
     }
   });
   const data = await externalRes.json();
-
-  return NextResponse.json(data);
+  // ผู้ใช้ (Login, Admin) ใช้แค่ username
+  const users = Array.isArray(data?.users)
+    ? data.users.map((user: { username: string }) => ({ username: user.username }))
+    : [];
+  return jsonWithEtag(req, { users });
   } catch (err: any) {
     console.error('❌ DB Error:', err.message);
     return NextResponse.json({ error: 'Failed to fetch table list' }, { status: 500 });

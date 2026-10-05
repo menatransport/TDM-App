@@ -20,6 +20,8 @@ interface ImageFile {
   id: string;
   file?: File;
   url: string;
+  // รูปย่อจาก server ใช้แสดงใน grid (รูปเต็มโหลดเมื่อกดดูเท่านั้น)
+  thumbUrl?: string;
   name: string;
   size?: number;
   isUploaded?: boolean;
@@ -42,8 +44,8 @@ const COMPRESSION_CONFIG = {
   // ขนาดไฟล์ขั้นต่ำที่ต้องบีบอัด (bytes)
   MIN_SIZE_TO_COMPRESS: 500 * 1024, // 500KB
   // ขนาดภาพสูงสุด (pixels)
-  MAX_WIDTH: 1920,
-  MAX_HEIGHT: 1920,
+  MAX_WIDTH: 1600,
+  MAX_HEIGHT: 1600,
   // คุณภาพตามขนาดไฟล์ (MB)
   QUALITY_TIERS: [
     { maxSizeMB: 1, quality: 0.85 },
@@ -89,7 +91,7 @@ export const Picture = ({ onLoadingChange }: TicketProps) => {
 
       const fetchImages = async () => {
         try {
-          const res = await fetch("/api/upload", {
+          const res = await fetch(`/api/upload?id=${encodeURIComponent(jobId ?? "")}`, {
             method: "GET",
             headers: {
               id: jobId ?? "",
@@ -596,7 +598,7 @@ export const Picture = ({ onLoadingChange }: TicketProps) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex justify-center p-5 relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-20 -left-20 w-40 h-40 bg-green-200 bg-opacity-30 rounded-full animate-pulse"></div>
+        <div className="absolute -top-20 -left-20 w-40 h-40 bg-green-200 bg-opacity-30 rounded-full"></div>
         <div className="absolute top-1/4 -right-16 w-32 h-32 bg-emerald-200 bg-opacity-20 rounded-full "></div>
         <div className="absolute bottom-1/4 -left-12 w-24 h-24 bg-green-300 bg-opacity-25 rounded-full "></div>
         <div className="absolute bottom-20 right-1/4 w-16 h-16 bg-emerald-300 bg-opacity-30 rounded-full "></div>
@@ -786,7 +788,9 @@ export const Picture = ({ onLoadingChange }: TicketProps) => {
                   >
                     <div className="aspect-square relative">
                       <img
-                        src={image.url}
+                        src={image.thumbUrl || image.url}
+                        loading="lazy"
+                        decoding="async"
                         alt={image.name}
                         className="w-full h-full object-cover"
                       />
@@ -851,7 +855,7 @@ export const Picture = ({ onLoadingChange }: TicketProps) => {
           </div>
 
           {viewingImage && (
-            <div className="fixed inset-0 bg-opacity-40 backdrop-blur-sm flex items-center justify-center z-100 p-4">
+            <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-100 p-4">
               <div className="relative max-w-4xl max-h-full">
                 <button
                   onClick={() => setViewingImage(null)}

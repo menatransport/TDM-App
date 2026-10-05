@@ -3,9 +3,8 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import Swal from "sweetalert2";
+import { Swal } from "@/lib/swal";
 import { TimelineStep } from "@/components/Timeline";
-import Image from "next/image";
 
 import {
   MapPin,
@@ -23,6 +22,7 @@ import {
   AlertTriangle,
   X,
   FileText,
+  Camera,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -32,6 +32,12 @@ type TicketProps = {
 
 export const Ticket = ({ onLoadingChange }: TicketProps) => {
   const router = useRouter();
+
+  // โหลดโค้ดหน้าที่มักกดไปต่อไว้ล่วงหน้า
+  useEffect(() => {
+    router.prefetch("/picture");
+    router.prefetch("/job");
+  }, [router]);
 
   const [isOpenPallet, setIsOpenPallet] = useState(false);
   const [isOpenDamage, setIsOpenDamage] = useState(false);
@@ -74,7 +80,7 @@ export const Ticket = ({ onLoadingChange }: TicketProps) => {
     const access_token = localStorage.getItem("access_token");
 
     try {
-      const res_data = await fetch("/api/tickets", {
+      const res_data = await fetch(`/api/tickets?id=${encodeURIComponent(jobId ?? "")}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -557,7 +563,7 @@ summaryText = `🚨สรุปการทำงาน🚨
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex justify-center p-5 relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-20 -left-20 w-40 h-40 bg-green-200 bg-opacity-30 rounded-full animate-pulse"></div>
+        <div className="absolute -top-20 -left-20 w-40 h-40 bg-green-200 bg-opacity-30 rounded-full"></div>
         <div className="absolute top-1/4 -right-16 w-32 h-32 bg-emerald-200 bg-opacity-20 rounded-full "></div>
         <div className="absolute bottom-1/4 -left-12 w-24 h-24 bg-green-300 bg-opacity-25 rounded-full "></div>
         <div className="absolute bottom-20 right-1/4 w-16 h-16 bg-emerald-300 bg-opacity-30 rounded-full "></div>
@@ -582,27 +588,26 @@ summaryText = `🚨สรุปการทำงาน🚨
           </Button>
 
           <div className="flex flex-col justify-center text-center item-center cursor-pointer">
-            <Image
-              src="/cameralord.gif"
+            <button
+              type="button"
+              aria-label="รูปภาพ"
               onClick={() => {
                 if (!isLoading) {
-                  console.log("image");
                   router.push(
                     `/picture?id=${job.load_id}&status=${job.status}`
                   );
                 }
               }}
-              className={`cursor-pointer transition-opacity duration-300 ${
+              className={`mx-auto mb-1 flex h-[52px] w-[52px] items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-green-500 shadow-md transition-opacity duration-300 active:scale-95 ${
                 isLoading
                   ? "opacity-50 pointer-events-none"
                   : "hover:opacity-80"
               }`}
-              width={60}
-              height={60}
-              alt="images"
-            />
+            >
+              <Camera className="h-7 w-7 text-white" />
+            </button>
             <Badge
-              className={`border-white/30 text-xs rounded-full backdrop-blur-sm`}
+              className={`border-white/30 text-xs rounded-full`}
             >
               รูปภาพ
             </Badge>
@@ -625,7 +630,7 @@ summaryText = `🚨สรุปการทำงาน🚨
                   <Badge
                     className={`${
                       getStatusConfig(job.status).color
-                    } border-white/30 text-xs px-2 py-0.5 rounded-full backdrop-blur-sm`}
+                    } border-white/30 text-xs px-2 py-0.5 rounded-full`}
                   >
                     {job.status}
                   </Badge>
@@ -634,7 +639,7 @@ summaryText = `🚨สรุปการทำงาน🚨
                       job.job_type == "ดรอป"
                         ? "bg-purple-200 text-purple-900"
                         : "bg-orange-200 text-orange-900"
-                    } border-white/30 text-xs px-2 py-0.5 rounded-full backdrop-blur-sm`}
+                    } border-white/30 text-xs px-2 py-0.5 rounded-full`}
                   >
                     ประเภทงาน: {job.job_type}
                   </Badge>

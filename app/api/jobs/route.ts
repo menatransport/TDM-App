@@ -1,5 +1,11 @@
 // app/api/test-db/route.ts
 import { NextResponse } from 'next/server';
+import { jsonWithEtag } from '@/lib/etagJson';
+
+// สถานะที่หน้าคนขับไม่แสดง
+const HIDDEN_STATUSES = new Set(['ตกคิว', 'อบรมที่บริษัท', 'ยกเลิก', 'ซ่อม']);
+// field ที่การ์ดงานของคนขับใช้
+const DRIVER_FIELDS = ['load_id', 'h_plate', 'job_type', 'status', 'locat_recive', 'locat_deliver', 'date_recive', 'date_deliver'] as const;
 
 export async function GET(req: Request) {
 try {
@@ -13,7 +19,14 @@ try {
     }
   });
   const data = await externalRes.json();
-  return NextResponse.json(data);
+  if (!Array.isArray(data?.jobs)) {
+    return NextResponse.json(data, { status: externalRes.status });
+  }
+
+  const jobs = data.jobs
+    .filter((job: any) => !HIDDEN_STATUSES.has(job.status))
+    .map((job: any) => Object.fromEntries(DRIVER_FIELDS.map((f) => [f, job[f]])));
+  return jsonWithEtag(req, { jobs });
   } catch (err: any) {
     console.error('❌ DB Error:', err.message);
     return NextResponse.json({ error: 'Failed to fetch table list' }, { status: 500 });

@@ -5,23 +5,17 @@ import { Navbars } from "@/components/Navbars";
 import { Picture } from "@/components/picture";
 import { Loading } from "@/components/loading";
 
-const imagespage = () => {
+const Imagespage = () => {
   const [isLoading, setIsLoading] = useState(true);
   return (
     <>
-    {isLoading && <Loading />}
-           <div
-            className={`
-              transition-all duration-700 delay-300 ease-in-out
-              ${isLoading ? "hidden" : "block"}
-            `}
-          >
-    <Navbars />
-    <Picture onLoadingChange={(loading: boolean) => setIsLoading(loading)} />
-          </div>
-
+      <Navbars />
+      {isLoading && <Loading variant="grid" />}
+      <div className={isLoading ? "hidden" : "block"}>
+        <Picture onLoadingChange={setIsLoading} />
+      </div>
     </>
   );
 };
 
-export default imagespage;
+export default Imagespage;

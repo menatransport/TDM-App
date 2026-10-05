@@ -1,10 +1,11 @@
 // app/api/test-db/route.ts
 import { NextResponse } from 'next/server';
+import { jsonWithEtag } from '@/lib/etagJson';
 
 export async function GET(req: Request) {
 try {
   const Access_token  = req.headers.get('Authorization')?.replace('Bearer ', '');
-  const loadId = req.headers.get('id');
+  const loadId = req.headers.get('id') || new URL(req.url).searchParams.get('id');
     const externalRes = await fetch(`${process.env.JOB_TICKETS_API_URL!}?load_id=${loadId}`, {
     method: 'GET',
     headers: {
@@ -13,8 +14,7 @@ try {
     }
   });
   const data = await externalRes.json();
-  console.log('ORDERS [API] ดึงข้อมูลจาก external API:', data);
-  return NextResponse.json(data);
+  return jsonWithEtag(req, data);
   } catch (err: any) {
     console.error('❌ DB Error:', err.message);
     return NextResponse.json({ error: 'Failed to fetch table list' }, { status: 500 });

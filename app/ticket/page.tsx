@@ -9,23 +9,14 @@ const Ticketpage = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   return (
-  <>
-
-    {isLoading && <Loading />}
-
-    
-  <div
-        className={`
-          transition-all duration-400 delay-100 ease-in-out
-          ${isLoading ? "hidden" : "block"}
-        `}
-      >
+    <>
       <Navbars />
-      <Ticket onLoadingChange={(loading: boolean) => setIsLoading(loading)} />
-    </div>
-  </>
-);
-
+      {isLoading && <Loading variant="detail" />}
+      <div className={isLoading ? "hidden" : "block"}>
+        <Ticket onLoadingChange={setIsLoading} />
+      </div>
+    </>
+  );
 };
 
 export default Ticketpage;

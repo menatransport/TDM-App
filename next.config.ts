@@ -11,7 +11,23 @@ const withPWA = nextPWA({
   fallbacks: {
     document: '/offline.html', // เพิ่มหน้า offline
   },
+  // ไม่ precache JS chunks และฟอนต์ทั้งหมด (รวมของหน้า admin) ให้คนขับโหลดเฉพาะที่ใช้จริงผ่าน runtime cache
+  buildExcludes: [/chunks\/.*\.js$/, /media\/.*$/],
+  // ไม่ precache ไฟล์ใน public (offline.html ถูกเพิ่มเองจาก fallbacks)
+  publicExcludes: ['!**/*'],
   runtimeCaching: [
+    {
+      // ไฟล์ build มี hash ในชื่อ เปลี่ยนเมื่อ deploy ใหม่ จึง cache ถาวรได้
+      urlPattern: /\/_next\/static\/.*/i,
+      handler: "CacheFirst",
+      options: {
+        cacheName: "next-static",
+        expiration: {
+          maxEntries: 200,
+          maxAgeSeconds: 60 * 60 * 24 * 30, // 30 วัน
+        },
+      },
+    },
     {
       urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
       handler: "CacheFirst",
@@ -94,7 +110,7 @@ const nextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https:; connect-src 'self' https: wss: ws:; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:;"
+            value: "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https:; connect-src 'self' data: blob: https: wss: ws:; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:;"
           },
           {
             key: 'Cross-Origin-Embedder-Policy',
